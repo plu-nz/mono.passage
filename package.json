@@ -1,0 +1,12 @@
+{
+  "name": "passage",
+  "private": true,
+  "packageManager": "pnpm@12.18.0",
+  "scripts": {
+    "dev:desktop": "pnpm --filter @passage/desktop tauri dev",
+    "build:desktop": "pnpm --filter @passage/desktop tauri build",
+    "dev:extension": "pnpm --filter @passage/extension dev",
+    "build:extension": "pnpm --filter @passage/extension build",
+    "check": "pnpm -r check"
+  }
+}

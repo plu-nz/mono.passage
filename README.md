@@ -4,6 +4,26 @@ Passage é uma proposta de interface multiplataforma para cofres compatíveis co
 
 Este documento registra os requisitos discutidos até agora. Ele descreve o produto desejado, não afirma que as funcionalidades já foram implementadas.
 
+## Estado do código
+
+O repositório contém um esqueleto executável do MVP. O app desktop mostra o estado de integração e a extensão Chromium verifica a presença de um conector local. Leitura do cofre, preenchimento, pareamento e sincronização ainda precisam ser implementados.
+
+| Diretório | Responsabilidade |
+| --- | --- |
+| `packages/core` | Tipos e contrato compartilhado do cofre e das mensagens locais. |
+| `apps/desktop` | Interface React/Vite e aplicativo Tauri 2 para Linux. |
+| `apps/extension` | Extensão Manifest V3 para Brave e Chrome, construída com WXT. |
+
+Para desenvolver no Linux, instale Node.js, pnpm, Rust e as [dependências de sistema do Tauri](https://v2.tauri.app/start/prerequisites/). Na raiz do repositório:
+
+```bash
+pnpm install
+pnpm check
+pnpm dev:desktop
+```
+
+Para gerar a extensão, execute `pnpm build:extension` e carregue `apps/extension/.output/chrome-mv3` como extensão descompactada em `brave://extensions` ou `chrome://extensions`. A extensão indicará que o conector local ainda não está instalado; isso é esperado nesta etapa.
+
 ## Princípios
 
 - O formato do cofre continua compatível com GNU `pass`: uma árvore de arquivos `.gpg` cifrados com OpenPGP.

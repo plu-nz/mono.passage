@@ -1,0 +1,17 @@
+[package]
+name = "passage_desktop"
+version = "0.0.0"
+description = "Passage desktop shell"
+authors = ["Plunz"]
+edition = "2021"
+
+[lib]
+name = "passage_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+tauri = { version = "2", features = [] }
