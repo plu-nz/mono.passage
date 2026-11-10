@@ -1,59 +1,92 @@
-# Interface para GNU pass
+# Passage
 
-> Nome provisório. Este repositório registra os requisitos e decisões do projeto antes da implementação.
+Passage é uma proposta de interface multiplataforma para cofres compatíveis com o [GNU `pass`](https://www.passwordstore.org/). O cofre pertence ao usuário: seus arquivos cifrados são sincronizados por um repositório Git privado que pode ser hospedado em um serviço Git ou em infraestrutura própria.
 
-## Objetivo
+Este documento registra os requisitos discutidos até agora. Ele descreve o produto desejado, não afirma que as funcionalidades já foram implementadas.
 
-Criar uma experiência de cofre de credenciais que use o formato do GNU `pass`, preserve o acesso pelo terminal e funcione bem no Linux, nos navegadores Brave e Chrome e no Android. O usuário controla o armazenamento: o cofre é sincronizado por um repositório Git privado, hospedado em um serviço de sua escolha ou em infraestrutura própria.
+## Princípios
 
-## Requisitos confirmados
+- O formato do cofre continua compatível com GNU `pass`: uma árvore de arquivos `.gpg` cifrados com OpenPGP.
+- O terminal é uma interface de primeira classe. O usuário pode continuar usando `pass` e `pass git` sem abrir o Passage.
+- O Git privado transporta os arquivos cifrados. Chaves PGP privadas, senhas de desbloqueio e credenciais de acesso ao Git não entram nesse repositório.
+- O mesmo cofre deve ser utilizável no desktop, no Android, no terminal e na web, sem depender de um servidor que conheça as senhas em texto claro.
+- O projeto deve aproveitar componentes existentes do ecossistema `pass` quando atendam aos requisitos; a interface e as integrações específicas do Passage serão construídas onde houver lacunas.
 
-### Cofre e armazenamento
+## Plataformas e formas de acesso
 
-- Usar o GNU `pass` e seu formato de cofre: uma árvore de arquivos `.gpg` cifrados com OpenPGP.
-- Manter compatibilidade com os comandos do `pass` no terminal, independentemente da interface gráfica.
-- Sincronizar o cofre por Git privado, inclusive com a possibilidade de hospedar o remoto em um NAS ou servidor próprio.
-- Manter a chave PGP privada fora do repositório Git. Cada dispositivo deve receber sua chave por um processo de configuração próprio.
-- Detectar conflitos de sincronização e exigir resolução explícita quando duas alterações atingirem a mesma entrada.
+| Forma de acesso | Requisito |
+| --- | --- |
+| **Desktop** | Aplicativo para consultar e gerenciar o cofre. Linux é a primeira plataforma. |
+| **Android** | Aplicativo para consultar e gerenciar o mesmo cofre, com integração ao preenchimento de credenciais do sistema. |
+| **Terminal puro** | Uso direto do GNU `pass` e de seus comandos Git, independente dos aplicativos Passage. |
+| **Web pura** | Página acessível em um navegador, inclusive em outro computador, capaz de abrir o cofre sem aplicativo ou conector desktop instalado. |
 
-### Linux e navegadores
+O suporte a iOS é desejável no futuro, se tecnicamente viável, mas está fora do escopo inicial.
 
-- Oferecer uma interface desktop para consultar e gerenciar o cofre.
-- Permitir preenchimento de credenciais no Brave e no Chrome por meio de extensões que acessem o mesmo cofre local.
-- Evitar uma sessão independente do cofre em cada navegador. O aplicativo ou serviço local deve controlar o acesso, com pareamento e possibilidade de revogar cada extensão.
-- Investigar desbloqueio do cofre pela digital, inclusive no primeiro acesso após iniciar o sistema. A verificação biométrica precisa liberar uma chave protegida; uma checagem isolada de digital não é suficiente.
+### Desktop e navegadores
+
+- Oferecer busca, consulta e edição dos itens do cofre no aplicativo desktop.
+- Preencher logins no Brave e no Chrome por meio de extensões que acessem o cofre local.
+- Permitir que os dois navegadores usem o mesmo estado de desbloqueio local, sem exigir um login independente do cofre em cada extensão.
+- Parear cada instalação da extensão com o aplicativo ou serviço local e permitir revogar esse acesso.
+- Avaliar o desbloqueio pela digital, inclusive no primeiro acesso após iniciar o sistema. O desenho precisa proteger a chave que abre o cofre; a mera confirmação de uma digital não substitui essa proteção.
 
 ### Android
 
-- Permitir consultar e gerenciar o mesmo cofre `pass` no Android.
-- Integrar com o preenchimento de senhas do sistema e avaliar o Credential Manager para passkeys em versões compatíveis do Android.
-- Sincronizar com o mesmo repositório Git privado e usar autenticação local do dispositivo para proteger o acesso à chave.
+- Ler e editar os mesmos arquivos `.gpg` usados pelo `pass` no Linux.
+- Integrar senhas ao preenchimento oferecido pelo Android e, para passkeys, ao provedor de credenciais nas versões compatíveis.
+- Proteger a chave local usando os recursos de autenticação e armazenamento seguro do dispositivo.
+- Sincronizar com o mesmo Git privado, incluindo um caminho claro para configurar a chave PGP e o acesso ao repositório no celular.
 
-### Tipos de credencial
+### Terminal
 
-- Suportar logins com usuário e senha.
-- Suportar segredos TOTP para gerar códigos de autenticação de dois fatores.
-- Avaliar compatibilidade de passkeys com o formato documentado pelo fork `agrahn/Android-Password-Store`, incluindo uso no desktop e sincronização entre dispositivos.
+- Preservar operações como `pass show`, `pass insert`, `pass edit`, `pass git pull` e `pass git push`.
+- Garantir que alterações feitas no terminal apareçam nos demais clientes após a sincronização.
+- Documentar a relação entre o bloqueio do aplicativo, o cache do `gpg-agent` e o acesso pelo terminal. A interface não deve afirmar que bloqueou todo o cofre se GPG ainda puder abri-lo.
 
-## Direção inicial
+### Web sem conector desktop
 
-1. Validar um cofre de teste com `pass`, Git privado, Browserpass no Brave e Chrome, e o fork Android Password Store no celular.
-2. Identificar as lacunas reais dessa combinação, especialmente experiência desktop, pareamento dos navegadores, biometria e resolução de conflitos.
-3. Construir a interface e os componentes necessários mantendo os arquivos utilizáveis pelo `pass`.
-4. Escolher a tecnologia da interface após validar os limites de integração. TypeScript com Tauri 2 é uma possibilidade por permitir compartilhar código com extensões; Flutter continua como alternativa.
+- Permitir autenticação para obter os arquivos `.gpg` cifrados de um repositório Git privado.
+- Descriptografar o cofre no navegador com uma implementação OpenPGP compatível; o serviço web não deve receber a chave aberta, a senha da chave ou os itens em texto claro.
+- Permitir acesso em um dispositivo novo. O processo de obtenção de uma cópia **cifrada** da chave privada e de sua recuperação precisa ser definido antes da implementação.
+- Separar autenticação no serviço/Git da descriptografia do cofre.
+- Começar com consulta e cópia de credenciais; definir edição e envio ao Git com controle de conflitos como uma etapa posterior.
+- Tratar o código entregue ao navegador como parte da superfície de segurança: distribuição controlada, ausência de scripts de terceiros, proteção contra XSS, política de conteúdo restritiva e sessão curta para material sensível.
 
-## Decisões em aberto
+## Credenciais
 
-- Nome definitivo e titularidade do repositório (`@xonha` ou `plunz`).
-- Escopo do primeiro lançamento: interface Linux, extensão própria ou adaptação do Browserpass, e app Android próprio ou integração com o projeto existente.
-- Modelo de desbloqueio biométrico no Linux, proteção da chave local e recuperação quando o leitor não estiver disponível.
-- Convenção de arquivos para TOTP, metadados de sites e passkeys que preserve a compatibilidade com o `pass`.
-- Política de sincronização: quando fazer pull/push, como apresentar conflitos e como recuperar alterações.
-- Necessidade de uma interface web. O caso de uso principal é atendido por desktop, extensões e Android.
+- Logins com usuário e senha.
+- Segredos TOTP e geração de códigos de autenticação de dois fatores.
+- Passkeys: avaliar a convenção de arquivos do fork [Android Password Store](https://github.com/agrahn/Android-Password-Store/blob/develop/PasskeyStorage.md) e definir como criar, usar e sincronizar essas credenciais no desktop e no Android, mantendo os arquivos utilizáveis pelo `pass`.
+
+## Sincronização e recuperação
+
+- Usar um repositório Git **privado para o cofre**, separado do repositório de código `xonha/passage`.
+- Aceitar hospedagem em GitHub ou em um servidor Git privado, inclusive no NAS do usuário.
+- Detectar alterações simultâneas. Conflitos na mesma entrada não podem ser resolvidos silenciosamente, pois os arquivos `.gpg` não admitem mesclagem textual útil.
+- Prever backup e recuperação da chave PGP. Perder o celular, o leitor biométrico ou um dispositivo não pode ser a única causa de perda permanente do cofre.
+- Informar que nomes de arquivos, pastas e histórico de commits são visíveis a quem tiver acesso ao repositório Git, embora o conteúdo dos arquivos esteja cifrado.
+
+## Caminho de validação
+
+1. Montar um cofre de teste com `pass` e Git privado, sem credenciais reais.
+2. Experimentar Browserpass no Brave e Chrome e o fork Android Password Store no celular para identificar as lacunas de experiência e compatibilidade.
+3. Prototipar a interface Linux e o modelo de desbloqueio, preservando o acesso pelo terminal.
+4. Prototipar o cliente web em modo de leitura e validar a compatibilidade OpenPGP e o processo de acesso em um dispositivo novo.
+5. Definir o escopo de extensões próprias, app Android próprio, edição web e passkeys a partir dos resultados.
+
+## Decisões técnicas em aberto
+
+- Tecnologia da interface: TypeScript com Tauri 2 e código compartilhado com extensões, Flutter, ou outra combinação.
+- Uso direto do Browserpass ou criação de uma extensão e conector próprios.
+- Modelo de desbloqueio biométrico no Linux, armazenamento da chave local e interação com `gpg-agent`.
+- Como oferecer uma cópia cifrada da chave PGP para acesso web emergencial e como autorizar o serviço web a ler o Git privado.
+- Formato interoperável para metadados de site, TOTP e passkeys.
+- Política de sincronização, edição concorrente e recuperação de conflitos em cada plataforma.
 
 ## Referências
 
 - [GNU pass](https://www.passwordstore.org/)
 - [Browserpass](https://github.com/browserpass/browserpass-extension)
-- [Android Password Store (fork com passkeys)](https://github.com/agrahn/Android-Password-Store)
-- [Formato de passkeys do Android Password Store](https://github.com/agrahn/Android-Password-Store/blob/develop/PasskeyStorage.md)
+- [Android Password Store, fork com passkeys](https://github.com/agrahn/Android-Password-Store)
+- [OpenPGP.js](https://docs.openpgpjs.org/)
