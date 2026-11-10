@@ -23,6 +23,21 @@ Este documento registra os requisitos discutidos até agora. Ele descreve o prod
 
 O suporte a iOS é desejável no futuro, se tecnicamente viável, mas está fora do escopo inicial.
 
+## Escopo do MVP
+
+O MVP entrega **aplicativo desktop para Linux e extensões para Brave e Chrome**. Ele resolve o problema original: preencher credenciais nos dois navegadores a partir de um único cofre `pass` local, sem fazer login separadamente em cada extensão.
+
+- O aplicativo desktop abre o cofre existente, permite buscar e consultar logins e controla o acesso das extensões.
+- As extensões compartilham uma implementação para navegadores Chromium, são pareadas individualmente com o desktop e permitem revogar cada pareamento.
+- A extensão identifica o site aberto, apresenta as entradas correspondentes e preenche usuário e senha após uma ação do usuário.
+- O cofre continua utilizável pelo GNU `pass` no terminal. Alterações feitas pelo Passage devem manter a compatibilidade dos arquivos `.gpg`.
+- O desktop oferece sincronização com o Git privado e apresenta conflitos ao usuário sem sobrescrever uma entrada silenciosamente.
+- O comportamento de bloqueio precisa ser coerente com o acesso direto pelo `pass` e com o cache do `gpg-agent`.
+
+**Integrações existentes durante o MVP:** o GNU `pass` cobre o terminal; o fork [Android Password Store](https://github.com/agrahn/Android-Password-Store) cobre o Android. O Passage não precisa implementar um CLI ou aplicativo Android próprios para validar o MVP.
+
+**Evolução posterior:** cliente web independente, aplicativo Android próprio se o existente deixar lacunas, iOS se viável, passkeys e um modelo de desbloqueio biométrico que proteja a chave também no primeiro acesso após iniciar o sistema. TOTP pode ser avaliado no MVP se o formato existente funcionar sem ampliar o escopo das integrações.
+
 ### Desktop e navegadores
 
 - Oferecer busca, consulta e edição dos itens do cofre no aplicativo desktop.
@@ -70,10 +85,10 @@ O suporte a iOS é desejável no futuro, se tecnicamente viável, mas está fora
 ## Caminho de validação
 
 1. Montar um cofre de teste com `pass` e Git privado, sem credenciais reais.
-2. Experimentar Browserpass no Brave e Chrome e o fork Android Password Store no celular para identificar as lacunas de experiência e compatibilidade.
-3. Prototipar a interface Linux e o modelo de desbloqueio, preservando o acesso pelo terminal.
-4. Prototipar o cliente web em modo de leitura e validar a compatibilidade OpenPGP e o processo de acesso em um dispositivo novo.
-5. Definir o escopo de extensões próprias, app Android próprio, edição web e passkeys a partir dos resultados.
+2. Experimentar Browserpass no Brave e Chrome para identificar o que a extensão própria precisa acrescentar; confirmar que o mesmo cofre abre no Android Password Store.
+3. Prototipar o aplicativo Linux e o pareamento com uma extensão Chromium.
+4. Validar leitura e escrita interoperáveis com o `pass`, preenchimento nos dois navegadores e sincronização Git com conflitos.
+5. Planejar web, Android próprio, passkeys e biometria avançada a partir do MVP validado.
 
 ## Decisões técnicas em aberto
 
