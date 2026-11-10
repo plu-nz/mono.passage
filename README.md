@@ -2,6 +2,8 @@
 
 Passage é uma proposta de interface multiplataforma para cofres compatíveis com o [GNU `pass`](https://www.passwordstore.org/). O cofre pertence ao usuário: seus arquivos cifrados são sincronizados por um repositório Git privado que pode ser hospedado em um serviço Git ou em infraestrutura própria.
 
+Site do projeto: [passage.plu.nz](https://passage.plu.nz/).
+
 Este documento registra os requisitos discutidos até agora. Ele descreve o produto desejado, não afirma que as funcionalidades já foram implementadas.
 
 ## Estado do código
@@ -13,6 +15,7 @@ O app desktop já lista entradas de um cofre GNU pass local, permite buscar por 
 | `packages/core` | Tipos e contrato compartilhado do cofre e das mensagens locais. |
 | `src/desktop` | Interface React/Vite e aplicativo Tauri 2 para Linux. |
 | `src/extension` | Extensão Manifest V3 para Brave e Chrome, construída com WXT. |
+| `website` | Landing page estática e gerador do Worker que a publica. |
 
 Para desenvolver no Linux, instale Node.js, pnpm, Rust e as [dependências de sistema do Tauri](https://v2.tauri.app/start/prerequisites/). Na raiz do repositório:
 

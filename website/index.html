@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101914">
+  <meta name="description" content="Passage: uma interface para o seu cofre GNU pass, começando pelo Linux. Seu cofre, seu Git, seus dispositivos.">
+  <title>Passage — seu cofre continua seu</title>
+  <style>
+    :root { color-scheme: dark; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #101914; color: #ecf1e9; }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; line-height: 1.55; }
+    a { color: inherit; }
+    .wrap { width: min(1120px, calc(100% - 48px)); margin: auto; }
+    header { border-bottom: 1px solid #314238; }
+    nav { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+    .brand { font-size: 1.35rem; font-weight: 800; text-decoration: none; letter-spacing: -.06em; }
+    .brand span { color: #b5e57b; }
+    .navlinks { display: flex; gap: 26px; align-items: center; font-size: .9rem; }
+    .navlinks a { text-decoration: none; color: #b9c7ba; }
+    .navlinks a:hover, footer a:hover { color: #d4f6a8; }
+    .navlinks .github { color: #e9f2e8; border: 1px solid #425649; padding: 9px 14px; border-radius: 999px; }
+    .hero { padding: 108px 0 100px; display: grid; grid-template-columns: 1.2fr .8fr; gap: 72px; align-items: center; }
+    .eyebrow { color: #b5e57b; font-size: .74rem; font-weight: 800; text-transform: uppercase; letter-spacing: .18em; }
+    h1 { font-size: clamp(3.5rem, 7vw, 6.5rem); line-height: .98; letter-spacing: -.075em; margin: 18px 0 28px; max-width: 720px; }
+    h1 em { font-style: normal; color: #b5e57b; }
+    .lead { color: #c4d0c4; font-size: 1.2rem; max-width: 600px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 34px; }
+    .button { display: inline-flex; align-items: center; justify-content: center; padding: 13px 19px; border-radius: 9px; font-weight: 700; text-decoration: none; }
+    .button.primary { background: #b5e57b; color: #12200e; }
+    .button.secondary { border: 1px solid #607262; }
+    .hero-art { min-height: 380px; border: 1px solid #435b46; border-radius: 24px; background: radial-gradient(circle at 50% 40%, #46603d 0, #263c2d 37%, #15251b 72%); display: grid; place-items: center; overflow: hidden; position: relative; }
+    .hero-art:before, .hero-art:after { content: ""; position: absolute; border: 1px solid #62826160; border-radius: 50%; width: 410px; height: 410px; }
+    .hero-art:after { width: 290px; height: 290px; }
+    .vault { z-index: 1; width: 156px; height: 178px; border: 4px solid #b5e57b; border-radius: 26px; background: #1d3124; box-shadow: 0 24px 80px #080f0a99, inset 0 0 40px #9fe26b22; display: grid; place-items: center; transform: rotate(-7deg); }
+    .vault svg { width: 78px; fill: none; stroke: #b5e57b; stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+    .section { border-top: 1px solid #314238; padding: 82px 0; }
+    h2 { font-size: clamp(2rem, 4vw, 3.3rem); line-height: 1.08; letter-spacing: -.055em; margin: 10px 0 20px; }
+    .section-intro { max-width: 680px; color: #bfccbe; font-size: 1.08rem; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 38px; }
+    .card { border: 1px solid #3b5040; border-radius: 16px; background: #18271d; padding: 27px; }
+    .card .number { color: #b5e57b; font-family: ui-monospace, monospace; font-size: .8rem; }
+    .card h3 { font-size: 1.15rem; margin: 28px 0 8px; }
+    .card p { color: #b9c6b9; margin: 0; }
+    .install { background: #d6ebb9; color: #162316; padding: 82px 0; }
+    .install .eyebrow { color: #42642e; }
+    .install p { max-width: 660px; }
+    .command { margin: 28px 0 13px; padding: 19px 22px; border-radius: 11px; background: #152218; color: #eaf5e3; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; overflow-x: auto; white-space: nowrap; }
+    .command span { color: #b5e57b; }
+    .fine { font-size: .87rem; opacity: .8; }
+    .roadmap { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+    .roadmap ul { margin: 20px 0 0; padding: 0; list-style: none; }
+    .roadmap li { padding: 14px 0; border-bottom: 1px solid #314238; color: #bfccbe; }
+    .roadmap li strong { color: #ecf1e9; }
+    footer { padding: 34px 0; border-top: 1px solid #314238; color: #aebbad; font-size: .88rem; }
+    footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+    footer a { text-decoration: none; }
+    @media (max-width: 760px) { .hero, .roadmap { grid-template-columns: 1fr; } .hero { padding: 70px 0; gap: 42px; } .hero-art { min-height: 280px; } .grid { grid-template-columns: 1fr; } .navlinks a:not(.github) { display: none; } .section, .install { padding: 64px 0; } }
+  </style>
+</head>
+<body>
+  <header><nav class="wrap" aria-label="Navegação principal"><a class="brand" href="/">passage<span>.</span></a><div class="navlinks"><a href="#como-funciona">Como funciona</a><a href="#instalar">Instalar</a><a class="github" href="https://github.com/plu-nz/passage">Ver no GitHub ↗</a></div></nav></header>
+  <main>
+    <section class="hero wrap"><div><div class="eyebrow">Open source · GNU pass · Linux first</div><h1>Seu cofre continua <em>seu.</em></h1><p class="lead">Passage é uma interface para cofres GNU pass. Seus segredos continuam nos seus arquivos GPG, e você escolhe onde sincronizar o Git privado.</p><div class="actions"><a class="button primary" href="#instalar">Instalar no Linux →</a><a class="button secondary" href="https://github.com/plu-nz/passage#estado-do-c%C3%B3digo">Conheça o projeto</a></div></div><div class="hero-art" aria-hidden="true"><div class="vault"><svg viewBox="0 0 90 90"><path d="M22 40V27a23 23 0 0 1 46 0v13"/><rect x="13" y="39" width="64" height="46" rx="10"/><circle cx="45" cy="60" r="5"/><path d="M45 65v9"/></svg></div></div></section>
+    <section id="como-funciona" class="section"><div class="wrap"><div class="eyebrow">Uma base aberta</div><h2>O mesmo cofre, nos seus termos.</h2><p class="section-intro">O Passage aproveita o formato e as ferramentas do GNU pass. A proposta é unir o uso no terminal a uma experiência visual e, depois, aos navegadores.</p><div class="grid"><article class="card"><div class="number">01 / FORMATO</div><h3>Arquivos GPG</h3><p>Entradas compatíveis com GNU pass. O aplicativo desktop atual já lê seu cofre local por meio de <code>pass show</code>.</p></article><article class="card"><div class="number">02 / CONTROLE</div><h3>Git sob sua escolha</h3><p>O cofre pode usar um repositório Git privado em um serviço externo ou na sua própria infraestrutura. A sincronização no app ainda está planejada.</p></article><article class="card"><div class="number">03 / TERMINAL</div><h3>Sem trocar seu fluxo</h3><p>O GNU pass continua funcionando diretamente no terminal. O Passage é uma interface adicional para o mesmo formato.</p></article></div></div></section>
+    <section id="instalar" class="install"><div class="wrap"><div class="eyebrow">Versão inicial</div><h2>Experimente no Linux.</h2><p>O instalador baixa o release Linux x86_64, verifica seu SHA-256 e instala o aplicativo no seu usuário. Não é necessário clonar o repositório.</p><div class="command"><span>$</span> curl -LsSf https://passage.plu.nz/install.sh | sh</div><p class="fine">Requer GNU pass configurado e as bibliotecas gráficas do Tauri. Revise o <a href="https://github.com/plu-nz/passage/blob/main/scripts/install.sh">script</a> antes de executá-lo.</p><a class="button secondary" style="border-color:#527348" href="https://github.com/plu-nz/passage/releases/latest">Ver release ↗</a></div></section>
+    <section class="section"><div class="wrap roadmap"><div><div class="eyebrow">Em construção</div><h2>Onde estamos.</h2><p class="section-intro">O desktop já permite listar, buscar e consultar entradas locais. A extensão para Brave e Chrome ainda está no estágio inicial; o conector e o preenchimento automático não estão prontos.</p></div><div><ul><li><strong>Agora:</strong> leitura local pelo desktop Linux e instalador.</li><li><strong>MVP:</strong> conectar extensões, parear cada navegador e preencher logins.</li><li><strong>Depois:</strong> edição, sincronização Git no app e acesso web independente.</li></ul><p><a href="https://github.com/plu-nz/passage/blob/main/README.md">Leia os requisitos e acompanhe o desenvolvimento ↗</a></p></div></div></section>
+  </main>
+  <footer><div class="wrap"><span>Passage · Um projeto open source da <a href="https://github.com/plu-nz">plu.nz</a></span><span><a href="https://github.com/plu-nz/passage">Código-fonte</a> · <a href="https://github.com/plu-nz/passage/issues">Issues</a></span></div></footer>
+</body>
+</html>

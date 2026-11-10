@@ -43,6 +43,8 @@ Para preencher, a extensão precisará solicitar acesso para o domínio da aba a
 
 ## 6. Endereço do instalador
 
-O código público fica em `github.com/plu-nz/passage`. O endereço `https://passage.plu.nz/install.sh` é um redirecionamento HTTP 302 da Cloudflare para `https://raw.githubusercontent.com/plu-nz/passage/main/scripts/install.sh`. A raiz `https://passage.plu.nz/` redireciona para o repositório. O subdomínio usa um registro DNS com proxy da Cloudflare e duas Single Redirect Rules na fase `http_request_dynamic_redirect`. O instalador continua versionado neste repositório; o atalho não hospeda uma segunda cópia.
+O código público fica em `github.com/plu-nz/passage`. A raiz `https://passage.plu.nz/` publica a landing page de `website/index.html` por meio do Cloudflare Worker `passage-landing`, associado ao subdomínio como Worker Custom Domain. O endereço `https://passage.plu.nz/install.sh` continua sendo um redirecionamento HTTP 302 da Cloudflare para `https://raw.githubusercontent.com/plu-nz/passage/main/scripts/install.sh`, por uma Single Redirect Rule na fase `http_request_dynamic_redirect`. O instalador continua versionado neste repositório; o atalho não hospeda uma segunda cópia.
+
+Para reconstruir o Worker, execute `node website/build-worker.mjs`; o resultado fica em `website/dist/worker.js`. O deploy atual é manual pela API da Cloudflare. Mudanças na página exigem gerar e publicar novamente o Worker; um push no GitHub, por si só, não atualiza o site. O Worker também implementa o redirecionamento `/install.sh` como fallback caso a regra da Cloudflare seja removida.
 
 O comando curto executa o script da branch `main`. O script baixa o pacote Linux x86_64 do release mais recente, verifica seu SHA-256 e instala sem clonar ou compilar o repositório. O arquivo de checksum protege contra transferência corrompida, mas ambos vêm do mesmo release. Versões fixas e assinatura de artefatos podem ser adicionadas antes de uma distribuição estável.
