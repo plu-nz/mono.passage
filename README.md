@@ -24,6 +24,8 @@ pnpm dev:desktop
 
 Para gerar a extensão, execute `pnpm build:extension` e carregue `src/extension/.output/chrome-mv3` como extensão descompactada em `brave://extensions` ou `chrome://extensions`. A extensão indicará que o conector local ainda não está instalado; isso é esperado nesta etapa. Para usar o desktop, instale GNU `pass` e configure um cofre em `~/.password-store` ou defina `PASSWORD_STORE_DIR`. A chave GPG e o `gpg-agent` continuam sob controle do sistema.
 
+Para instalar o aplicativo no perfil do usuário em Linux, execute `./scripts/install-linux-user.sh`. O script compila o binário Tauri, instala `~/.local/bin/passage` e cria uma entrada no menu de aplicativos. O diretório `~/.local/bin` deve estar no `PATH` da sessão. GNU `pass` precisa estar instalado para abrir o cofre.
+
 Veja [as decisões e pendências da implementação](docs/decisions.md) para revisar o caminho adotado.
 
 ## Princípios
