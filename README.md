@@ -29,7 +29,7 @@ Para gerar a extensão, execute `pnpm build:extension` e carregue `src/extension
 Com Git, Node.js, pnpm, Rust e as [dependências de sistema do Tauri](https://v2.tauri.app/start/prerequisites/) instalados:
 
 ```sh
-curl -LsSf https://raw.githubusercontent.com/plu-nz/passage/main/scripts/install.sh | sh
+curl -LsSf https://passage.plu.nz/install.sh | sh
 ```
 
 O script baixa o código público, compila o app e instala `~/.local/bin/passage` com um atalho no menu. Ele não instala as dependências do sistema. Para abrir um cofre, instale GNU `pass` e configure `~/.password-store` ou `PASSWORD_STORE_DIR`. `~/.local/bin` deve estar no `PATH` da sessão. Também é possível clonar o repositório e executar `./scripts/install-linux-user.sh` diretamente.

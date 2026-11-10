@@ -40,3 +40,9 @@ Para preencher, a extensão precisará solicitar acesso para o domínio da aba a
 - Política de edição concorrente e resolução de conflitos Git.
 - Desenho de desbloqueio biométrico que proteja efetivamente a chave privada.
 - Futuro cliente web sem conector e eventual app Android próprio.
+
+## 6. Endereço do instalador
+
+O código público fica em `github.com/plu-nz/passage`. O endereço `https://passage.plu.nz/install.sh` é um redirecionamento HTTP 302 da Cloudflare para `https://raw.githubusercontent.com/plu-nz/passage/main/scripts/install.sh`. A raiz `https://passage.plu.nz/` redireciona para o repositório. O subdomínio usa um registro DNS com proxy da Cloudflare e duas Single Redirect Rules na fase `http_request_dynamic_redirect`. O instalador continua versionado neste repositório; o atalho não hospeda uma segunda cópia.
+
+O comando curto executa o script da branch `main`, portanto acompanha as atualizações dessa branch. Antes de uma distribuição estável, devemos oferecer versões fixas e binários de release para evitar recompilar todas as dependências em cada instalação.
