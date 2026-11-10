@@ -26,13 +26,15 @@ Para gerar a extensão, execute `pnpm build:extension` e carregue `src/extension
 
 ## Instalação no Linux
 
-Com Git, Node.js, pnpm, Rust e as [dependências de sistema do Tauri](https://v2.tauri.app/start/prerequisites/) instalados:
+Em Linux x86_64, com `curl`, `tar` e `sha256sum`:
 
 ```sh
 curl -LsSf https://passage.plu.nz/install.sh | sh
 ```
 
-O script baixa o código público, compila o app e instala `~/.local/bin/passage` com um atalho no menu. Ele não instala as dependências do sistema. Para abrir um cofre, instale GNU `pass` e configure `~/.password-store` ou `PASSWORD_STORE_DIR`. `~/.local/bin` deve estar no `PATH` da sessão. Também é possível clonar o repositório e executar `./scripts/install-linux-user.sh` diretamente.
+O script baixa o binário pronto do [release mais recente](https://github.com/plu-nz/passage/releases/latest), verifica o SHA-256 e instala `~/.local/bin/passage` com um atalho no menu. Não é preciso clonar o repositório, nem instalar Node.js, pnpm ou Rust. GNU `pass` e as bibliotecas gráficas do Tauri ainda são dependências de execução; configure um cofre em `~/.password-store` ou `PASSWORD_STORE_DIR`. `~/.local/bin` deve estar no `PATH` da sessão.
+
+Para compilar e instalar a partir do código local, use `./scripts/install-linux-user.sh`.
 
 Veja [as decisões e pendências da implementação](docs/decisions.md) para revisar o caminho adotado.
 
