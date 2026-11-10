@@ -61,7 +61,7 @@ O suporte a iOS é desejável no futuro, se tecnicamente viável, mas está fora
 
 ## Sincronização e recuperação
 
-- Usar um repositório Git **privado para o cofre**, separado do repositório de código `xonha/passage`.
+- Usar um repositório Git **privado para o cofre**, separado do repositório de código `plu-nz/passage`.
 - Aceitar hospedagem em GitHub ou em um servidor Git privado, inclusive no NAS do usuário.
 - Detectar alterações simultâneas. Conflitos na mesma entrada não podem ser resolvidos silenciosamente, pois os arquivos `.gpg` não admitem mesclagem textual útil.
 - Prever backup e recuperação da chave PGP. Perder o celular, o leitor biométrico ou um dispositivo não pode ser a única causa de perda permanente do cofre.
