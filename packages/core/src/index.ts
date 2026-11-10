@@ -9,7 +9,7 @@ export interface VaultEntry {
 export type VaultState =
   | { kind: 'unavailable'; reason: string }
   | { kind: 'locked' }
-  | { kind: 'unlocked' };
+  | { kind: 'available' };
 
 export interface VaultPort {
   state(): Promise<VaultState>;

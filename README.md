@@ -6,13 +6,13 @@ Este documento registra os requisitos discutidos até agora. Ele descreve o prod
 
 ## Estado do código
 
-O repositório contém um esqueleto executável do MVP. O app desktop mostra o estado de integração e a extensão Chromium verifica a presença de um conector local. Leitura do cofre, preenchimento, pareamento e sincronização ainda precisam ser implementados.
+O app desktop já lista entradas de um cofre GNU pass local, permite buscar por nome e abre uma entrada usando `pass show`. A extensão Chromium ainda verifica apenas a presença de um conector local. Preenchimento, pareamento, edição e sincronização ainda precisam ser implementados.
 
 | Diretório | Responsabilidade |
 | --- | --- |
 | `packages/core` | Tipos e contrato compartilhado do cofre e das mensagens locais. |
-| `apps/desktop` | Interface React/Vite e aplicativo Tauri 2 para Linux. |
-| `apps/extension` | Extensão Manifest V3 para Brave e Chrome, construída com WXT. |
+| `src/desktop` | Interface React/Vite e aplicativo Tauri 2 para Linux. |
+| `src/extension` | Extensão Manifest V3 para Brave e Chrome, construída com WXT. |
 
 Para desenvolver no Linux, instale Node.js, pnpm, Rust e as [dependências de sistema do Tauri](https://v2.tauri.app/start/prerequisites/). Na raiz do repositório:
 
@@ -22,7 +22,9 @@ pnpm check
 pnpm dev:desktop
 ```
 
-Para gerar a extensão, execute `pnpm build:extension` e carregue `apps/extension/.output/chrome-mv3` como extensão descompactada em `brave://extensions` ou `chrome://extensions`. A extensão indicará que o conector local ainda não está instalado; isso é esperado nesta etapa.
+Para gerar a extensão, execute `pnpm build:extension` e carregue `src/extension/.output/chrome-mv3` como extensão descompactada em `brave://extensions` ou `chrome://extensions`. A extensão indicará que o conector local ainda não está instalado; isso é esperado nesta etapa. Para usar o desktop, instale GNU `pass` e configure um cofre em `~/.password-store` ou defina `PASSWORD_STORE_DIR`. A chave GPG e o `gpg-agent` continuam sob controle do sistema.
+
+Veja [as decisões e pendências da implementação](docs/decisions.md) para revisar o caminho adotado.
 
 ## Princípios
 
@@ -112,7 +114,7 @@ O MVP entrega **aplicativo desktop para Linux e extensões para Brave e Chrome**
 
 ## Decisões técnicas em aberto
 
-- Tecnologia da interface: TypeScript com Tauri 2 e código compartilhado com extensões, Flutter, ou outra combinação.
+- Tecnologia da interface: TypeScript com Tauri 2 e código compartilhado com extensões foi escolhida para o MVP; revisar após validar o fluxo completo.
 - Uso direto do Browserpass ou criação de uma extensão e conector próprios.
 - Modelo de desbloqueio biométrico no Linux, armazenamento da chave local e interação com `gpg-agent`.
 - Como oferecer uma cópia cifrada da chave PGP para acesso web emergencial e como autorizar o serviço web a ler o Git privado.

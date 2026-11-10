@@ -3,5 +3,5 @@ dist/
 .output/
 .wxt/
 target/
-apps/desktop/src-tauri/gen/
+src/desktop/src-tauri/gen/
 *.log

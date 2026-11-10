@@ -166,7 +166,13 @@ importers:
 
   .: {}
 
-  apps/desktop:
+  packages/core:
+    devDependencies:
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  src/desktop:
     dependencies:
       '@passage/core':
         specifier: workspace:*
@@ -200,7 +206,7 @@ importers:
         specifier: ^8.3.7
         version: 8.3.7(jiti@2.7.0)
 
-  apps/extension:
+  src/extension:
     dependencies:
       '@passage/core':
         specifier: workspace:*
@@ -212,12 +218,6 @@ importers:
       wxt:
         specifier: ^0.21.5
         version: 0.21.5(rolldown@1.2.18)(typescript@5.9.3)(vite@8.3.7(jiti@2.7.0))
-
-  packages/core:
-    devDependencies:
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
 
 packages:
 

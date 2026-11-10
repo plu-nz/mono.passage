@@ -1,0 +1,25 @@
+:root { font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: #f4f1e9; background: #151a19; font-synthesis: none; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+button, input { font: inherit; }
+button { cursor: pointer; border: 1px solid #526657; border-radius: 9px; padding: 10px 14px; color: #f4f1e9; background: #26372e; }
+button:hover, button:focus-visible { border-color: #b4e0c2; }
+.shell { max-width: 1100px; margin: 0 auto; padding: 32px; }
+header { display: flex; align-items: center; gap: 16px; margin-bottom: 30px; }
+.mark { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 13px; background: #b4e0c2; color: #173328; font-size: 27px; font-weight: 800; }
+h1 { margin: 0; font-size: 25px; } header p { margin: 4px 0 0; color: #b9c4bd; }
+.notice, .error { padding: 18px; border: 1px solid #665344; border-radius: 12px; background: #302820; }
+.toolbar { display: flex; gap: 12px; margin-bottom: 16px; }
+input { flex: 1; min-width: 0; padding: 12px; border: 1px solid #526657; border-radius: 9px; outline: none; color: inherit; background: #202824; }
+input:focus { border-color: #b4e0c2; }
+.workspace { display: grid; grid-template-columns: minmax(220px, 35%) 1fr; min-height: 460px; border: 1px solid #3d4942; border-radius: 14px; overflow: hidden; }
+nav { padding: 10px; border-right: 1px solid #3d4942; overflow: auto; } nav p { color: #9aaba0; padding: 10px; }
+.entry { display: block; width: 100%; margin-bottom: 4px; border: 0; text-align: left; overflow-wrap: anywhere; background: transparent; }
+.entry.selected { background: #34513c; }
+.detail { padding: 28px; min-width: 0; } .detail h2 { margin: 0 0 26px; overflow-wrap: anywhere; }
+.detail label { display: block; margin: 20px 0 8px; color: #b4e0c2; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+.password { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px; border: 1px solid #3d4942; border-radius: 9px; }
+.password code { overflow-wrap: anywhere; } pre { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5; }
+.hint { margin-top: 30px; color: #9aaba0; font-size: 12px; line-height: 1.5; }
+.error { margin-top: 16px; }
+@media(max-width: 650px) { .shell { padding: 16px; } .workspace { grid-template-columns: 1fr; } nav { max-height: 220px; border-right: 0; border-bottom: 1px solid #3d4942; } }
