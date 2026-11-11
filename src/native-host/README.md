@@ -20,7 +20,7 @@ sh scripts/install-native-host.sh \
   ID_MOSTRADO_EM_CHROME_EXTENSIONS
 ```
 
-Para usar outro `CARGO_TARGET_DIR`, passe o caminho real do binário produzido. Os IDs de extensão aparecem no gerenciador de cada navegador após carregar a extensão descompactada. O script registra manifestos para perfis estáveis de Brave e Chrome em `~/.config`; Brave Beta/Nightly e perfis alternativos ainda não são atendidos. É preciso Python 3.
+Para usar outro `CARGO_TARGET_DIR`, passe o caminho real do binário produzido. Os IDs de extensão aparecem no gerenciador de cada navegador após carregar a extensão descompactada. O script registra manifestos para Brave e Chrome estáveis; também registra perfis Brave Beta, Nightly e Brave Origin já existentes. É preciso Python 3.
 
 ## Parear e revogar
 
@@ -35,6 +35,8 @@ passage-native-host revoke chrome-extension://ID_DA_EXTENSAO/ ID_DA_INSTALACAO
 `list` mostra a origem e o ID da instalação; `revoke` bloqueia pedidos seguintes. O token emitido após a aprovação é mostrado uma vez ao navegador e armazenado apenas como hash no host. O estado local fica em `~/.config/passage/native-host.json` (ou `XDG_CONFIG_HOME/passage`) com permissões de usuário.
 
 Cada pareamento é válido apenas para o cofre selecionado quando foi aprovado. Ao escolher outro cofre no desktop, a extensão precisa de novo pareamento para acessá-lo. A lista na interface desktop mostra somente os pareamentos do cofre atual; `list` no CLI mostra todos para permitir revogação. Se você voltar a selecionar um cofre anterior, o pareamento antigo desse cofre continua válido até ser revogado.
+
+O desktop pode bloquear o acesso das extensões com `passage-native-host lock` e liberar com `passage-native-host unlock`. O estado persiste após fechar o aplicativo ou reiniciar o computador; `passage-native-host lock-status` o consulta. O bloqueio corta pedidos novos mesmo quando o `gpg-agent` ainda tem a chave em cache. Ele não bloqueia o uso direto de `pass` no terminal nem apaga uma senha que já esteja visível numa página do navegador.
 
 ## Limites atuais
 

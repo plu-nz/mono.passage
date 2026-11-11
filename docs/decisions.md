@@ -24,7 +24,7 @@ Este registro separa o que já foi implementado das escolhas ainda provisórias.
 
 ## 3. Conector dos navegadores
 
-**Protótipo implementado:** host Native Messaging com pareamento por código aprovado no desktop ou terminal, token por instalação vinculado ao diretório do cofre, revogação pela interface ou CLI e leitura limitada à origem HTTPS associada a um campo `url` da entrada. Trocar de cofre exige novo pareamento. A extensão consulta o host e preenche após escolha do usuário. O estado do GPG é compartilhado pelo sistema. Ainda faltam validação ponta a ponta em Brave/Chrome, distribuição de extensões com IDs estáveis e auditoria de segurança antes de considerar o fluxo concluído. O empacotamento no código inclui o host, mas o release público atual ainda contém só o desktop.
+**Protótipo implementado:** host Native Messaging com pareamento por código aprovado no desktop ou terminal, token por instalação vinculado ao diretório do cofre, revogação pela interface ou CLI e leitura limitada à origem HTTPS associada a um campo `url` da entrada. Trocar de cofre exige novo pareamento. A extensão consulta o host e preenche após escolha do usuário. O estado do GPG é compartilhado pelo sistema. Testes de integração diretos passaram; a extensão real no Brave Origin, com perfil e cofre descartáveis, conseguiu consultar, parear, listar, ler e observar o bloqueio via Native Messaging. Ainda faltam preenchimento real de formulário nos dois navegadores, validação no Chrome, distribuição com IDs estáveis e revisão final antes de considerar o fluxo concluído. O empacotamento no código inclui o host, mas o release público atual ainda contém só o desktop.
 
 Para preencher, a extensão precisará solicitar acesso para o domínio da aba atual e só injetar credenciais após uma ação do usuário. O protocolo deve associar a resposta à aba e à origem que iniciou o pedido; nunca enviar segredos a uma página arbitrária nem aceitar um domínio fornecido pela própria página.
 
@@ -36,12 +36,20 @@ O desktop mostra o estado do repositório do cofre e oferece baixar/enviar quand
 
 O desktop usa o GitHub CLI (`gh`) para autenticação pelo navegador. O Passage exibe apenas a conta ativa, abre o fluxo do CLI no terminal padrão e não recebe o token. Para um cofre que já seja um repositório Git, configura o helper de credenciais de `github.com` somente no `.git/config` local; não altera remotos nem cria repositórios. O armazenamento do token segue o comportamento do `gh`, incluindo seu fallback em arquivo local quando o keyring não funciona. A integração não substitui autenticação SSH ou de outros servidores Git.
 
+O desktop agora pode inicializar Git no diretório do cofre e adicionar `origin` quando ele não existe. Não cria commits nem força a ligação com um remoto que já tenha histórico. Teste automatizado com dois clones divergentes confirma que pull e push recusam a divergência sem substituir o HEAD local. Ainda falta exercício com um remoto privado real e configuração inicial de upstream pela interface.
+
+### Bloqueio e TOTP
+
+O host mantém um estado `locked` persistente. A interface pode bloquear/liberar o acesso das extensões; o host verifica o estado antes e após a leitura. Isso não bloqueia `pass` no terminal nem limpa o cache do `gpg-agent`. Há uma janela residual para um pedido já em andamento entre a última verificação e o envio da resposta; por isso a interface descreve o controle como bloqueio do acesso das extensões, não como bloqueio criptográfico do cofre.
+
+O desktop lê URI `otpauth://totp/...` em linha própria, como no `pass-otp`, e `otpauth: URI`. Gera código somente em memória e valida algoritmo, dígitos e período. Os testes incluem os vetores da RFC 6238 para SHA-1, SHA-256 e SHA-512. Não há geração de TOTP pela extensão neste estágio.
+
 ## 4. Próximas etapas recomendadas
 
 1. Criar cofre de teste descartável e exercitar leitura e escrita, incluindo `PASSWORD_STORE_DIR`, falha de GPG e alteração externa pelo terminal.
 2. Validar host, pareamento, revogação e preenchimento em instalações reais de Brave e Chrome; definir IDs estáveis para distribuição.
 3. Validar sincronização com remoto Git de teste e conflitos concorrentes; reduzir a janela de corrida da edição antes de recomendar dados reais.
-4. Empacotar e publicar novo release com host após a matriz de testes; o release atual ainda não o contém.
+4. Empacotar e publicar novo release com host e extensão após a matriz de testes; o release atual ainda não os contém. O workflow já foi preparado para anexar a extensão como arquivo.
 5. Projetar biometria e bloqueio considerando a chave GPG e o cache do `gpg-agent`, antes de prometer desbloqueio pela digital no primeiro acesso.
 
 ## 5. Decisões ainda abertas

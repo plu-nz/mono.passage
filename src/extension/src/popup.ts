@@ -55,6 +55,12 @@ function offerPairing() {
 async function initialize() {
   const response = await request({ type: 'status' });
   if (response.type !== 'status') throw new Error('Conector local indisponível.');
+  if (response.locked === true) {
+    status.textContent = 'Acesso das extensões bloqueado no Passage.';
+    actions.replaceChildren(button('Verificar novamente', initialize));
+    entries.replaceChildren();
+    return;
+  }
   if (response.paired) {
     try { await loadEntries(); }
     catch (error) { showError(error); offerPairing(); }

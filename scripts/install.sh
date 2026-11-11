@@ -6,7 +6,7 @@ if [ "$(uname -s)" != Linux ] || [ "$(uname -m)" != x86_64 ]; then
   exit 1
 fi
 
-for command_name in curl tar sha256sum install mktemp; do
+for command_name in curl tar sha256sum install mktemp mkdir; do
   if ! command -v "$command_name" >/dev/null 2>&1; then
     echo "Passage: comando necessário não encontrado: $command_name" >&2
     exit 1
@@ -23,6 +23,14 @@ curl -fsSL "$release_url/$archive.sha256" -o "$temp_dir/$archive.sha256"
 (cd "$temp_dir" && sha256sum -c "$archive.sha256")
 tar -xzf "$temp_dir/$archive" -C "$temp_dir"
 
+extension_archive='passage-extension-chromium.tar.gz'
+extension_available=false
+if curl -fsSL "$release_url/$extension_archive" -o "$temp_dir/$extension_archive" 2>/dev/null; then
+  curl -fsSL "$release_url/$extension_archive.sha256" -o "$temp_dir/$extension_archive.sha256"
+  (cd "$temp_dir" && sha256sum -c "$extension_archive.sha256")
+  extension_available=true
+fi
+
 install_root="${XDG_DATA_HOME:-$HOME/.local/share}"
 user_bin="$HOME/.local/bin"
 install -Dm755 "$temp_dir/passage" "$user_bin/.passage.new"
@@ -36,6 +44,12 @@ if [ -f "$temp_dir/install-native-host.sh" ]; then
 fi
 install -Dm644 "$temp_dir/nz.plu.passage.png" "$install_root/icons/hicolor/512x512/apps/nz.plu.passage.png"
 install -Dm644 "$temp_dir/nz.plu.passage.desktop" "$install_root/applications/nz.plu.passage.desktop"
+if [ "$extension_available" = true ]; then
+  extension_dir="$install_root/passage/extension-chromium"
+  mkdir -p "$extension_dir"
+  tar -xzf "$temp_dir/$extension_archive" -C "$extension_dir"
+  printf 'Extensão descompactada em %s; carregue essa pasta no Brave ou Chrome e registre os IDs no conector.\n' "$extension_dir"
+fi
 
 if [ -f "$temp_dir/passage-native-host" ] && [ -n "${PASSAGE_BRAVE_EXTENSION_ID:-}" ] && [ -n "${PASSAGE_CHROME_EXTENSION_ID:-}" ]; then
   if [ -f "$temp_dir/install-native-host.sh" ]; then

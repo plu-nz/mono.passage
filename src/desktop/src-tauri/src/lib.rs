@@ -1,11 +1,15 @@
 pub mod git;
 mod github;
+mod otp;
 mod pairing;
 pub mod setup;
 pub mod vault;
 
 use git::{GitStatus, GitVault};
-use pairing::{approve_pairing, list_pairings, revoke_pairing};
+use pairing::{
+    approve_pairing, browser_access_state, list_pairings, lock_browser_access, revoke_pairing,
+    unlock_browser_access,
+};
 use serde::Serialize;
 use setup::VaultInfo;
 use std::process::Command;
@@ -78,6 +82,12 @@ fn read_entry(id: String) -> Result<Secret, String> {
 }
 
 #[tauri::command]
+fn generate_totp(id: String) -> Result<otp::TotpCode, String> {
+    let entry = Vault::open_env()?.read(&id)?;
+    otp::generate(&entry)
+}
+
+#[tauri::command]
 fn create_login_entry(
     id: String,
     password: String,
@@ -118,6 +128,16 @@ fn remove_entry(id: String, expected_hash: String) -> Result<(), String> {
 #[tauri::command]
 fn git_status() -> Result<GitStatus, String> {
     GitVault::open(Vault::open_env()?.root())?.status()
+}
+
+#[tauri::command]
+fn git_initialize() -> Result<GitStatus, String> {
+    GitVault::initialize(Vault::open_env()?.root())
+}
+
+#[tauri::command]
+fn git_set_remote(url: String) -> Result<GitStatus, String> {
+    GitVault::open(Vault::open_env()?.root())?.set_remote(&url)
 }
 
 #[tauri::command]
@@ -164,12 +184,15 @@ pub fn run() {
             create_key_and_vault,
             list_entries,
             read_entry,
+            generate_totp,
             create_login_entry,
             update_login_entry,
             create_entry,
             update_entry,
             remove_entry,
             git_status,
+            git_initialize,
+            git_set_remote,
             github_status,
             github_login,
             github_configure_vault,
@@ -177,7 +200,10 @@ pub fn run() {
             git_push,
             list_pairings,
             approve_pairing,
-            revoke_pairing
+            revoke_pairing,
+            browser_access_state,
+            lock_browser_access,
+            unlock_browser_access
         ])
         .run(tauri::generate_context!())
         .expect("failed to run Passage");

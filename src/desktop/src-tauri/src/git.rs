@@ -18,6 +18,43 @@ pub struct GitVault {
 }
 
 impl GitVault {
+    pub fn initialize(root: &Path) -> Result<GitStatus, String> {
+        let root = root.canonicalize().map_err(|_| "Cofre não encontrado")?;
+        if !root.join(".gpg-id").is_file() {
+            return Err("Inicialize o cofre com GNU pass antes do Git".into());
+        }
+        if root.join(".git").exists() {
+            return Err("Este cofre já contém um repositório Git".into());
+        }
+        if Self::open(&root).is_ok() {
+            return Err("Este cofre já pertence a um repositório Git".into());
+        }
+        let result = Command::new("git")
+            .args(["init", "-b", "main"])
+            .current_dir(&root)
+            .output()
+            .map_err(|_| "Git não está instalado")?;
+        if !result.status.success() {
+            return Err("Não foi possível iniciar o repositório Git".into());
+        }
+        Self::open(&root)?.status()
+    }
+
+    pub fn set_remote(&self, url: &str) -> Result<GitStatus, String> {
+        let url = url.trim();
+        if url.is_empty() || url.starts_with('-') || url.chars().any(char::is_control) {
+            return Err("URL do remoto Git inválida".into());
+        }
+        if self.try_output(&["remote", "get-url", "origin"]).is_some() {
+            return Err(
+                "O remoto origin já existe. Altere-o pelo Git para evitar substituição acidental."
+                    .into(),
+            );
+        }
+        self.output(&["remote", "add", "origin", url])?;
+        self.status()
+    }
+
     pub fn configure_github_helper(&self) -> Result<(), String> {
         // An empty helper resets inherited helpers for this host only, so a
         // different global credential manager cannot answer first.
@@ -343,5 +380,69 @@ mod tests {
         assert!(git.push().unwrap_err().contains("commits novos"));
         assert!(local.join("local-only.gpg").exists());
         assert!(!local.join("remote-only.gpg").exists());
+    }
+
+    #[test]
+    fn initializes_only_a_pass_vault_and_preserves_existing_remote() {
+        let f = Fixture::new();
+        let local = f.root.join("vault");
+        fs::create_dir(&local).unwrap();
+        assert!(GitVault::initialize(&local).is_err());
+        fs::write(local.join(".gpg-id"), b"test-key\n").unwrap();
+        let git = GitVault::initialize(&local).unwrap();
+        assert_eq!(git.branch, "main");
+        assert!(git.dirty);
+        let git = GitVault::open(&local).unwrap();
+        git.set_remote("https://github.com/example/vault.git")
+            .unwrap();
+        assert!(git.set_remote("https://example.invalid/other.git").is_err());
+        assert_eq!(
+            git.output(&["remote", "get-url", "origin"]).unwrap().trim(),
+            "https://github.com/example/vault.git"
+        );
+        assert!(GitVault::initialize(&local).is_err());
+    }
+
+    #[test]
+    fn refuses_divergence_without_changing_local_or_remote() {
+        let f = Fixture::new();
+        let bare = f.root.join("remote.git");
+        f.git(&f.root, &["init", "--bare", bare.to_str().unwrap()]);
+        let local = f.root.join("vault");
+        fs::create_dir(&local).unwrap();
+        f.git(&local, &["init", "-b", "main"]);
+        f.git(&local, &["config", "user.name", "Passage Test"]);
+        f.git(&local, &["config", "user.email", "test@example.invalid"]);
+        fs::write(local.join(".gpg-id"), b"test-key\n").unwrap();
+        f.git(&local, &["add", ".gpg-id"]);
+        f.git(&local, &["commit", "-m", "initial"]);
+        f.git(&local, &["remote", "add", "origin", bare.to_str().unwrap()]);
+        f.git(&local, &["push", "-u", "origin", "main"]);
+        let second = f.root.join("second");
+        f.git(
+            &f.root,
+            &[
+                "clone",
+                "-b",
+                "main",
+                bare.to_str().unwrap(),
+                second.to_str().unwrap(),
+            ],
+        );
+        f.git(&second, &["config", "user.name", "Passage Test"]);
+        f.git(&second, &["config", "user.email", "test@example.invalid"]);
+        fs::write(second.join("remote.gpg"), b"remote").unwrap();
+        f.git(&second, &["add", "remote.gpg"]);
+        f.git(&second, &["commit", "-m", "remote"]);
+        f.git(&second, &["push"]);
+        fs::write(local.join("local.gpg"), b"local").unwrap();
+        f.git(&local, &["add", "local.gpg"]);
+        f.git(&local, &["commit", "-m", "local"]);
+        let git = GitVault::open(&local).unwrap();
+        let head = git.output(&["rev-parse", "HEAD"]).unwrap();
+        assert!(git.pull().unwrap_err().contains("divergiram"));
+        assert!(git.push().unwrap_err().contains("remoto"));
+        assert_eq!(git.output(&["rev-parse", "HEAD"]).unwrap(), head);
+        assert!(!local.join("remote.gpg").exists());
     }
 }

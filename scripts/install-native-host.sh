@@ -29,7 +29,12 @@ for extension_id in (brave_id, chrome_id):
 
 config_home = pathlib.Path(os.environ.get("XDG_CONFIG_HOME", pathlib.Path.home() / ".config"))
 host = str(pathlib.Path(host).resolve(strict=True))
-for profile, extension_id in (("BraveSoftware/Brave-Browser", brave_id), ("google-chrome", chrome_id)):
+profiles = [("BraveSoftware/Brave-Browser", brave_id), ("google-chrome", chrome_id)]
+for variant in ("Brave-Origin", "Brave-Origin-Beta", "Brave-Origin-Nightly", "Brave-Browser-Beta", "Brave-Browser-Nightly"):
+    if (config_home / "BraveSoftware" / variant).is_dir():
+        profiles.append((f"BraveSoftware/{variant}", brave_id))
+
+for profile, extension_id in profiles:
     directory = config_home / profile / "NativeMessagingHosts"
     directory.mkdir(parents=True, exist_ok=True)
     manifest = directory / "com.plunz.passage.json"

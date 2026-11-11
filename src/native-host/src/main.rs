@@ -20,6 +20,8 @@ const PAIR_TTL: u64 = 300;
 struct State {
     pending: Vec<Pending>,
     authorized: Vec<Authorized>,
+    #[serde(default)]
+    locked: bool,
 }
 #[derive(Serialize, Deserialize)]
 struct Pending {
@@ -157,6 +159,9 @@ fn authorized(state: &State, extension: &str, id: &str, token: &str, vault_path:
             && a.vault_path.as_deref() == Some(vault_path)
     })
 }
+fn can_access(state: &State, extension: &str, id: &str, token: &str, vault_path: &Path) -> bool {
+    !state.locked && authorized(state, extension, id, token, vault_path)
+}
 
 fn approve_pending(state: &mut State, code: &str) -> Result<String, String> {
     let pending = state
@@ -192,14 +197,17 @@ fn handle(request: &Value, extension: &str) -> Result<Value, String> {
         "status" => {
             let id = field(request, "installationId")?;
             let vault = Vault::open_env()?;
-            let paired = with_state(|s| {
-                Ok(s.authorized.iter().any(|a| {
-                    a.origin == extension
-                        && a.installation_id == id
-                        && a.vault_path.as_deref() == Some(vault.root())
-                }))
+            let (paired, locked) = with_state(|s| {
+                Ok((
+                    s.authorized.iter().any(|a| {
+                        a.origin == extension
+                            && a.installation_id == id
+                            && a.vault_path.as_deref() == Some(vault.root())
+                    }),
+                    s.locked,
+                ))
             })?;
-            json!({"type":"status","version":1,"paired":paired})
+            json!({"type":"status","version":1,"paired":paired,"locked":locked})
         }
         "pair" => {
             let id = field(request, "installationId")?;
@@ -257,7 +265,7 @@ fn handle(request: &Value, extension: &str) -> Result<Value, String> {
             let token = field(request, "token")?;
             let origin = site_origin(field(request, "origin")?)?;
             let vault = Vault::open_env()?;
-            if !with_state(|s| Ok(authorized(s, extension, id, token, vault.root())))? {
+            if !with_state(|s| Ok(can_access(s, extension, id, token, vault.root())))? {
                 return Err("Extensão não autorizada para este cofre".into());
             }
             if kind == "listForOrigin" {
@@ -270,6 +278,9 @@ fn handle(request: &Value, extension: &str) -> Result<Value, String> {
                             .then(|| json!({"id":e.id,"title":e.title,"username":secret.username}))
                     })
                     .collect();
+                if !with_state(|s| Ok(can_access(s, extension, id, token, vault.root())))? {
+                    return Err("Acesso ao cofre bloqueado ou revogado".into());
+                }
                 json!({"type":"entries","entries":entries})
             } else {
                 let entry_id = field(request, "id")?;
@@ -281,6 +292,9 @@ fn handle(request: &Value, extension: &str) -> Result<Value, String> {
                 let secret = vault.read(entry_id)?;
                 if !matches_site(&secret.urls, &origin) {
                     return Err("Entrada indisponível para este site".into());
+                }
+                if !with_state(|s| Ok(can_access(s, extension, id, token, vault.root())))? {
+                    return Err("Acesso ao cofre bloqueado ou revogado".into());
                 }
                 json!({"type":"secret","id":entry_id,"username":secret.username.or(entry.username),"password":secret.password})
             }
@@ -346,6 +360,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .collect::<Vec<_>>())
         })?;
         println!("{}", serde_json::to_string(&items)?);
+        return Ok(());
+    }
+    if args.get(1).map(String::as_str) == Some("lock-status") {
+        let locked = with_state(|s| Ok(s.locked))?;
+        println!("{}", json!({"locked":locked}));
+        return Ok(());
+    }
+    if args.get(1).map(String::as_str) == Some("lock") {
+        with_state(|s| {
+            s.locked = true;
+            Ok(())
+        })?;
+        println!("Acesso das extensões bloqueado.");
+        return Ok(());
+    }
+    if args.get(1).map(String::as_str) == Some("unlock") {
+        with_state(|s| {
+            s.locked = false;
+            Ok(())
+        })?;
+        println!("Acesso das extensões liberado.");
         return Ok(());
     }
     if args.get(1).map(String::as_str) == Some("revoke") {
@@ -492,7 +527,12 @@ mod tests {
             token,
             vault_path
         ));
+        assert!(can_access(&state, origin, id, token, vault_path));
+        state.locked = true;
+        assert!(!can_access(&state, origin, id, token, vault_path));
+        state.locked = false;
+        assert!(can_access(&state, origin, id, token, vault_path));
         assert!(revoke_authorized(&mut state, origin, id));
-        assert!(!authorized(&state, origin, id, token, vault_path));
+        assert!(!can_access(&state, origin, id, token, vault_path));
     }
 }

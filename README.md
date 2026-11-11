@@ -8,7 +8,7 @@ Este documento registra os requisitos discutidos até agora. Ele descreve o prod
 
 ## Estado do código
 
-O app desktop permite escolher um cofre GNU pass existente, criar outro com uma chave GPG nova ou já disponível, listar, buscar, abrir, criar e editar entradas. A branch `main` também contém conexão à conta GitHub pelo GitHub CLI, sincronização Git conservadora, aprovação e revogação de extensões pela interface, e um host Native Messaging com busca por URL e preenchimento após ação do usuário. Ainda faltam validação ponta a ponta em Brave e Chrome e release atualizado; o release público atual continua distribuindo apenas o desktop anterior.
+O app desktop permite escolher um cofre GNU pass existente, criar outro com uma chave GPG nova ou já disponível, listar, buscar, abrir, criar e editar entradas, gerar TOTP e bloquear o acesso das extensões. A branch `main` também contém conexão à conta GitHub pelo GitHub CLI, inicialização do Git no cofre, configuração do remoto, sincronização Git conservadora, aprovação e revogação de extensões pela interface, e um host Native Messaging com busca por URL e preenchimento após ação do usuário. Ainda faltam validação ponta a ponta em Brave e Chrome e release atualizado; o release público atual continua distribuindo apenas o desktop anterior.
 
 | Diretório | Responsabilidade |
 | --- | --- |
@@ -55,6 +55,14 @@ Instale o [GitHub CLI (`gh`)](https://cli.github.com/). No painel **Sincronizaç
 
 Se o cofre já for a raiz de um repositório Git, **Usar neste cofre** configura apenas o `.git/config` desse cofre para pedir ao `gh` as credenciais de remotos HTTPS em `github.com`. O Passage não recebe nem salva o token. Essa etapa não cria um repositório remoto nem altera o remoto existente; configure a URL e o branch de acompanhamento pelo Git ou `pass git`. Remotos SSH e servidores Git privados continuam usando sua autenticação normal.
 
+No mesmo painel, **Iniciar Git neste cofre** cria um repositório local na branch `main` se o diretório ainda não tiver `.git`. **Adicionar remoto origin** registra a URL informada sem substituir um remoto existente. O Passage não cria commits nem configura o upstream: confira o conteúdo do cofre, registre apenas os arquivos cifrados e `.gpg-id` com `pass git`, então faça o primeiro `pass git push -u origin main`. Se o remoto já tiver histórico, resolva essa ligação pelo Git antes de sincronizar pelo Passage.
+
+### TOTP e bloqueio das extensões
+
+Para gerar um código, armazene um URI `otpauth://totp/...` em uma linha da entrada, como faz o `pass-otp`, abra a entrada e clique em **Gerar código TOTP**. O Passage também lê uma linha `otpauth: URI`. O código fica em memória e some ao expirar ou após fechar a entrada; ele não é gravado no cofre.
+
+No painel **Extensões autorizadas**, **Bloquear extensões** impede novas leituras pelo host Native Messaging, inclusive se a chave GPG estiver em cache. **Liberar extensões** restaura esse acesso. O estado persiste até outra ação; bloquear não fecha o cache do `gpg-agent` e não impede `pass show` no terminal. Um pedido já em andamento pode terminar antes de o bloqueio ser aplicado.
+
 ## Instalação no Linux
 
 Em Linux x86_64, com `curl`, `tar` e `sha256sum`:
@@ -63,7 +71,7 @@ Em Linux x86_64, com `curl`, `tar` e `sha256sum`:
 curl -LsSf https://passage.plu.nz/install.sh | sh
 ```
 
-O script baixa o binário pronto do [release mais recente](https://github.com/plu-nz/passage/releases/latest), verifica o SHA-256 e instala `~/.local/bin/passage` com um atalho no menu. Não é preciso clonar o repositório, nem instalar Node.js, pnpm ou Rust. GNU `pass`, GPG e as bibliotecas gráficas do Tauri ainda são dependências de execução. `~/.local/bin` deve estar no `PATH` da sessão.
+O script baixa o binário pronto do [release mais recente](https://github.com/plu-nz/passage/releases/latest), verifica o SHA-256 e instala `~/.local/bin/passage` com um atalho no menu. Releases que incluam a extensão também a instalam descompactada em `~/.local/share/passage/extension-chromium` (ou em `XDG_DATA_HOME/passage/extension-chromium`). Carregue essa pasta em `brave://extensions` e `chrome://extensions`; depois registre os IDs mostrados pelo navegador com `passage-install-native-host ~/.local/bin/passage-native-host ID_BRAVE ID_CHROME`. Não é preciso clonar o repositório, nem instalar Node.js, pnpm ou Rust. GNU `pass`, GPG e as bibliotecas gráficas do Tauri ainda são dependências de execução. `~/.local/bin` deve estar no `PATH` da sessão.
 
 O mesmo comando atualiza uma instalação existente para a release mais recente. Feche e abra o Passage após atualizar. A versão instalada muda apenas quando uma nova release é publicada.
 
@@ -74,7 +82,7 @@ gh workflow run release-linux.yml --ref main -f version=0.1.1
 gh run watch
 ```
 
-O [workflow manual](.github/workflows/release-linux.yml) valida que a tag ainda não existe, compila desktop e conector em Ubuntu 22.04, executa as verificações e publica o pacote e seu SHA-256 como release mais recente. A versão é informada sem o prefixo `v` e precisa ser incrementada a cada publicação. A extensão é compilada separadamente pelo desenvolvedor; sua distribuição ainda não faz parte da release.
+O [workflow manual](.github/workflows/release-linux.yml) valida que a tag ainda não existe, compila desktop, conector e extensão em Ubuntu 22.04, executa as verificações e publica os arquivos e seus SHA-256 como release mais recente. A versão é informada sem o prefixo `v` e precisa ser incrementada a cada publicação. A extensão é publicada como arquivo para carregar manualmente; publicação em lojas e IDs permanentes ainda estão pendentes.
 
 Para compilar e instalar a partir do código local, use `./scripts/install-linux-user.sh`.
 

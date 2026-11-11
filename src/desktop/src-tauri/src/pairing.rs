@@ -54,3 +54,26 @@ pub fn revoke_pairing(origin: String, installation_id: String) -> Result<(), Str
     host_command(&["revoke", &origin, &installation_id])?;
     Ok(())
 }
+
+#[tauri::command]
+pub fn browser_access_state() -> Result<bool, String> {
+    let output = host_command(&["lock-status"])?;
+    let value: serde_json::Value = serde_json::from_str(&output)
+        .map_err(|_| "Estado inválido do conector local".to_owned())?;
+    value
+        .get("locked")
+        .and_then(serde_json::Value::as_bool)
+        .ok_or_else(|| "Estado inválido do conector local".to_owned())
+}
+
+#[tauri::command]
+pub fn lock_browser_access() -> Result<(), String> {
+    host_command(&["lock"])?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn unlock_browser_access() -> Result<(), String> {
+    host_command(&["unlock"])?;
+    Ok(())
+}

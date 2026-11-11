@@ -82,16 +82,19 @@ jobs:
         run: |
           pnpm install --frozen-lockfile
           pnpm check
+          pnpm build:extension
           pnpm --filter @passage/desktop tauri build --no-bundle
           cargo test --manifest-path src/desktop/src-tauri/Cargo.toml --lib
           cargo test --manifest-path src/native-host/Cargo.toml
           cargo build --release --manifest-path src/native-host/Cargo.toml
+          python3 src/native-host/tests/integration.py src/native-host/target/release/passage-native-host
 
       - name: Package
         run: |
           ./scripts/package-linux.sh
           cd dist/release
           sha256sum -c passage-linux-x86_64.tar.gz.sha256
+          sha256sum -c passage-extension-chromium.tar.gz.sha256
 
       - name: Publish release
         env:
@@ -100,6 +103,8 @@ jobs:
           gh release create "$RELEASE_TAG" \
             dist/release/passage-linux-x86_64.tar.gz \
             dist/release/passage-linux-x86_64.tar.gz.sha256 \
+            dist/release/passage-extension-chromium.tar.gz \
+            dist/release/passage-extension-chromium.tar.gz.sha256 \
             --target "$GITHUB_SHA" \
             --title "$RELEASE_TAG" \
             --generate-notes \

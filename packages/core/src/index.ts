@@ -26,7 +26,7 @@ export type NativeRequest =
 
 export type NativeResponse =
   | { type: 'pong'; requestId: string; version: 1 }
-  | { type: 'status'; requestId: string; version: 1; paired: boolean }
+  | { type: 'status'; requestId: string; version: 1; paired: boolean; locked: boolean }
   | { type: 'pairPending'; requestId: string; code?: string; expiresAt?: number }
   | { type: 'paired'; requestId: string; token: string }
   | { type: 'entries'; requestId: string; entries: Pick<VaultEntry, 'id' | 'title' | 'username'>[] }

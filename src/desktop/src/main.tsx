@@ -12,6 +12,11 @@ type Pairing = { origin: string; installationId: string };
 type GpgKey = { id: string; label: string };
 type VaultInfo = { path: string; source: string; initialized: boolean; gpgKeys: GpgKey[]; recipientIds: string[]; passInstalled: boolean; gpgInstalled: boolean };
 type CreatedVault = { info: VaultInfo; fingerprint: string };
+type TotpCode = { code: string; period: number; remaining: number; validUntil: number };
+
+function displayDetails(details: string): string {
+  return details.split('\n').map(line => /^\s*(?:otpauth\s*:\s*)?otpauth:\/\//i.test(line) ? 'TOTP: configurado' : line).join('\n');
+}
 
 function App() {
   const [state, setState] = React.useState<VaultState>({ kind: 'unavailable', reason: 'Verificando o ambiente local…' });
@@ -31,11 +36,15 @@ function App() {
   const [entryBusy, setEntryBusy] = React.useState(false);
   const [git, setGit] = React.useState<GitStatus | null>(null);
   const [gitError, setGitError] = React.useState('');
+  const [gitRemote, setGitRemote] = React.useState('');
   const [github, setGithub] = React.useState<GithubStatus | null>(null);
   const [githubError, setGithubError] = React.useState('');
   const [pairings, setPairings] = React.useState<Pairing[]>([]);
   const [pairingError, setPairingError] = React.useState('');
   const [pairingCode, setPairingCode] = React.useState('');
+  const [browserLocked, setBrowserLocked] = React.useState<boolean | null>(null);
+  const [browserLockError, setBrowserLockError] = React.useState('');
+  const [totp, setTotp] = React.useState<TotpCode | null>(null);
   const [vaultInfo, setVaultInfo] = React.useState<VaultInfo | null>(null);
   const [vaultPath, setVaultPath] = React.useState('');
   const [keyId, setKeyId] = React.useState('');
@@ -50,6 +59,7 @@ function App() {
     requestNumber.current += 1;
     setSelected(null);
     setSecret(null);
+    setTotp(null);
     setVisible(false);
     setEditing(false);
     setCreating(false);
@@ -87,11 +97,21 @@ function App() {
     catch (cause) { setPairingError(String(cause)); }
   }, []);
   React.useEffect(() => { void refreshGit(); void refreshGithub(); void refreshPairings(); }, [refreshGit, refreshGithub, refreshPairings]);
+  const refreshBrowserLock = React.useCallback(async () => {
+    try { setBrowserLocked(await invoke<boolean>('browser_access_state')); setBrowserLockError(''); }
+    catch (cause) { setBrowserLocked(null); setBrowserLockError(String(cause)); }
+  }, []);
+  React.useEffect(() => { void refreshBrowserLock(); }, [refreshBrowserLock]);
   React.useEffect(() => {
     if (!secret) return;
-    const timer = window.setTimeout(() => { setSecret(null); setVisible(false); setEditing(false); setEntryPassword(''); setEntryDetails(''); }, 30_000);
+    const timer = window.setTimeout(() => { setSecret(null); setTotp(null); setVisible(false); setEditing(false); setEntryPassword(''); setEntryDetails(''); }, 30_000);
     return () => window.clearTimeout(timer);
   }, [secret]);
+  React.useEffect(() => {
+    if (!totp) return;
+    const timer = window.setTimeout(() => setTotp(null), Math.max(0, totp.validUntil * 1000 - Date.now()));
+    return () => window.clearTimeout(timer);
+  }, [totp]);
   React.useEffect(() => {
     if (!editing || !entryPassword || entryBusy) return;
     const timer = window.setTimeout(() => { setEditing(false); setCreating(false); setEntryPassword(''); setEntryDetails(''); }, 30_000);
@@ -102,6 +122,7 @@ function App() {
     const request = ++requestNumber.current;
     setSelected(id);
     setSecret(null);
+    setTotp(null);
     setVisible(false);
     setEditing(false);
     setCreating(false);
@@ -168,6 +189,15 @@ function App() {
     catch (cause) { setGitError(String(cause)); await refreshGit(); }
   }
 
+  async function setupGit(operation: 'git_initialize' | 'git_set_remote') {
+    setGitError('');
+    try {
+      setGit(await invoke<GitStatus>(operation, operation === 'git_set_remote' ? { url: gitRemote.trim() } : {}));
+      if (operation === 'git_set_remote') setGitRemote('');
+      await refreshGithub();
+    } catch (cause) { setGitError(String(cause)); await refreshGit(); }
+  }
+
   async function connectGithub() {
     setGithubError('');
     try { await invoke('github_login'); }
@@ -178,6 +208,26 @@ function App() {
     setGithubError('');
     try { setGithub(await invoke<GithubStatus>('github_configure_vault')); }
     catch (cause) { setGithubError(String(cause)); }
+  }
+
+  async function changeBrowserLock(lock: boolean) {
+    setBrowserLockError('');
+    try {
+      await invoke(lock ? 'lock_browser_access' : 'unlock_browser_access');
+      setBrowserLocked(lock);
+      if (lock) { requestNumber.current += 1; setSecret(null); setTotp(null); setVisible(false); setEditing(false); setEntryPassword(''); setEntryDetails(''); }
+    } catch (cause) { setBrowserLockError(String(cause)); await refreshBrowserLock(); }
+  }
+
+  async function showTotp() {
+    if (!selected) return;
+    const request = requestNumber.current;
+    try {
+      const code = await invoke<TotpCode>('generate_totp', { id: selected });
+      if (request === requestNumber.current) { setTotp(code); setError(''); }
+    } catch (cause) {
+      if (request === requestNumber.current) { setTotp(null); setError(String(cause)); }
+    }
   }
 
   async function approvePairing() {
@@ -258,7 +308,7 @@ function App() {
           <p className="hint">A primeira linha é a senha. Os campos continuam legíveis pelo GNU pass.</p>
           <div className="form-actions"><button disabled={entryBusy || !entryId.trim() || !entryPassword} onClick={() => void saveEntry()}>{entryBusy ? 'Salvando…' : 'Salvar'}</button><button disabled={entryBusy} onClick={() => { setEditing(false); setCreating(false); setEntryPassword(''); setEntryDetails(''); }}>Cancelar</button></div>
         </div>
-      </> : selected ? <><h2>{selected}</h2>{secret ? <><label>Senha</label><div className="password"><code>{visible ? secret.password : '••••••••••••'}</code><button onClick={() => setVisible(!visible)}>{visible ? 'Ocultar' : 'Mostrar'}</button></div>{secret.details && <><label>Outros campos</label><pre>{secret.details}</pre></>}<button onClick={startEdit}>Editar</button><p className="hint">O conteúdo é removido da tela após 30 segundos. O gpg-agent pode continuar com a chave em cache.</p></> : <p>Abra a entrada para ver seu conteúdo.</p>}</> : <p>Selecione uma entrada.</p>}</section></div>
+      </> : selected ? <><h2>{selected}</h2>{secret ? <><label>Senha</label><div className="password"><code>{visible ? secret.password : '••••••••••••'}</code><button onClick={() => setVisible(!visible)}>{visible ? 'Ocultar' : 'Mostrar'}</button></div>{secret.details && <><label>Outros campos</label><pre>{displayDetails(secret.details)}</pre></>}<button onClick={startEdit}>Editar</button><button onClick={() => void showTotp()}>Gerar código TOTP</button>{totp && <p role="status">Código TOTP: <code>{totp.code}</code> · válido por até {Math.max(0, Math.ceil(totp.validUntil - Date.now() / 1000))} s</p>}<p className="hint">O conteúdo é removido da tela após 30 segundos. O gpg-agent pode continuar com a chave em cache.</p></> : <p>Abra a entrada para ver seu conteúdo.</p>}</> : <p>Selecione uma entrada.</p>}</section></div>
     </>}
     {error && <p className="error" role="alert">{error}</p>}
     <section className="panel" aria-label="Sincronização Git">
@@ -268,13 +318,18 @@ function App() {
       <div className="panel-actions"><button disabled={!github?.cli_installed} onClick={() => void connectGithub()}>{github?.login ? 'Trocar conta' : 'Entrar com GitHub'}</button><button onClick={() => void refreshGithub()}>Verificar conta</button><button disabled={!github?.login || !git} onClick={() => void configureGithubVault()}>Usar neste cofre</button></div>
       {githubError && <p className="panel-error" role="alert">{githubError}</p>}
       <p className="hint">O login abre o GitHub CLI em um terminal. Depois de concluir no navegador, clique em Verificar conta. A conta é guardada pelo gh; o Passage não armazena o token. Usar neste cofre configura somente o repositório Git local para remotos HTTPS do GitHub.</p>
-      {git ? <p>Branch {git.branch}{git.upstream ? ` · remoto ${git.upstream}` : ' · sem remoto'} · {git.dirty ? 'alterações locais' : 'sem alterações locais'} · ↑{git.ahead} ↓{git.behind}</p> : <p>Este cofre ainda não está pronto para sincronização Git.</p>}
+      {git ? <p>Branch {git.branch}{git.upstream ? ` · upstream ${git.upstream}` : ' · sem upstream'} · {git.dirty ? 'alterações locais' : 'sem alterações locais'} · ↑{git.ahead} ↓{git.behind}</p> : <p>Este cofre ainda não está pronto para sincronização Git.</p>}
+      {!git && state.kind === 'available' && <button onClick={() => void setupGit('git_initialize')}>Iniciar Git neste cofre</button>}
+      {git && !git.upstream && <><div className="panel-actions"><input aria-label="URL do remoto Git origin" value={gitRemote} onChange={event => setGitRemote(event.target.value)} placeholder="URL HTTPS, SSH ou caminho do remoto" autoComplete="off" /><button disabled={!gitRemote.trim()} onClick={() => void setupGit('git_set_remote')}>Adicionar remoto origin</button></div><p className="hint">O Passage não cria commits. Registre seletivamente somente os arquivos .gpg e .gpg-id com <code>pass git add</code> e <code>pass git commit</code>, e configure o upstream com <code>pass git push -u origin main</code>. Confira se o cofre não contém cópias da chave privada ou arquivos em texto claro.</p></>}
       <div className="panel-actions"><button onClick={() => void refreshGit()}>Verificar</button><button disabled={!git} onClick={() => void sync('git_pull')}>Baixar</button><button disabled={!git} onClick={() => void sync('git_push')}>Enviar</button></div>
       {gitError && <p className="panel-error" role="alert">{gitError}</p>}
       <p className="hint">Configure o remoto pelo Git ou por <code>pass git</code>. Conflitos e alterações locais impedem a sincronização automática.</p>
     </section>
     <section className="panel" aria-label="Extensões autorizadas">
       <h2>Extensões autorizadas</h2>
+      <p>{browserLocked === null ? 'Estado de acesso indisponível.' : browserLocked ? 'Acesso das extensões bloqueado.' : 'Acesso das extensões liberado.'} O bloqueio não fecha o cache do GPG nem impede o uso de pass no terminal.</p>
+      <div className="panel-actions"><button disabled={browserLocked !== false} onClick={() => void changeBrowserLock(true)}>Bloquear extensões</button><button disabled={browserLocked !== true} onClick={() => void changeBrowserLock(false)}>Liberar extensões</button><button onClick={() => void refreshBrowserLock()}>Verificar bloqueio</button></div>
+      {browserLockError && <p className="panel-error" role="alert">{browserLockError}</p>}
       <p>Digite o código mostrado na extensão para autorizar esta instalação.</p>
       <div className="panel-actions"><input aria-label="Código de pareamento" value={pairingCode} maxLength={12} onChange={event => setPairingCode(event.target.value)} placeholder="Código de 12 caracteres" /><button disabled={!/^[a-f0-9]{12}$/i.test(pairingCode.trim())} onClick={() => void approvePairing()}>Autorizar</button></div>
       {pairings.map(pairing => <div className="pairing" key={`${pairing.origin}:${pairing.installationId}`}><span>{pairing.origin}<small>{pairing.installationId}</small></span><button onClick={() => void revokePairing(pairing)}>Revogar</button></div>)}
