@@ -1,10 +1,12 @@
 pub mod git;
 mod pairing;
+pub mod setup;
 pub mod vault;
 
 use git::{GitStatus, GitVault};
 use pairing::{approve_pairing, list_pairings, revoke_pairing};
 use serde::Serialize;
+use setup::VaultInfo;
 use std::process::Command;
 use vault::{Entry, Secret, Vault};
 
@@ -27,9 +29,32 @@ fn vault_state() -> VaultState {
         };
     }
     match Vault::open_env() {
-        Ok(_) => VaultState::Available,
+        Ok(vault) if setup::is_initialized(vault.root()) => VaultState::Available,
+        Ok(_) => VaultState::Unavailable {
+            reason: "O diretório ainda não foi inicializado com GNU pass (.gpg-id ausente).".into(),
+        },
         Err(reason) => VaultState::Unavailable { reason },
     }
+}
+
+#[tauri::command]
+fn vault_info() -> Result<VaultInfo, String> {
+    setup::vault_info()
+}
+
+#[tauri::command]
+fn gpg_keys() -> Vec<setup::GpgKey> {
+    setup::gpg_keys()
+}
+
+#[tauri::command]
+fn select_vault(path: String) -> Result<VaultInfo, String> {
+    setup::select_vault(&path)
+}
+
+#[tauri::command]
+fn create_vault(path: String, key_id: String) -> Result<VaultInfo, String> {
+    setup::create_vault(&path, &key_id)
 }
 
 #[tauri::command]
@@ -83,6 +108,10 @@ pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             vault_state,
+            vault_info,
+            gpg_keys,
+            select_vault,
+            create_vault,
             list_entries,
             read_entry,
             create_entry,

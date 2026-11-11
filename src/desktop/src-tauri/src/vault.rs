@@ -1,7 +1,7 @@
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::{
-    env, fs,
+    fs,
     io::Write,
     path::{Component, Path, PathBuf},
     process::{Command, Stdio},
@@ -35,12 +35,7 @@ impl Vault {
     }
 
     pub fn open_env() -> Result<Self, String> {
-        let root = if let Some(dir) = env::var_os("PASSWORD_STORE_DIR") {
-            PathBuf::from(dir)
-        } else {
-            PathBuf::from(env::var_os("HOME").ok_or("HOME não está definido")?)
-                .join(".password-store")
-        };
+        let (root, _) = crate::setup::active_vault_path()?;
         Self::open(root)
     }
 
@@ -261,6 +256,7 @@ fn ciphertext_hash(file: &Path) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::env;
 
     #[test]
     fn validates_ids_and_rejects_traversal_or_options() {

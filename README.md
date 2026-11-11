@@ -8,7 +8,7 @@ Este documento registra os requisitos discutidos até agora. Ele descreve o prod
 
 ## Estado do código
 
-O app desktop lista entradas de um cofre GNU pass local, permite buscar por nome e abre uma entrada usando `pass show`. A branch `main` também contém sincronização Git conservadora, aprovação e revogação de extensões pela interface, e um host Native Messaging com busca por URL e preenchimento após ação do usuário. Ainda faltam validação ponta a ponta em Brave e Chrome e release atualizado; o release público atual continua distribuindo apenas o desktop. Edição de entradas na interface ainda não está disponível.
+O app desktop permite escolher um cofre GNU pass existente ou criar um novo com uma chave GPG privada já disponível, lista entradas, busca por nome e abre uma entrada usando `pass show`. A branch `main` também contém sincronização Git conservadora, aprovação e revogação de extensões pela interface, e um host Native Messaging com busca por URL e preenchimento após ação do usuário. Ainda faltam validação ponta a ponta em Brave e Chrome e release atualizado; o release público atual continua distribuindo apenas o desktop anterior. Edição de entradas na interface ainda não está disponível.
 
 | Diretório | Responsabilidade |
 | --- | --- |
@@ -26,7 +26,13 @@ pnpm check
 pnpm dev:desktop
 ```
 
-Para gerar a extensão, execute `pnpm build:extension` e carregue `src/extension/.output/chrome-mv3` como extensão descompactada em `brave://extensions` ou `chrome://extensions`. Siga [as instruções do conector local](src/native-host/README.md) para compilá-lo e registrar os IDs das extensões; o código mostrado pelo popup pode ser aprovado na interface desktop ou pelo CLI. Para usar o desktop, instale GNU `pass` e configure um cofre em `~/.password-store` ou defina `PASSWORD_STORE_DIR`. A chave GPG e o `gpg-agent` continuam sob controle do sistema.
+Para gerar a extensão, execute `pnpm build:extension` e carregue `src/extension/.output/chrome-mv3` como extensão descompactada em `brave://extensions` ou `chrome://extensions`. Siga [as instruções do conector local](src/native-host/README.md) para compilá-lo e registrar os IDs das extensões; o código mostrado pelo popup pode ser aprovado na interface desktop ou pelo CLI. Para usar o desktop, instale GNU `pass` e GPG. A chave GPG e o `gpg-agent` continuam sob controle do sistema.
+
+### Abrir ou criar um cofre no desktop
+
+No painel **Cofre**, informe o caminho absoluto do diretório e escolha **Abrir existente** para um cofre já inicializado com `.gpg-id`. Para criar, escolha uma chave GPG privada na lista e clique em **Criar cofre**. O Passage usa `pass init` para criar a estrutura compatível com GNU pass; ele não gera nem importa chaves GPG. Se a lista estiver vazia, crie uma chave com `gpg --full-generate-key` ou importe a chave correspondente ao cofre existente antes de tentar ler suas entradas.
+
+O diretório escolhido fica salvo na configuração local do Passage e é usado pelo desktop e pelo conector das extensões. `PASSWORD_STORE_DIR`, quando definido no ambiente do processo, tem prioridade e impede trocar o diretório pela interface. No terminal, para usar um cofre fora de `~/.password-store`, defina a mesma variável, por exemplo `PASSWORD_STORE_DIR=/caminho/do/cofre pass ls`.
 
 ## Instalação no Linux
 
@@ -36,7 +42,7 @@ Em Linux x86_64, com `curl`, `tar` e `sha256sum`:
 curl -LsSf https://passage.plu.nz/install.sh | sh
 ```
 
-O script baixa o binário pronto do [release mais recente](https://github.com/plu-nz/passage/releases/latest), verifica o SHA-256 e instala `~/.local/bin/passage` com um atalho no menu. Não é preciso clonar o repositório, nem instalar Node.js, pnpm ou Rust. GNU `pass` e as bibliotecas gráficas do Tauri ainda são dependências de execução; configure um cofre em `~/.password-store` ou `PASSWORD_STORE_DIR`. `~/.local/bin` deve estar no `PATH` da sessão.
+O script baixa o binário pronto do [release mais recente](https://github.com/plu-nz/passage/releases/latest), verifica o SHA-256 e instala `~/.local/bin/passage` com um atalho no menu. Não é preciso clonar o repositório, nem instalar Node.js, pnpm ou Rust. GNU `pass`, GPG e as bibliotecas gráficas do Tauri ainda são dependências de execução. `~/.local/bin` deve estar no `PATH` da sessão.
 
 O mesmo comando atualiza uma instalação existente para a release mais recente. Feche e abra o Passage após atualizar. A versão instalada muda apenas quando uma nova release é publicada.
 

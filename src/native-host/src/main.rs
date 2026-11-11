@@ -8,7 +8,7 @@ use std::{
     env, fs,
     io::{self, Read, Write},
     os::unix::fs::{OpenOptionsExt, PermissionsExt},
-    path::PathBuf,
+    path::{Path, PathBuf},
     time::{SystemTime, UNIX_EPOCH},
 };
 use url::Url;
@@ -28,12 +28,16 @@ struct Pending {
     code: String,
     expires_at: u64,
     approved: bool,
+    #[serde(default)]
+    vault_path: Option<PathBuf>,
 }
 #[derive(Serialize, Deserialize)]
 struct Authorized {
     origin: String,
     installation_id: String,
     token_hash: String,
+    #[serde(default)]
+    vault_path: Option<PathBuf>,
 }
 
 fn now() -> u64 {
@@ -144,12 +148,14 @@ fn field<'a>(value: &'a Value, key: &str) -> Result<&'a str, String> {
         .filter(|s| !s.is_empty() && s.len() <= 4096)
         .ok_or_else(|| format!("Campo {key} inválido"))
 }
-fn authorized(state: &State, extension: &str, id: &str, token: &str) -> bool {
+fn authorized(state: &State, extension: &str, id: &str, token: &str, vault_path: &Path) -> bool {
     let digest = hash(token);
-    state
-        .authorized
-        .iter()
-        .any(|a| a.origin == extension && a.installation_id == id && a.token_hash == digest)
+    state.authorized.iter().any(|a| {
+        a.origin == extension
+            && a.installation_id == id
+            && a.token_hash == digest
+            && a.vault_path.as_deref() == Some(vault_path)
+    })
 }
 
 fn approve_pending(state: &mut State, code: &str) -> Result<String, String> {
@@ -159,7 +165,16 @@ fn approve_pending(state: &mut State, code: &str) -> Result<String, String> {
         .find(|p| p.code == code && p.expires_at > now())
         .ok_or("Código inválido ou expirado")?;
     pending.approved = true;
-    Ok(format!("{} ({})", pending.origin, pending.installation_id))
+    Ok(format!(
+        "{} ({}) — {}",
+        pending.origin,
+        pending.installation_id,
+        pending
+            .vault_path
+            .as_ref()
+            .map(|p| p.display().to_string())
+            .unwrap_or_else(|| "cofre antigo".into())
+    ))
 }
 
 fn revoke_authorized(state: &mut State, origin: &str, id: &str) -> bool {
@@ -176,15 +191,20 @@ fn handle(request: &Value, extension: &str) -> Result<Value, String> {
         "ping" => json!({"type":"pong","version":1}),
         "status" => {
             let id = field(request, "installationId")?;
+            let vault = Vault::open_env()?;
             let paired = with_state(|s| {
-                Ok(s.authorized
-                    .iter()
-                    .any(|a| a.origin == extension && a.installation_id == id))
+                Ok(s.authorized.iter().any(|a| {
+                    a.origin == extension
+                        && a.installation_id == id
+                        && a.vault_path.as_deref() == Some(vault.root())
+                }))
             })?;
             json!({"type":"status","version":1,"paired":paired})
         }
         "pair" => {
             let id = field(request, "installationId")?;
+            let vault = Vault::open_env()?;
+            let vault_path = vault.root().to_path_buf();
             let (code, expires_at) = with_state(|s| {
                 s.pending
                     .retain(|p| !(p.origin == extension && p.installation_id == id));
@@ -196,6 +216,7 @@ fn handle(request: &Value, extension: &str) -> Result<Value, String> {
                     code: code.clone(),
                     expires_at,
                     approved: false,
+                    vault_path: Some(vault_path),
                 });
                 Ok((code, expires_at))
             })?;
@@ -203,25 +224,29 @@ fn handle(request: &Value, extension: &str) -> Result<Value, String> {
         }
         "pairStatus" => {
             let id = field(request, "installationId")?;
-            let result =
-                with_state(|s| {
-                    if let Some(pos) = s.pending.iter().position(|p| {
-                        p.origin == extension && p.installation_id == id && p.approved
-                    }) {
-                        s.pending.remove(pos);
-                        let token = random_hex(32);
-                        s.authorized
-                            .retain(|a| !(a.origin == extension && a.installation_id == id));
-                        s.authorized.push(Authorized {
-                            origin: extension.into(),
-                            installation_id: id.into(),
-                            token_hash: hash(&token),
-                        });
-                        Ok(Some(token))
-                    } else {
-                        Ok(None)
-                    }
-                })?;
+            let vault = Vault::open_env()?;
+            let result = with_state(|s| {
+                if let Some(pos) = s.pending.iter().position(|p| {
+                    p.origin == extension
+                        && p.installation_id == id
+                        && p.approved
+                        && p.vault_path.as_deref() == Some(vault.root())
+                }) {
+                    s.pending.remove(pos);
+                    let token = random_hex(32);
+                    s.authorized
+                        .retain(|a| !(a.origin == extension && a.installation_id == id));
+                    s.authorized.push(Authorized {
+                        origin: extension.into(),
+                        installation_id: id.into(),
+                        token_hash: hash(&token),
+                        vault_path: Some(vault.root().to_path_buf()),
+                    });
+                    Ok(Some(token))
+                } else {
+                    Ok(None)
+                }
+            })?;
             match result {
                 Some(token) => json!({"type":"paired","token":token}),
                 None => json!({"type":"pairPending"}),
@@ -231,10 +256,10 @@ fn handle(request: &Value, extension: &str) -> Result<Value, String> {
             let id = field(request, "installationId")?;
             let token = field(request, "token")?;
             let origin = site_origin(field(request, "origin")?)?;
-            if !with_state(|s| Ok(authorized(s, extension, id, token)))? {
-                return Err("Extensão não autorizada".into());
-            }
             let vault = Vault::open_env()?;
+            if !with_state(|s| Ok(authorized(s, extension, id, token, vault.root())))? {
+                return Err("Extensão não autorizada para este cofre".into());
+            }
             if kind == "listForOrigin" {
                 let entries: Vec<_> = vault
                     .list()?
@@ -312,9 +337,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
     if args.get(1).map(String::as_str) == Some("list-json") {
+        let vault = Vault::open_env()?;
         let items = with_state(|s| {
             Ok(s.authorized
                 .iter()
+                .filter(|a| a.vault_path.as_deref() == Some(vault.root()))
                 .map(|a| json!({"origin":a.origin,"installationId":a.installation_id}))
                 .collect::<Vec<_>>())
         })?;
@@ -363,6 +390,45 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn host_uses_selected_vault_and_env_override() {
+        let base = env::temp_dir().join(format!("passage-host-settings-{}", random_hex(8)));
+        let config = base.join("config");
+        let selected = base.join("selected");
+        let override_store = base.join("override");
+        fs::create_dir_all(config.join("passage")).unwrap();
+        fs::create_dir_all(&selected).unwrap();
+        fs::create_dir_all(&override_store).unwrap();
+        fs::write(
+            config.join("passage/settings.json"),
+            serde_json::to_vec(&json!({"vaultPath": selected})).unwrap(),
+        )
+        .unwrap();
+
+        let old_config = env::var_os("XDG_CONFIG_HOME");
+        let old_store = env::var_os("PASSWORD_STORE_DIR");
+        env::set_var("XDG_CONFIG_HOME", &config);
+        env::remove_var("PASSWORD_STORE_DIR");
+        assert_eq!(
+            Vault::open_env().unwrap().root(),
+            selected.canonicalize().unwrap()
+        );
+        env::set_var("PASSWORD_STORE_DIR", &override_store);
+        assert_eq!(
+            Vault::open_env().unwrap().root(),
+            override_store.canonicalize().unwrap()
+        );
+        match old_config {
+            Some(value) => env::set_var("XDG_CONFIG_HOME", value),
+            None => env::remove_var("XDG_CONFIG_HOME"),
+        }
+        match old_store {
+            Some(value) => env::set_var("PASSWORD_STORE_DIR", value),
+            None => env::remove_var("PASSWORD_STORE_DIR"),
+        }
+        fs::remove_dir_all(base).unwrap();
+    }
     #[test]
     fn rejects_lookalike_domains() {
         let urls = vec!["https://example.com/login".into()];
@@ -389,6 +455,7 @@ mod tests {
     fn pairing_requires_approval_and_revocation_blocks_token() {
         let origin = "chrome-extension://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/";
         let id = "installation-1";
+        let vault_path = Path::new("/example/vault-a");
         let mut state = State::default();
         state.pending.push(Pending {
             origin: origin.into(),
@@ -396,6 +463,7 @@ mod tests {
             code: "test-code".into(),
             expires_at: now() + 60,
             approved: false,
+            vault_path: Some(vault_path.to_path_buf()),
         });
         assert!(approve_pending(&mut state, "wrong-code").is_err());
         assert!(!state.pending[0].approved);
@@ -406,11 +474,25 @@ mod tests {
             origin: origin.into(),
             installation_id: id.into(),
             token_hash: hash(token),
+            vault_path: Some(vault_path.to_path_buf()),
         });
-        assert!(authorized(&state, origin, id, token));
-        assert!(!authorized(&state, origin, id, "wrong-token"));
-        assert!(!authorized(&state, origin, "other-installation", token));
+        assert!(authorized(&state, origin, id, token, vault_path));
+        assert!(!authorized(
+            &state,
+            origin,
+            id,
+            token,
+            Path::new("/example/vault-b")
+        ));
+        assert!(!authorized(&state, origin, id, "wrong-token", vault_path));
+        assert!(!authorized(
+            &state,
+            origin,
+            "other-installation",
+            token,
+            vault_path
+        ));
         assert!(revoke_authorized(&mut state, origin, id));
-        assert!(!authorized(&state, origin, id, token));
+        assert!(!authorized(&state, origin, id, token, vault_path));
     }
 }

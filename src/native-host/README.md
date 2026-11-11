@@ -34,6 +34,8 @@ passage-native-host revoke chrome-extension://ID_DA_EXTENSAO/ ID_DA_INSTALACAO
 
 `list` mostra a origem e o ID da instalação; `revoke` bloqueia pedidos seguintes. O token emitido após a aprovação é mostrado uma vez ao navegador e armazenado apenas como hash no host. O estado local fica em `~/.config/passage/native-host.json` (ou `XDG_CONFIG_HOME/passage`) com permissões de usuário.
 
+Cada pareamento é válido apenas para o cofre selecionado quando foi aprovado. Ao escolher outro cofre no desktop, a extensão precisa de novo pareamento para acessá-lo. A lista na interface desktop mostra somente os pareamentos do cofre atual; `list` no CLI mostra todos para permitir revogação. Se você voltar a selecionar um cofre anterior, o pareamento antigo desse cofre continua válido até ser revogado.
+
 ## Limites atuais
 
 - A extensão precisa usar a origem da aba obtida pela API do navegador e validar a aba novamente antes de preencher. O host exige origem HTTPS e correspondência exata com um campo `url` da entrada.

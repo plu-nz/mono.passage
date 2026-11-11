@@ -8,6 +8,8 @@ type Entry = { id: string; title: string };
 type Secret = { password: string; details: string };
 type GitStatus = { branch: string; upstream: string | null; dirty: boolean; ahead: number; behind: number };
 type Pairing = { origin: string; installationId: string };
+type GpgKey = { id: string; label: string };
+type VaultInfo = { path: string; source: string; initialized: boolean; gpgKeys: GpgKey[]; recipientIds: string[]; passInstalled: boolean; gpgInstalled: boolean };
 
 function App() {
   const [state, setState] = React.useState<VaultState>({ kind: 'unavailable', reason: 'Verificando o ambiente local…' });
@@ -22,6 +24,11 @@ function App() {
   const [pairings, setPairings] = React.useState<Pairing[]>([]);
   const [pairingError, setPairingError] = React.useState('');
   const [pairingCode, setPairingCode] = React.useState('');
+  const [vaultInfo, setVaultInfo] = React.useState<VaultInfo | null>(null);
+  const [vaultPath, setVaultPath] = React.useState('');
+  const [keyId, setKeyId] = React.useState('');
+  const [vaultError, setVaultError] = React.useState('');
+  const [vaultBusy, setVaultBusy] = React.useState(false);
   const requestNumber = React.useRef(0);
 
   const refresh = React.useCallback(async () => {
@@ -40,6 +47,16 @@ function App() {
   }, []);
 
   React.useEffect(() => { void refresh(); }, [refresh]);
+  const refreshVaultInfo = React.useCallback(async () => {
+    try {
+      const info = await invoke<VaultInfo>('vault_info');
+      setVaultInfo(info);
+      setVaultPath(info.path);
+      setKeyId(current => current || info.gpgKeys[0]?.id || '');
+      setVaultError('');
+    } catch (cause) { setVaultError(String(cause)); }
+  }, []);
+  React.useEffect(() => { void refreshVaultInfo(); }, [refreshVaultInfo]);
   const refreshGit = React.useCallback(async () => {
     try { setGit(await invoke<GitStatus>('git_status')); setGitError(''); }
     catch (cause) { setGit(null); setGitError(String(cause)); }
@@ -89,8 +106,32 @@ function App() {
     catch (cause) { setPairingError(String(cause)); }
   }
 
+  async function configureVault(operation: 'select_vault' | 'create_vault') {
+    setVaultBusy(true);
+    setVaultError('');
+    try {
+      const info = await invoke<VaultInfo>(operation, operation === 'create_vault' ? { path: vaultPath.trim(), keyId } : { path: vaultPath.trim() });
+      setVaultInfo(info);
+      setVaultPath(info.path);
+      await refresh();
+      await refreshGit();
+      await refreshPairings();
+    } catch (cause) { setVaultError(String(cause)); }
+    finally { setVaultBusy(false); }
+  }
+
   return <main className="shell">
     <header><div className="mark" aria-hidden="true">P</div><div><h1>Passage</h1><p>Seu cofre GNU pass no desktop.</p></div></header>
+    <section className="panel vault-panel" aria-label="Configuração do cofre">
+      <h2>Cofre</h2>
+      <p className="hint">Diretório ativo: <code>{vaultInfo?.path || 'verificando…'}</code>{vaultInfo?.source === 'environment' ? ' · definido por PASSWORD_STORE_DIR' : ''}</p>
+      <label htmlFor="vault-path">Diretório do cofre</label>
+      <div className="panel-actions"><input id="vault-path" value={vaultPath} onChange={event => setVaultPath(event.target.value)} placeholder="/home/usuario/.password-store" autoComplete="off" disabled={vaultBusy || vaultInfo?.source === 'environment'} /><button disabled={vaultBusy || !vaultPath.trim() || vaultInfo?.source === 'environment'} onClick={() => void configureVault('select_vault')}>Abrir existente</button></div>
+      <div className="panel-actions"><select aria-label="Chave GPG para o novo cofre" value={keyId} onChange={event => setKeyId(event.target.value)} disabled={vaultBusy || vaultInfo?.source === 'environment'}><option value="">Selecione uma chave GPG</option>{vaultInfo?.gpgKeys.map(key => <option key={key.id} value={key.id}>{key.label} · {key.id.slice(-16)}</option>)}</select><button disabled={vaultBusy || !vaultPath.trim() || !keyId || vaultInfo?.source === 'environment'} onClick={() => void configureVault('create_vault')}>Criar cofre</button></div>
+      {vaultInfo && <p className="hint">{!vaultInfo.passInstalled ? 'GNU pass não encontrado. ' : ''}{!vaultInfo.gpgInstalled ? 'GPG não encontrado. ' : ''}{vaultInfo.initialized ? `Inicializado para: ${vaultInfo.recipientIds.join(', ') || 'chave não identificada'}.` : 'Cofre ainda não inicializado.'} {vaultInfo.gpgKeys.length === 0 && vaultInfo.gpgInstalled ? 'Nenhuma chave GPG privada encontrada. Crie ou importe uma chave antes de criar o cofre.' : ''}</p>}
+      <button onClick={() => void refreshVaultInfo()} disabled={vaultBusy}>Verificar chaves e cofre</button>
+      {vaultError && <p className="panel-error" role="alert">{vaultError}</p>}
+    </section>
     {state.kind === 'unavailable' ? <section className="notice">{state.reason}</section> : <>
       <div className="toolbar"><input aria-label="Buscar entradas" placeholder="Buscar no cofre" value={query} onChange={event => setQuery(event.target.value)} /><button onClick={() => void refresh()}>Atualizar</button></div>
       <div className="workspace"><nav aria-label="Entradas do cofre">{filtered.length ? filtered.map(entry => <button className={selected === entry.id ? 'entry selected' : 'entry'} key={entry.id} onClick={() => void openEntry(entry.id)}>{entry.id}</button>) : <p>Nenhuma entrada encontrada.</p>}</nav>
