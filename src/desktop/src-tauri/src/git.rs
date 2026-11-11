@@ -18,6 +18,26 @@ pub struct GitVault {
 }
 
 impl GitVault {
+    pub fn configure_github_helper(&self) -> Result<(), String> {
+        // An empty helper resets inherited helpers for this host only, so a
+        // different global credential manager cannot answer first.
+        self.output(&[
+            "config",
+            "--local",
+            "--replace-all",
+            "credential.https://github.com.helper",
+            "",
+        ])?;
+        self.output(&[
+            "config",
+            "--local",
+            "--add",
+            "credential.https://github.com.helper",
+            "!gh auth git-credential",
+        ])?;
+        Ok(())
+    }
+
     pub fn open(root: &Path) -> Result<Self, String> {
         let canonical = root
             .canonicalize()
@@ -211,6 +231,29 @@ mod tests {
         fn drop(&mut self) {
             let _ = fs::remove_dir_all(&self.root);
         }
+    }
+
+    #[test]
+    fn github_helper_is_scoped_to_vault_repository() {
+        let f = Fixture::new();
+        let local = f.root.join("vault");
+        fs::create_dir(&local).unwrap();
+        f.git(&local, &["init"]);
+        let git = GitVault::open(&local).unwrap();
+        git.configure_github_helper().unwrap();
+        let helpers = git
+            .output(&[
+                "config",
+                "--local",
+                "--get-all",
+                "credential.https://github.com.helper",
+            ])
+            .unwrap();
+        assert_eq!(
+            helpers.lines().collect::<Vec<_>>(),
+            ["", "!gh auth git-credential"]
+        );
+        assert!(!f.root.join(".git").exists());
     }
 
     #[test]

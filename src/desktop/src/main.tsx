@@ -7,6 +7,7 @@ import './style.css';
 type Entry = { id: string; title: string };
 type Secret = { password: string; details: string; other_details: string; username: string | null; urls: string[]; ciphertext_hash: string };
 type GitStatus = { branch: string; upstream: string | null; dirty: boolean; ahead: number; behind: number };
+type GithubStatus = { cli_installed: boolean; login: string | null; vault_git_configured: boolean };
 type Pairing = { origin: string; installationId: string };
 type GpgKey = { id: string; label: string };
 type VaultInfo = { path: string; source: string; initialized: boolean; gpgKeys: GpgKey[]; recipientIds: string[]; passInstalled: boolean; gpgInstalled: boolean };
@@ -30,6 +31,8 @@ function App() {
   const [entryBusy, setEntryBusy] = React.useState(false);
   const [git, setGit] = React.useState<GitStatus | null>(null);
   const [gitError, setGitError] = React.useState('');
+  const [github, setGithub] = React.useState<GithubStatus | null>(null);
+  const [githubError, setGithubError] = React.useState('');
   const [pairings, setPairings] = React.useState<Pairing[]>([]);
   const [pairingError, setPairingError] = React.useState('');
   const [pairingCode, setPairingCode] = React.useState('');
@@ -75,11 +78,15 @@ function App() {
     try { setGit(await invoke<GitStatus>('git_status')); setGitError(''); }
     catch (cause) { setGit(null); setGitError(String(cause)); }
   }, []);
+  const refreshGithub = React.useCallback(async () => {
+    try { setGithub(await invoke<GithubStatus>('github_status')); setGithubError(''); }
+    catch (cause) { setGithubError(String(cause)); }
+  }, []);
   const refreshPairings = React.useCallback(async () => {
     try { setPairings(await invoke<Pairing[]>('list_pairings')); setPairingError(''); }
     catch (cause) { setPairingError(String(cause)); }
   }, []);
-  React.useEffect(() => { void refreshGit(); void refreshPairings(); }, [refreshGit, refreshPairings]);
+  React.useEffect(() => { void refreshGit(); void refreshGithub(); void refreshPairings(); }, [refreshGit, refreshGithub, refreshPairings]);
   React.useEffect(() => {
     if (!secret) return;
     const timer = window.setTimeout(() => { setSecret(null); setVisible(false); setEditing(false); setEntryPassword(''); setEntryDetails(''); }, 30_000);
@@ -161,6 +168,18 @@ function App() {
     catch (cause) { setGitError(String(cause)); await refreshGit(); }
   }
 
+  async function connectGithub() {
+    setGithubError('');
+    try { await invoke('github_login'); }
+    catch (cause) { setGithubError(String(cause)); }
+  }
+
+  async function configureGithubVault() {
+    setGithubError('');
+    try { setGithub(await invoke<GithubStatus>('github_configure_vault')); }
+    catch (cause) { setGithubError(String(cause)); }
+  }
+
   async function approvePairing() {
     setPairingError('');
     try { await invoke('approve_pairing', { code: pairingCode.trim() }); setPairingCode(''); await refreshPairings(); }
@@ -183,6 +202,7 @@ function App() {
       setVaultPath(info.path);
       await refresh();
       await refreshGit();
+      await refreshGithub();
       await refreshPairings();
     } catch (cause) { setVaultError(String(cause)); }
     finally { setVaultBusy(false); }
@@ -200,6 +220,7 @@ function App() {
       setCreatedFingerprint(result.fingerprint);
       await refresh();
       await refreshGit();
+      await refreshGithub();
       await refreshPairings();
     } catch (cause) { setVaultError(String(cause)); }
     finally { setVaultBusy(false); }
@@ -242,6 +263,11 @@ function App() {
     {error && <p className="error" role="alert">{error}</p>}
     <section className="panel" aria-label="Sincronização Git">
       <h2>Sincronização Git</h2>
+      <h3>GitHub</h3>
+      <p>{!github ? 'Verificando a conta…' : !github.cli_installed ? 'Instale o GitHub CLI (gh) para conectar sua conta.' : github.login ? `Conectado como @${github.login}.` : 'Nenhuma conta do GitHub conectada pelo gh.'} {github?.vault_git_configured ? 'Este cofre usa a conta do gh para remotos HTTPS do GitHub.' : ''}</p>
+      <div className="panel-actions"><button disabled={!github?.cli_installed} onClick={() => void connectGithub()}>{github?.login ? 'Trocar conta' : 'Entrar com GitHub'}</button><button onClick={() => void refreshGithub()}>Verificar conta</button><button disabled={!github?.login || !git} onClick={() => void configureGithubVault()}>Usar neste cofre</button></div>
+      {githubError && <p className="panel-error" role="alert">{githubError}</p>}
+      <p className="hint">O login abre o GitHub CLI em um terminal. Depois de concluir no navegador, clique em Verificar conta. A conta é guardada pelo gh; o Passage não armazena o token. Usar neste cofre configura somente o repositório Git local para remotos HTTPS do GitHub.</p>
       {git ? <p>Branch {git.branch}{git.upstream ? ` · remoto ${git.upstream}` : ' · sem remoto'} · {git.dirty ? 'alterações locais' : 'sem alterações locais'} · ↑{git.ahead} ↓{git.behind}</p> : <p>Este cofre ainda não está pronto para sincronização Git.</p>}
       <div className="panel-actions"><button onClick={() => void refreshGit()}>Verificar</button><button disabled={!git} onClick={() => void sync('git_pull')}>Baixar</button><button disabled={!git} onClick={() => void sync('git_push')}>Enviar</button></div>
       {gitError && <p className="panel-error" role="alert">{gitError}</p>}

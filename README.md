@@ -8,7 +8,7 @@ Este documento registra os requisitos discutidos até agora. Ele descreve o prod
 
 ## Estado do código
 
-O app desktop permite escolher um cofre GNU pass existente, criar outro com uma chave GPG nova ou já disponível, listar, buscar, abrir, criar e editar entradas. A branch `main` também contém sincronização Git conservadora, aprovação e revogação de extensões pela interface, e um host Native Messaging com busca por URL e preenchimento após ação do usuário. Ainda faltam validação ponta a ponta em Brave e Chrome e release atualizado; o release público atual continua distribuindo apenas o desktop anterior.
+O app desktop permite escolher um cofre GNU pass existente, criar outro com uma chave GPG nova ou já disponível, listar, buscar, abrir, criar e editar entradas. A branch `main` também contém conexão à conta GitHub pelo GitHub CLI, sincronização Git conservadora, aprovação e revogação de extensões pela interface, e um host Native Messaging com busca por URL e preenchimento após ação do usuário. Ainda faltam validação ponta a ponta em Brave e Chrome e release atualizado; o release público atual continua distribuindo apenas o desktop anterior.
 
 | Diretório | Responsabilidade |
 | --- | --- |
@@ -48,6 +48,12 @@ O diretório escolhido fica salvo na configuração local do Passage e é usado 
 ### Criar e editar entradas
 
 Com o cofre aberto, clique em **Nova entrada** e informe o caminho da entrada, a senha, o usuário e a URL. O Passage grava pelo GNU `pass`: a senha fica na primeira linha, seguida por `login:` e `url:`. O campo **Outras linhas do pass** aceita metadados adicionais, como `otpauth:` ou anotações. Para editar uma entrada, abra-a e clique em **Editar**. O editor preserva as outras linhas existentes e recusa a gravação se o arquivo cifrado tiver mudado desde a leitura; nesse caso, atualize a entrada antes de tentar novamente. A senha aberta é removida da interface após 30 segundos; o formulário de criação fecha após 30 segundos sem alteração da senha. A operação não faz `git push` automaticamente.
+
+### Conectar uma conta GitHub
+
+Instale o [GitHub CLI (`gh`)](https://cli.github.com/). No painel **Sincronização Git**, clique em **Entrar com GitHub**. O Passage abre `gh auth login` no terminal padrão; conclua o login no navegador e volte ao Passage para clicar em **Verificar conta**. Se o terminal padrão não puder ser aberto, execute `gh auth login --web` manualmente. O token é administrado pelo `gh`, que pode usar o armazenamento seguro do sistema ou, se ele não estiver disponível, um arquivo local; verifique `gh auth status` para conhecer o local usado.
+
+Se o cofre já for a raiz de um repositório Git, **Usar neste cofre** configura apenas o `.git/config` desse cofre para pedir ao `gh` as credenciais de remotos HTTPS em `github.com`. O Passage não recebe nem salva o token. Essa etapa não cria um repositório remoto nem altera o remoto existente; configure a URL e o branch de acompanhamento pelo Git ou `pass git`. Remotos SSH e servidores Git privados continuam usando sua autenticação normal.
 
 ## Instalação no Linux
 

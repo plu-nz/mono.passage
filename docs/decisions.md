@@ -12,7 +12,7 @@ Este registro separa o que já foi implementado das escolhas ainda provisórias.
 
 ## 2. Leitura do cofre no Linux
 
-**Implementado:** o desktop permite escolher um cofre existente ou criar um novo com uma chave GPG privada presente no sistema. Também oferece gerar uma chave pelo GPG e inicializar o cofre no mesmo fluxo; a frase secreta é coletada pelo `pinentry`, fora da interface Passage. A seleção fica em `XDG_CONFIG_HOME/passage/settings.json` (ou `~/.config/passage/settings.json`); `PASSWORD_STORE_DIR` tem prioridade, seguido da seleção e de `~/.password-store`. A criação chama `pass init` e recusa sobrescrever um cofre inicializado. O desktop lista os arquivos `.gpg` sem entrar em `.git` ou seguir links simbólicos e chama `pass show` para abrir uma entrada. O conteúdo completo só é solicitado quando o usuário seleciona a entrada. A primeira linha é tratada como senha; as demais ficam em “Outros campos”. A interface limpa o conteúdo exibido após 30 segundos. O núcleo Rust agora também interpreta `login`/`username` e `url` e oferece operações de escrita por `pass`; a UI ainda não as expõe. Atualização e remoção exigem hash do arquivo cifrado lido anteriormente, mas há uma janela de corrida com alterações externas entre a verificação e o subprocesso `pass`.
+**Implementado:** o desktop permite escolher um cofre existente ou criar um novo com uma chave GPG privada presente no sistema. Também oferece gerar uma chave pelo GPG e inicializar o cofre no mesmo fluxo; a frase secreta é coletada pelo `pinentry`, fora da interface Passage. A seleção fica em `XDG_CONFIG_HOME/passage/settings.json` (ou `~/.config/passage/settings.json`); `PASSWORD_STORE_DIR` tem prioridade, seguido da seleção e de `~/.password-store`. A criação chama `pass init` e recusa sobrescrever um cofre inicializado. O desktop lista os arquivos `.gpg` sem entrar em `.git` ou seguir links simbólicos e chama `pass show` para abrir uma entrada. O conteúdo completo só é solicitado quando o usuário seleciona a entrada. A primeira linha é tratada como senha; as demais ficam em “Outros campos”. A interface limpa o conteúdo exibido após 30 segundos. O núcleo Rust interpreta `login`/`username` e `url`; a UI cria e edita entradas por `pass` e preserva as outras linhas. Atualização e remoção exigem hash do arquivo cifrado lido anteriormente, mas há uma janela de corrida com alterações externas entre a verificação e o subprocesso `pass`.
 
 **Motivo:** delegar descriptografia e regras do cofre ao GNU `pass` e ao GPG preserva a interoperabilidade com o terminal e com Android Password Store. Nenhum segredo é gravado pelo aplicativo nesta etapa.
 
@@ -32,11 +32,15 @@ Para preencher, a extensão precisará solicitar acesso para o domínio da aba a
 
 O desktop mostra o estado do repositório do cofre e oferece baixar/enviar quando há branch com upstream. `pull` exige árvore limpa, busca alterações e só aceita avanço direto. `push` busca o remoto antes de enviar e recusa se ele avançou. Divergência exige resolução manual; o Passage não tenta mesclar arquivos `.gpg`. Essas operações não criam commits: o usuário continua usando `pass git` ou Git para registrar alterações. Há uma janela de concorrência se outro processo modificar o cofre durante fetch, merge ou push; o fluxo ainda precisa de validação com um remoto de teste antes de ser considerado pronto para dados reais.
 
+### Autenticação GitHub
+
+O desktop usa o GitHub CLI (`gh`) para autenticação pelo navegador. O Passage exibe apenas a conta ativa, abre o fluxo do CLI no terminal padrão e não recebe o token. Para um cofre que já seja um repositório Git, configura o helper de credenciais de `github.com` somente no `.git/config` local; não altera remotos nem cria repositórios. O armazenamento do token segue o comportamento do `gh`, incluindo seu fallback em arquivo local quando o keyring não funciona. A integração não substitui autenticação SSH ou de outros servidores Git.
+
 ## 4. Próximas etapas recomendadas
 
 1. Criar cofre de teste descartável e exercitar leitura e escrita, incluindo `PASSWORD_STORE_DIR`, falha de GPG e alteração externa pelo terminal.
 2. Validar host, pareamento, revogação e preenchimento em instalações reais de Brave e Chrome; definir IDs estáveis para distribuição.
-3. Validar sincronização com remoto Git de teste e conflitos concorrentes; fechar a janela de corrida da edição antes de expô-la na interface.
+3. Validar sincronização com remoto Git de teste e conflitos concorrentes; reduzir a janela de corrida da edição antes de recomendar dados reais.
 4. Empacotar e publicar novo release com host após a matriz de testes; o release atual ainda não o contém.
 5. Projetar biometria e bloqueio considerando a chave GPG e o cache do `gpg-agent`, antes de prometer desbloqueio pela digital no primeiro acesso.
 

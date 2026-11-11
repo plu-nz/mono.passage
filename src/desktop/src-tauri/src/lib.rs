@@ -1,4 +1,5 @@
 pub mod git;
+mod github;
 mod pairing;
 pub mod setup;
 pub mod vault;
@@ -120,6 +121,22 @@ fn git_status() -> Result<GitStatus, String> {
 }
 
 #[tauri::command]
+fn github_status() -> github::GithubStatus {
+    github::status(Vault::open_env().ok().as_ref().map(Vault::root))
+}
+
+#[tauri::command]
+fn github_login() -> Result<(), String> {
+    github::start_login()
+}
+
+#[tauri::command]
+fn github_configure_vault() -> Result<github::GithubStatus, String> {
+    let vault = Vault::open_env()?;
+    github::configure_vault(vault.root())
+}
+
+#[tauri::command]
 fn git_pull() -> Result<GitStatus, String> {
     let vault = Vault::open_env()?;
     let git = GitVault::open(vault.root())?;
@@ -153,6 +170,9 @@ pub fn run() {
             update_entry,
             remove_entry,
             git_status,
+            github_status,
+            github_login,
+            github_configure_vault,
             git_pull,
             git_push,
             list_pairings,
