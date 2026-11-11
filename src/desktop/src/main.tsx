@@ -5,7 +5,7 @@ import type { VaultState } from '@passage/core';
 import './style.css';
 
 type Entry = { id: string; title: string };
-type Secret = { password: string; details: string };
+type Secret = { password: string; details: string; other_details: string; username: string | null; urls: string[]; ciphertext_hash: string };
 type GitStatus = { branch: string; upstream: string | null; dirty: boolean; ahead: number; behind: number };
 type Pairing = { origin: string; installationId: string };
 type GpgKey = { id: string; label: string };
@@ -20,6 +20,14 @@ function App() {
   const [secret, setSecret] = React.useState<Secret | null>(null);
   const [error, setError] = React.useState('');
   const [visible, setVisible] = React.useState(false);
+  const [editing, setEditing] = React.useState(false);
+  const [creating, setCreating] = React.useState(false);
+  const [entryId, setEntryId] = React.useState('');
+  const [entryPassword, setEntryPassword] = React.useState('');
+  const [entryUsername, setEntryUsername] = React.useState('');
+  const [entryUrl, setEntryUrl] = React.useState('');
+  const [entryDetails, setEntryDetails] = React.useState('');
+  const [entryBusy, setEntryBusy] = React.useState(false);
   const [git, setGit] = React.useState<GitStatus | null>(null);
   const [gitError, setGitError] = React.useState('');
   const [pairings, setPairings] = React.useState<Pairing[]>([]);
@@ -40,6 +48,8 @@ function App() {
     setSelected(null);
     setSecret(null);
     setVisible(false);
+    setEditing(false);
+    setCreating(false);
     try {
       const next = await invoke<VaultState>('vault_state');
       setState(next);
@@ -72,15 +82,22 @@ function App() {
   React.useEffect(() => { void refreshGit(); void refreshPairings(); }, [refreshGit, refreshPairings]);
   React.useEffect(() => {
     if (!secret) return;
-    const timer = window.setTimeout(() => { setSecret(null); setVisible(false); }, 30_000);
+    const timer = window.setTimeout(() => { setSecret(null); setVisible(false); setEditing(false); setEntryPassword(''); setEntryDetails(''); }, 30_000);
     return () => window.clearTimeout(timer);
   }, [secret]);
+  React.useEffect(() => {
+    if (!editing || !entryPassword || entryBusy) return;
+    const timer = window.setTimeout(() => { setEditing(false); setCreating(false); setEntryPassword(''); setEntryDetails(''); }, 30_000);
+    return () => window.clearTimeout(timer);
+  }, [editing, entryPassword, entryBusy]);
 
   async function openEntry(id: string) {
     const request = ++requestNumber.current;
     setSelected(id);
     setSecret(null);
     setVisible(false);
+    setEditing(false);
+    setCreating(false);
     setError('');
     try {
       const result = await invoke<Secret>('read_entry', { id });
@@ -88,6 +105,52 @@ function App() {
     } catch (cause) {
       if (request === requestNumber.current) setError(String(cause));
     }
+  }
+
+  function startCreate() {
+    requestNumber.current += 1;
+    setSelected(null);
+    setSecret(null);
+    setVisible(false);
+    setCreating(true);
+    setEditing(true);
+    setEntryId('');
+    setEntryPassword('');
+    setEntryUsername('');
+    setEntryUrl('');
+    setEntryDetails('');
+    setError('');
+  }
+
+  function startEdit() {
+    if (!selected || !secret) return;
+    setEntryId(selected);
+    setEntryPassword(secret.password);
+    setEntryUsername(secret.username || '');
+    setEntryUrl(secret.urls[0] || '');
+    setEntryDetails(secret.other_details);
+    setCreating(false);
+    setEditing(true);
+    setVisible(false);
+  }
+
+  async function saveEntry() {
+    if (!entryId.trim() || !entryPassword || (!creating && !secret)) return;
+    setEntryBusy(true);
+    setError('');
+    try {
+      const id = entryId.trim();
+      await invoke(creating ? 'create_login_entry' : 'update_login_entry', {
+        id, password: entryPassword, username: entryUsername, url: entryUrl,
+        details: entryDetails, ...(creating ? {} : { expectedHash: secret!.ciphertext_hash })
+      });
+      setEntryPassword('');
+      setEntryDetails('');
+      await refresh();
+      await openEntry(id);
+      await refreshGit();
+    } catch (cause) { setError(String(cause)); }
+    finally { setEntryBusy(false); }
   }
 
   const filtered = entries.filter(entry => entry.id.toLocaleLowerCase().includes(query.toLocaleLowerCase()));
@@ -161,9 +224,20 @@ function App() {
       {vaultError && <p className="panel-error" role="alert">{vaultError}</p>}
     </section>
     {state.kind === 'unavailable' ? <section className="notice">{state.reason}</section> : <>
-      <div className="toolbar"><input aria-label="Buscar entradas" placeholder="Buscar no cofre" value={query} onChange={event => setQuery(event.target.value)} /><button onClick={() => void refresh()}>Atualizar</button></div>
+      <div className="toolbar"><input aria-label="Buscar entradas" placeholder="Buscar no cofre" value={query} onChange={event => setQuery(event.target.value)} /><button onClick={startCreate}>Nova entrada</button><button onClick={() => void refresh()}>Atualizar</button></div>
       <div className="workspace"><nav aria-label="Entradas do cofre">{filtered.length ? filtered.map(entry => <button className={selected === entry.id ? 'entry selected' : 'entry'} key={entry.id} onClick={() => void openEntry(entry.id)}>{entry.id}</button>) : <p>Nenhuma entrada encontrada.</p>}</nav>
-      <section className="detail" aria-label="Detalhes da entrada">{selected ? <><h2>{selected}</h2>{secret ? <><label>Senha</label><div className="password"><code>{visible ? secret.password : '••••••••••••'}</code><button onClick={() => setVisible(!visible)}>{visible ? 'Ocultar' : 'Mostrar'}</button></div>{secret.details && <><label>Outros campos</label><pre>{secret.details}</pre></>}<p className="hint">O conteúdo é removido da tela após 30 segundos. O gpg-agent pode continuar com a chave em cache.</p></> : <p>Abra a entrada para ver seu conteúdo.</p>}</> : <p>Selecione uma entrada.</p>}</section></div>
+      <section className="detail" aria-label="Detalhes da entrada">{editing ? <>
+        <h2>{creating ? 'Nova entrada' : `Editar ${selected}`}</h2>
+        <div className="entry-form">
+          <label htmlFor="entry-id">Nome ou caminho da entrada</label><input id="entry-id" value={entryId} onChange={event => setEntryId(event.target.value)} disabled={!creating || entryBusy} placeholder="sites/exemplo.com" autoComplete="off" />
+          <label htmlFor="entry-password">Senha</label><input id="entry-password" type="password" value={entryPassword} onChange={event => setEntryPassword(event.target.value)} disabled={entryBusy} autoComplete="new-password" />
+          <label htmlFor="entry-username">Usuário</label><input id="entry-username" value={entryUsername} onChange={event => setEntryUsername(event.target.value)} disabled={entryBusy} autoComplete="off" />
+          <label htmlFor="entry-url">URL</label><input id="entry-url" type="url" value={entryUrl} onChange={event => setEntryUrl(event.target.value)} disabled={entryBusy} placeholder="https://exemplo.com" autoComplete="url" />
+          <label htmlFor="entry-details">Outras linhas do pass</label><textarea id="entry-details" value={entryDetails} onChange={event => setEntryDetails(event.target.value)} disabled={entryBusy} rows={6} spellCheck={false} />
+          <p className="hint">A primeira linha é a senha. Os campos continuam legíveis pelo GNU pass.</p>
+          <div className="form-actions"><button disabled={entryBusy || !entryId.trim() || !entryPassword} onClick={() => void saveEntry()}>{entryBusy ? 'Salvando…' : 'Salvar'}</button><button disabled={entryBusy} onClick={() => { setEditing(false); setCreating(false); setEntryPassword(''); setEntryDetails(''); }}>Cancelar</button></div>
+        </div>
+      </> : selected ? <><h2>{selected}</h2>{secret ? <><label>Senha</label><div className="password"><code>{visible ? secret.password : '••••••••••••'}</code><button onClick={() => setVisible(!visible)}>{visible ? 'Ocultar' : 'Mostrar'}</button></div>{secret.details && <><label>Outros campos</label><pre>{secret.details}</pre></>}<button onClick={startEdit}>Editar</button><p className="hint">O conteúdo é removido da tela após 30 segundos. O gpg-agent pode continuar com a chave em cache.</p></> : <p>Abra a entrada para ver seu conteúdo.</p>}</> : <p>Selecione uma entrada.</p>}</section></div>
     </>}
     {error && <p className="error" role="alert">{error}</p>}
     <section className="panel" aria-label="Sincronização Git">

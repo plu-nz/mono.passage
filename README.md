@@ -8,7 +8,7 @@ Este documento registra os requisitos discutidos até agora. Ele descreve o prod
 
 ## Estado do código
 
-O app desktop permite escolher um cofre GNU pass existente ou criar um novo com uma chave GPG privada já disponível, lista entradas, busca por nome e abre uma entrada usando `pass show`. A branch `main` também contém sincronização Git conservadora, aprovação e revogação de extensões pela interface, e um host Native Messaging com busca por URL e preenchimento após ação do usuário. Ainda faltam validação ponta a ponta em Brave e Chrome e release atualizado; o release público atual continua distribuindo apenas o desktop anterior. Edição de entradas na interface ainda não está disponível.
+O app desktop permite escolher um cofre GNU pass existente, criar outro com uma chave GPG nova ou já disponível, listar, buscar, abrir, criar e editar entradas. A branch `main` também contém sincronização Git conservadora, aprovação e revogação de extensões pela interface, e um host Native Messaging com busca por URL e preenchimento após ação do usuário. Ainda faltam validação ponta a ponta em Brave e Chrome e release atualizado; o release público atual continua distribuindo apenas o desktop anterior.
 
 | Diretório | Responsabilidade |
 | --- | --- |
@@ -44,6 +44,10 @@ gpg --armor --export-secret-keys FINGERPRINT > /caminho/seguro/passage-secret-ke
 Para restaurar em outro dispositivo, copie o arquivo de backup por um meio seguro e execute `gpg --import /caminho/seguro/passage-secret-key.asc`. Depois confirme a chave com `gpg --list-secret-keys --fingerprint` e teste a leitura de uma entrada com `PASSWORD_STORE_DIR=/caminho/do/cofre pass show ENTRADA`. A exportação, importação e leitura foram verificadas com uma chave e um cofre descartáveis. Guarde o backup separadamente do cofre Git.
 
 O diretório escolhido fica salvo na configuração local do Passage e é usado pelo desktop e pelo conector das extensões. `PASSWORD_STORE_DIR`, quando definido no ambiente do processo, tem prioridade e impede trocar o diretório pela interface. No terminal, para usar um cofre fora de `~/.password-store`, defina a mesma variável, por exemplo `PASSWORD_STORE_DIR=/caminho/do/cofre pass ls`.
+
+### Criar e editar entradas
+
+Com o cofre aberto, clique em **Nova entrada** e informe o caminho da entrada, a senha, o usuário e a URL. O Passage grava pelo GNU `pass`: a senha fica na primeira linha, seguida por `login:` e `url:`. O campo **Outras linhas do pass** aceita metadados adicionais, como `otpauth:` ou anotações. Para editar uma entrada, abra-a e clique em **Editar**. O editor preserva as outras linhas existentes e recusa a gravação se o arquivo cifrado tiver mudado desde a leitura; nesse caso, atualize a entrada antes de tentar novamente. A senha aberta é removida da interface após 30 segundos; o formulário de criação fecha após 30 segundos sem alteração da senha. A operação não faz `git push` automaticamente.
 
 ## Instalação no Linux
 

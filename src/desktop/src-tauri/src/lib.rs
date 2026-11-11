@@ -77,6 +77,29 @@ fn read_entry(id: String) -> Result<Secret, String> {
 }
 
 #[tauri::command]
+fn create_login_entry(
+    id: String,
+    password: String,
+    username: String,
+    url: String,
+    details: String,
+) -> Result<Secret, String> {
+    Vault::open_env()?.create_login(&id, &password, &username, &url, &details)
+}
+
+#[tauri::command]
+fn update_login_entry(
+    id: String,
+    password: String,
+    username: String,
+    url: String,
+    details: String,
+    expected_hash: String,
+) -> Result<Secret, String> {
+    Vault::open_env()?.update_login(&id, &password, &username, &url, &details, &expected_hash)
+}
+
+#[tauri::command]
 fn create_entry(id: String, content: String) -> Result<(), String> {
     Vault::open_env()?.create(&id, &content)
 }
@@ -124,6 +147,8 @@ pub fn run() {
             create_key_and_vault,
             list_entries,
             read_entry,
+            create_login_entry,
+            update_login_entry,
             create_entry,
             update_entry,
             remove_entry,
