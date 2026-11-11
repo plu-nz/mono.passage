@@ -4,6 +4,6 @@ export default defineConfig({
   manifest: {
     name: 'Passage',
     description: 'Acesse seu cofre Passage a partir do navegador.',
-    permissions: ['nativeMessaging'],
+    permissions: ['nativeMessaging', 'activeTab', 'scripting', 'storage'],
   },
 });

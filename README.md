@@ -8,13 +8,14 @@ Este documento registra os requisitos discutidos até agora. Ele descreve o prod
 
 ## Estado do código
 
-O app desktop já lista entradas de um cofre GNU pass local, permite buscar por nome e abre uma entrada usando `pass show`. A extensão Chromium ainda verifica apenas a presença de um conector local. Preenchimento, pareamento, edição e sincronização ainda precisam ser implementados.
+O app desktop lista entradas de um cofre GNU pass local, permite buscar por nome e abre uma entrada usando `pass show`. O código da extensão e do host Native Messaging já inclui pareamento por código, busca por URL e preenchimento sob ação do usuário, mas ainda precisa de validação ponta a ponta em Brave e Chrome. O host é instalado manualmente nesta etapa; o instalador público continua distribuindo apenas o desktop. Edição na interface e sincronização Git ainda não estão disponíveis.
 
 | Diretório | Responsabilidade |
 | --- | --- |
 | `packages/core` | Tipos e contrato compartilhado do cofre e das mensagens locais. |
 | `src/desktop` | Interface React/Vite e aplicativo Tauri 2 para Linux. |
 | `src/extension` | Extensão Manifest V3 para Brave e Chrome, construída com WXT. |
+| `src/native-host` | Conector local Native Messaging para as extensões. |
 | `website` | Landing page estática e gerador do Worker que a publica. |
 
 Para desenvolver no Linux, instale Node.js, pnpm, Rust e as [dependências de sistema do Tauri](https://v2.tauri.app/start/prerequisites/). Na raiz do repositório:
@@ -25,7 +26,7 @@ pnpm check
 pnpm dev:desktop
 ```
 
-Para gerar a extensão, execute `pnpm build:extension` e carregue `src/extension/.output/chrome-mv3` como extensão descompactada em `brave://extensions` ou `chrome://extensions`. A extensão indicará que o conector local ainda não está instalado; isso é esperado nesta etapa. Para usar o desktop, instale GNU `pass` e configure um cofre em `~/.password-store` ou defina `PASSWORD_STORE_DIR`. A chave GPG e o `gpg-agent` continuam sob controle do sistema.
+Para gerar a extensão, execute `pnpm build:extension` e carregue `src/extension/.output/chrome-mv3` como extensão descompactada em `brave://extensions` ou `chrome://extensions`. Siga [as instruções do conector local](src/native-host/README.md) para compilá-lo, registrar os IDs das extensões e aprovar o pareamento. Para usar o desktop, instale GNU `pass` e configure um cofre em `~/.password-store` ou defina `PASSWORD_STORE_DIR`. A chave GPG e o `gpg-agent` continuam sob controle do sistema.
 
 ## Instalação no Linux
 

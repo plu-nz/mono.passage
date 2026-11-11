@@ -12,7 +12,7 @@ Este registro separa o que já foi implementado das escolhas ainda provisórias.
 
 ## 2. Leitura do cofre no Linux
 
-**Implementado:** o desktop usa `PASSWORD_STORE_DIR` ou `~/.password-store`, lista os arquivos `.gpg` sem entrar em `.git` ou seguir links simbólicos e chama `pass show` para abrir uma entrada. O conteúdo completo só é solicitado quando o usuário seleciona a entrada. A primeira linha é tratada como senha; as demais ficam em “Outros campos”. A interface limpa o conteúdo exibido após 30 segundos.
+**Implementado:** o desktop usa `PASSWORD_STORE_DIR` ou `~/.password-store`, lista os arquivos `.gpg` sem entrar em `.git` ou seguir links simbólicos e chama `pass show` para abrir uma entrada. O conteúdo completo só é solicitado quando o usuário seleciona a entrada. A primeira linha é tratada como senha; as demais ficam em “Outros campos”. A interface limpa o conteúdo exibido após 30 segundos. O núcleo Rust agora também interpreta `login`/`username` e `url` e oferece operações de escrita por `pass`; a UI ainda não as expõe. Atualização e remoção exigem hash do arquivo cifrado lido anteriormente, mas há uma janela de corrida com alterações externas entre a verificação e o subprocesso `pass`.
 
 **Motivo:** delegar descriptografia e regras do cofre ao GNU `pass` e ao GPG preserva a interoperabilidade com o terminal e com Android Password Store. Nenhum segredo é gravado pelo aplicativo nesta etapa.
 
@@ -20,7 +20,7 @@ Este registro separa o que já foi implementado das escolhas ainda provisórias.
 
 ## 3. Conector dos navegadores
 
-**Ainda pendente:** a extensão só testa um `ping` de Native Messaging. Não expomos `list` ou `read` pelo host antes de implementar pareamento por instalação, revogação e uma política explícita de acesso por origem. O desktop deve ser a autoridade de autorização das extensões. O estado do GPG será compartilhado pelo sistema, mas cada extensão terá uma identidade e permissões próprias.
+**Protótipo implementado:** host Native Messaging com pareamento por código aprovado no terminal, token por instalação, revogação por CLI e leitura limitada à origem HTTPS associada a um campo `url` da entrada. A extensão consulta o host e preenche após escolha do usuário. O estado do GPG é compartilhado pelo sistema. Ainda faltam validação ponta a ponta em Brave/Chrome, aprovação e revogação pela UI desktop, distribuição automática do host e auditoria de segurança antes de considerar o fluxo concluído.
 
 Para preencher, a extensão precisará solicitar acesso para o domínio da aba atual e só injetar credenciais após uma ação do usuário. O protocolo deve associar a resposta à aba e à origem que iniciou o pedido; nunca enviar segredos a uma página arbitrária nem aceitar um domínio fornecido pela própria página.
 

@@ -5,16 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Passage</title>
     <style>
-      body { width: 300px; margin: 0; padding: 22px; background: #151a19; color: #f4f1e9; font: 14px system-ui, sans-serif; }
+      body { width: 330px; margin: 0; padding: 22px; background: #151a19; color: #f4f1e9; font: 14px system-ui, sans-serif; }
       h1 { margin: 0 0 10px; font-size: 22px; }
       p { color: #b9c4bd; line-height: 1.45; }
       .status { padding: 12px; border: 1px solid #3d4942; border-radius: 10px; }
+      button { display: block; width: 100%; margin-top: 10px; padding: 10px; border: 1px solid #5a7665; border-radius: 8px; color: #f4f1e9; background: #25392e; cursor: pointer; text-align: left; }
     </style>
   </head>
   <body>
     <h1>Passage</h1>
-    <p>O cofre do desktop estará disponível aqui quando o conector local estiver configurado.</p>
     <div class="status" id="status" role="status">Verificando conexão…</div>
+    <div id="actions"></div>
+    <div id="entries"></div>
     <script type="module" src="../src/popup.ts"></script>
   </body>
 </html>
