@@ -28,6 +28,12 @@ nav { padding: 10px; border-right: 1px solid #3d4942; overflow: auto; } nav p { 
 .vault-panel { margin: 0 0 20px; }
 .vault-panel label { display: block; margin-top: 14px; color: #b4e0c2; font-size: 13px; }
 .vault-panel .hint { margin-top: 10px; }
+.key-creation { margin: 18px 0; padding: 14px; border: 1px solid #3d4942; border-radius: 9px; }
+.key-creation summary { cursor: pointer; color: #b4e0c2; font-weight: 700; }
+.key-creation p { margin: 12px 0; }
+.recovery-notice { margin: 14px 0; padding: 14px; border: 1px solid #b4e0c2; border-radius: 9px; background: #20382a; }
+.recovery-notice p { margin: 8px 0; }
+.recovery-notice code { overflow-wrap: anywhere; }
 .panel h2 { margin: 0 0 12px; font-size: 18px; }
 .panel p { color: #b9c4bd; }
 .panel-actions { display: flex; gap: 10px; margin: 14px 0; }

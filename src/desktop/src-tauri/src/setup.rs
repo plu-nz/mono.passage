@@ -26,6 +26,12 @@ pub struct VaultInfo {
     pub gpg_installed: bool,
 }
 
+#[derive(Clone, Debug, Serialize)]
+pub struct CreatedKeyVault {
+    pub info: VaultInfo,
+    pub fingerprint: String,
+}
+
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Settings {
@@ -148,6 +154,29 @@ pub fn create_vault(path: &str, key_id: &str) -> Result<VaultInfo, String> {
     {
         return Err("Selecione a impressão digital de uma chave GPG privada disponível".into());
     }
+    let path = validate_new_vault_path(path)?;
+    let output = Command::new("pass")
+        .args(["init", key_id])
+        .env("PASSWORD_STORE_DIR", path)
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .output()
+        .map_err(|_| "GNU pass não está instalado")?;
+    if !output.status.success() {
+        return Err(
+            "Não foi possível criar o cofre. Verifique GPG e permissões do diretório.".into(),
+        );
+    }
+    let canonical = path
+        .canonicalize()
+        .map_err(|_| "Cofre criado, mas caminho indisponível")?;
+    if !is_initialized(&canonical) {
+        return Err("GNU pass não criou o arquivo .gpg-id".into());
+    }
+    persist_selection(&canonical)?;
+    vault_info()
+}
+
+fn validate_new_vault_path(path: &str) -> Result<&Path, String> {
     let path = Path::new(path);
     if !path.is_absolute() || path == Path::new("/") {
         return Err("Escolha um diretório novo com caminho absoluto".into());
@@ -170,25 +199,106 @@ pub fn create_vault(path: &str, key_id: &str) -> Result<VaultInfo, String> {
             return Err("O diretório pai precisa existir".into());
         }
     }
-    let output = Command::new("pass")
-        .args(["init", key_id])
-        .env("PASSWORD_STORE_DIR", path)
-        .env("GIT_TERMINAL_PROMPT", "0")
+    Ok(path)
+}
+
+pub fn create_key_and_vault(
+    path: &str,
+    name: &str,
+    email: &str,
+) -> Result<CreatedKeyVault, String> {
+    create_key_and_vault_with(path, name, email, generate_key)
+}
+
+fn create_key_and_vault_with<F>(
+    path: &str,
+    name: &str,
+    email: &str,
+    generate: F,
+) -> Result<CreatedKeyVault, String>
+where
+    F: FnOnce(&str) -> Result<String, String>,
+{
+    require_selection_allowed()?;
+    validate_new_vault_path(path)?;
+    if !available("pass", "--version") || !available("gpg", "--version") {
+        return Err("GNU pass e GPG precisam estar instalados antes de criar o cofre".into());
+    }
+    let uid = validated_uid(name, email)?;
+    let fingerprint = generate(&uid)?;
+    let info = create_vault(path, &fingerprint).map_err(|reason| {
+        format!("Chave GPG {fingerprint} criada, mas o cofre não foi concluído: {reason} A chave foi preservada. Corrija o problema e crie o cofre escolhendo esta chave.")
+    })?;
+    Ok(CreatedKeyVault { info, fingerprint })
+}
+
+fn validated_uid(name: &str, email: &str) -> Result<String, String> {
+    let name = name.trim();
+    let email = email.trim();
+    if name.is_empty()
+        || name.len() > 100
+        || name.chars().any(|c| c.is_control() || "<>()".contains(c))
+    {
+        return Err("Nome inválido para a chave GPG".into());
+    }
+    if email.len() > 254
+        || email
+            .bytes()
+            .any(|c| !c.is_ascii() || c.is_ascii_control() || c == b' ')
+    {
+        return Err("E-mail inválido para a chave GPG".into());
+    }
+    let Some((local, domain)) = email.split_once('@') else {
+        return Err("E-mail inválido para a chave GPG".into());
+    };
+    if local.is_empty()
+        || domain.is_empty()
+        || domain.contains('@')
+        || !domain.contains('.')
+        || domain.starts_with('-')
+        || domain.ends_with('-')
+        || !email
+            .bytes()
+            .all(|c| c.is_ascii_alphanumeric() || b"._+@-".contains(&c))
+    {
+        return Err("E-mail inválido para a chave GPG".into());
+    }
+    Ok(format!("{name} <{email}>"))
+}
+
+fn generate_key(uid: &str) -> Result<String, String> {
+    let output = Command::new("gpg")
+        .args([
+            "--batch",
+            "--pinentry-mode",
+            "ask",
+            "--status-fd",
+            "1",
+            "--quick-generate-key",
+            uid,
+            "default",
+            "default",
+            "never",
+        ])
         .output()
-        .map_err(|_| "GNU pass não está instalado")?;
+        .map_err(|_| "Não foi possível iniciar GPG".to_string())?;
+    let fingerprint = parse_created_fingerprint(&output.stdout);
     if !output.status.success() {
-        return Err(
-            "Não foi possível criar o cofre. Verifique GPG e permissões do diretório.".into(),
-        );
+        return Err(match fingerprint {
+            Some(id) => format!("GPG não concluiu a geração. Verifique o pinentry. A chave {id} pode ter sido criada; confira suas chaves privadas antes de tentar novamente."),
+            None => "GPG não criou a chave. Verifique o pinentry e tente novamente.".into(),
+        });
     }
-    let canonical = path
-        .canonicalize()
-        .map_err(|_| "Cofre criado, mas caminho indisponível")?;
-    if !is_initialized(&canonical) {
-        return Err("GNU pass não criou o arquivo .gpg-id".into());
-    }
-    persist_selection(&canonical)?;
-    vault_info()
+    fingerprint.ok_or("GPG concluiu sem informar a impressão digital. Confira as chaves privadas antes de tentar novamente.".into())
+}
+
+fn parse_created_fingerprint(output: &[u8]) -> Option<String> {
+    String::from_utf8_lossy(output)
+        .lines()
+        .filter_map(|line| line.strip_prefix("[GNUPG:] KEY_CREATED "))
+        .filter_map(|line| line.split_whitespace().last())
+        .find(|id| key_id_is_valid(id))
+        .map(str::to_owned)
 }
 
 pub fn vault_info() -> Result<VaultInfo, String> {
@@ -241,17 +351,30 @@ pub fn gpg_keys() -> Vec<GpgKey> {
     if !output.status.success() {
         return Vec::new();
     }
+    parse_gpg_keys(&output.stdout)
+}
+
+fn parse_gpg_keys(output: &[u8]) -> Vec<GpgKey> {
     let mut keys = Vec::new();
     let mut current: Option<usize> = None;
-    for line in String::from_utf8_lossy(&output.stdout).lines() {
+    for line in String::from_utf8_lossy(output).lines() {
         let fields: Vec<_> = line.split(':').collect();
         match fields.first().copied() {
             Some("sec") => {
-                keys.push(GpgKey {
-                    id: String::new(),
-                    label: String::new(),
-                });
-                current = Some(keys.len() - 1);
+                let validity = fields.get(1).copied().unwrap_or("");
+                let capabilities = fields.get(11).copied().unwrap_or("");
+                let usable = !matches!(validity, "r" | "e" | "d" | "i")
+                    && capabilities.contains('E')
+                    && !capabilities.contains('D');
+                current = if usable {
+                    keys.push(GpgKey {
+                        id: String::new(),
+                        label: String::new(),
+                    });
+                    Some(keys.len() - 1)
+                } else {
+                    None
+                };
             }
             Some("fpr") => {
                 if let Some(index) = current {
@@ -289,6 +412,55 @@ mod tests {
         assert!(key_id_is_valid(&"A".repeat(40)));
         assert!(!key_id_is_valid("--output=/tmp/file"));
         assert!(!key_id_is_valid("12345678"));
+    }
+
+    #[test]
+    fn validates_identity_before_key_creation() {
+        assert!(validated_uid("Alice", "alice@example.com").is_ok());
+        for (name, email) in [
+            ("", "a@example.com"),
+            ("Alice\nBob", "a@example.com"),
+            ("Alice", "bad"),
+            ("Alice", "x@example.com --output"),
+        ] {
+            assert!(validated_uid(name, email).is_err());
+        }
+        assert_eq!(
+            parse_created_fingerprint(
+                b"[GNUPG:] KEY_CREATED B 0123456789ABCDEF0123456789ABCDEF01234567\n"
+            ),
+            Some("0123456789ABCDEF0123456789ABCDEF01234567".into())
+        );
+    }
+
+    #[test]
+    fn gpg_parser_only_returns_usable_encryption_keys() {
+        fn record(validity: &str, capabilities: &str, fingerprint: &str) -> String {
+            let mut fields = vec![""; 12];
+            fields[0] = "sec";
+            fields[1] = validity;
+            fields[11] = capabilities;
+            format!(
+                "{}\nfpr:::::::::{}:\nuid:::::::::Test Key:\n",
+                fields.join(":"),
+                fingerprint
+            )
+        }
+        let usable = "0123456789ABCDEF0123456789ABCDEF01234567";
+        let other = "89ABCDEF0123456789ABCDEF0123456789ABCDEF";
+        let listing = [
+            record("u", "scESC", usable),
+            record("u", "scSC", other),
+            record("r", "scESC", other),
+            record("e", "scESC", other),
+            record("d", "scESC", other),
+            record("i", "scESC", other),
+            record("u", "scESCD", other),
+        ]
+        .join("");
+        let keys = parse_gpg_keys(listing.as_bytes());
+        assert_eq!(keys.len(), 1);
+        assert_eq!(keys[0].id, usable);
     }
 
     #[test]
@@ -357,6 +529,51 @@ mod tests {
         );
         let keys = gpg_keys();
         assert_eq!(keys.len(), 1);
+        let sign_only = Command::new("gpg")
+            .args([
+                "--batch",
+                "--pinentry-mode",
+                "loopback",
+                "--passphrase",
+                "",
+                "--quick-generate-key",
+                "Sign Only <sign-only@example.invalid>",
+                "ed25519",
+                "sign",
+                "1d",
+            ])
+            .output()
+            .unwrap();
+        assert!(
+            sign_only.status.success(),
+            "{}",
+            String::from_utf8_lossy(&sign_only.stderr)
+        );
+        assert_eq!(
+            gpg_keys().len(),
+            1,
+            "Chave apenas de assinatura não deve ser oferecida"
+        );
+        let listing = Command::new("gpg")
+            .args([
+                "--batch",
+                "--with-colons",
+                "--fingerprint",
+                "--list-secret-keys",
+                "sign-only@example.invalid",
+            ])
+            .output()
+            .unwrap();
+        assert!(listing.status.success());
+        let fingerprint = String::from_utf8_lossy(&listing.stdout)
+            .lines()
+            .find(|line| line.starts_with("fpr:"))
+            .and_then(|line| line.split(':').nth(9))
+            .unwrap()
+            .to_owned();
+        let sign_store = home.join("sign-only-store");
+        assert!(create_vault(sign_store.to_str().unwrap(), &fingerprint).is_err());
+        assert!(!sign_store.exists());
         let store = home.join("new-store");
         let info = create_vault(store.to_str().unwrap(), &keys[0].id).unwrap();
         assert_eq!(info.source, "selection");
@@ -368,6 +585,41 @@ mod tests {
             select_vault(store.to_str().unwrap()).unwrap().path,
             store.to_str().unwrap()
         );
+        let second = home.join("generated-store");
+        let generated = create_key_and_vault_with(
+            second.to_str().unwrap(),
+            "New Key",
+            "new@example.invalid",
+            |uid| {
+                let result = Command::new("gpg")
+                    .args([
+                        "--batch",
+                        "--pinentry-mode",
+                        "loopback",
+                        "--passphrase",
+                        "",
+                        "--status-fd",
+                        "1",
+                        "--quick-generate-key",
+                        uid,
+                        "default",
+                        "default",
+                        "1d",
+                    ])
+                    .output()
+                    .unwrap();
+                assert!(
+                    result.status.success(),
+                    "{}",
+                    String::from_utf8_lossy(&result.stderr)
+                );
+                Ok(parse_created_fingerprint(&result.stdout).unwrap())
+            },
+        )
+        .unwrap();
+        assert!(generated.info.initialized);
+        assert_eq!(generated.info.recipient_ids, [generated.fingerprint]);
+        assert!(second.join(".gpg-id").is_file());
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;

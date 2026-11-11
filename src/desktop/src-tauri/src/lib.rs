@@ -58,6 +58,15 @@ fn create_vault(path: String, key_id: String) -> Result<VaultInfo, String> {
 }
 
 #[tauri::command]
+fn create_key_and_vault(
+    path: String,
+    name: String,
+    email: String,
+) -> Result<setup::CreatedKeyVault, String> {
+    setup::create_key_and_vault(&path, &name, &email)
+}
+
+#[tauri::command]
 fn list_entries() -> Result<Vec<Entry>, String> {
     Vault::open_env()?.list()
 }
@@ -112,6 +121,7 @@ pub fn run() {
             gpg_keys,
             select_vault,
             create_vault,
+            create_key_and_vault,
             list_entries,
             read_entry,
             create_entry,

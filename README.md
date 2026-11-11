@@ -30,7 +30,18 @@ Para gerar a extensão, execute `pnpm build:extension` e carregue `src/extension
 
 ### Abrir ou criar um cofre no desktop
 
-No painel **Cofre**, informe o caminho absoluto do diretório e escolha **Abrir existente** para um cofre já inicializado com `.gpg-id`. Para criar, escolha uma chave GPG privada na lista e clique em **Criar cofre**. O Passage usa `pass init` para criar a estrutura compatível com GNU pass; ele não gera nem importa chaves GPG. Se a lista estiver vazia, crie uma chave com `gpg --full-generate-key` ou importe a chave correspondente ao cofre existente antes de tentar ler suas entradas.
+No painel **Cofre**, informe o caminho absoluto do diretório e escolha **Abrir existente** para um cofre já inicializado com `.gpg-id`. Para criar, escolha uma chave GPG privada na lista e clique em **Criar cofre**, ou abra **Criar chave GPG e cofre** para gerar uma chave nova pelo GPG e inicializar o cofre em sequência. A frase secreta é solicitada pelo `pinentry` do sistema; o Passage não a recebe. O Passage usa `pass init` para criar a estrutura compatível com GNU pass. Para abrir um cofre de outro dispositivo, importe a chave privada correspondente antes de tentar ler as entradas.
+
+Depois de criar uma chave nova, guarde uma cópia segura da chave privada e a frase secreta. O Git sincroniza apenas os arquivos cifrados do cofre; perder a chave privada impede recuperar as senhas. O Passage mostra a impressão digital da chave criada e não exporta automaticamente material secreto. A criação da chave é uma operação separada da inicialização do cofre: se a segunda etapa falhar, a chave gerada permanece no GPG e pode ser usada para tentar criar o cofre novamente.
+
+Para fazer backup, substitua `FINGERPRINT` pela impressão digital mostrada no aplicativo e escolha um destino seguro fora do repositório Git:
+
+```sh
+umask 077
+gpg --armor --export-secret-keys FINGERPRINT > /caminho/seguro/passage-secret-key.asc
+```
+
+Para restaurar em outro dispositivo, copie o arquivo de backup por um meio seguro e execute `gpg --import /caminho/seguro/passage-secret-key.asc`. Depois confirme a chave com `gpg --list-secret-keys --fingerprint` e teste a leitura de uma entrada com `PASSWORD_STORE_DIR=/caminho/do/cofre pass show ENTRADA`. A exportação, importação e leitura foram verificadas com uma chave e um cofre descartáveis. Guarde o backup separadamente do cofre Git.
 
 O diretório escolhido fica salvo na configuração local do Passage e é usado pelo desktop e pelo conector das extensões. `PASSWORD_STORE_DIR`, quando definido no ambiente do processo, tem prioridade e impede trocar o diretório pela interface. No terminal, para usar um cofre fora de `~/.password-store`, defina a mesma variável, por exemplo `PASSWORD_STORE_DIR=/caminho/do/cofre pass ls`.
 
