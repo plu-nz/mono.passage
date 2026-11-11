@@ -1,0 +1,106 @@
+name: Release Linux
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versão sem o prefixo v (ex.: 0.1.1)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-linux
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Validate version and tag
+        env:
+          VERSION: ${{ inputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo 'Use uma versão no formato X.Y.Z.' >&2
+            exit 1
+          fi
+          tag="v$VERSION"
+          if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
+            echo "A tag $tag já existe." >&2
+            exit 1
+          fi
+          echo "RELEASE_TAG=$tag" >> "$GITHUB_ENV"
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.18.0
+          run_install: false
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Set artifact version
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          version = os.environ['VERSION']
+          for name in ('src/desktop/package.json', 'src/desktop/src-tauri/tauri.conf.json'):
+              path = Path(name)
+              data = json.loads(path.read_text())
+              data['version'] = version
+              path.write_text(json.dumps(data, indent=2) + '\n')
+          for name in ('src/desktop/src-tauri/Cargo.toml', 'src/native-host/Cargo.toml'):
+              path = Path(name)
+              text = path.read_text()
+              text = text.replace('version = "0.1.0"', f'version = "{version}"', 1)
+              path.write_text(text)
+          PY
+
+      - name: Build and check
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm check
+          pnpm --filter @passage/desktop tauri build --no-bundle
+          cargo test --manifest-path src/desktop/src-tauri/Cargo.toml --lib
+          cargo test --manifest-path src/native-host/Cargo.toml
+          cargo build --release --manifest-path src/native-host/Cargo.toml
+
+      - name: Package
+        run: |
+          ./scripts/package-linux.sh
+          cd dist/release
+          sha256sum -c passage-linux-x86_64.tar.gz.sha256
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$RELEASE_TAG" \
+            dist/release/passage-linux-x86_64.tar.gz \
+            dist/release/passage-linux-x86_64.tar.gz.sha256 \
+            --target "$GITHUB_SHA" \
+            --title "$RELEASE_TAG" \
+            --generate-notes \
+            --latest

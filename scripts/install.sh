@@ -39,7 +39,7 @@ install -Dm644 "$temp_dir/nz.plu.passage.desktop" "$install_root/applications/nz
 
 if [ -f "$temp_dir/passage-native-host" ] && [ -n "${PASSAGE_BRAVE_EXTENSION_ID:-}" ] && [ -n "${PASSAGE_CHROME_EXTENSION_ID:-}" ]; then
   if [ -f "$temp_dir/install-native-host.sh" ]; then
-    sh "$temp_dir/install-native-host.sh" "$user_bin/passage-native-host" "$PASSAGE_BRAVE_EXTENSION_ID" "$PASSAGE_CHROME_EXTENSION_ID"
+    "$temp_dir/install-native-host.sh" "$user_bin/passage-native-host" "$PASSAGE_BRAVE_EXTENSION_ID" "$PASSAGE_CHROME_EXTENSION_ID"
   fi
 fi
 

@@ -38,6 +38,17 @@ curl -LsSf https://passage.plu.nz/install.sh | sh
 
 O script baixa o binário pronto do [release mais recente](https://github.com/plu-nz/passage/releases/latest), verifica o SHA-256 e instala `~/.local/bin/passage` com um atalho no menu. Não é preciso clonar o repositório, nem instalar Node.js, pnpm ou Rust. GNU `pass` e as bibliotecas gráficas do Tauri ainda são dependências de execução; configure um cofre em `~/.password-store` ou `PASSWORD_STORE_DIR`. `~/.local/bin` deve estar no `PATH` da sessão.
 
+O mesmo comando atualiza uma instalação existente para a release mais recente. Feche e abra o Passage após atualizar. A versão instalada muda apenas quando uma nova release é publicada.
+
+Para publicar uma nova versão Linux a partir de `main`, execute com acesso de escrita ao repositório:
+
+```sh
+gh workflow run release-linux.yml --ref main -f version=0.1.1
+gh run watch
+```
+
+O [workflow manual](.github/workflows/release-linux.yml) valida que a tag ainda não existe, compila desktop e conector em Ubuntu 22.04, executa as verificações e publica o pacote e seu SHA-256 como release mais recente. A versão é informada sem o prefixo `v` e precisa ser incrementada a cada publicação. A extensão é compilada separadamente pelo desenvolvedor; sua distribuição ainda não faz parte da release.
+
 Para compilar e instalar a partir do código local, use `./scripts/install-linux-user.sh`.
 
 Veja [as decisões e pendências da implementação](docs/decisions.md) para revisar o caminho adotado.
