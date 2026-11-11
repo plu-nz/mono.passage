@@ -40,6 +40,7 @@ O script baixa o binário pronto do [release mais recente](https://github.com/pl
 Para compilar e instalar a partir do código local, use `./scripts/install-linux-user.sh`.
 
 Veja [as decisões e pendências da implementação](docs/decisions.md) para revisar o caminho adotado.
+O [plano de execução](docs/execution-plan.md) detalha as entregas, dependências e critérios de aceite do desktop Linux e das extensões.
 
 ## Princípios
 
