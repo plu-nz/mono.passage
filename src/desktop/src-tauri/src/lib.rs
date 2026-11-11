@@ -1,5 +1,9 @@
+pub mod git;
+mod pairing;
 pub mod vault;
 
+use git::{GitStatus, GitVault};
+use pairing::{approve_pairing, list_pairings, revoke_pairing};
 use serde::Serialize;
 use std::process::Command;
 use vault::{Entry, Secret, Vault};
@@ -53,6 +57,27 @@ fn remove_entry(id: String, expected_hash: String) -> Result<(), String> {
     Vault::open_env()?.remove(&id, &expected_hash)
 }
 
+#[tauri::command]
+fn git_status() -> Result<GitStatus, String> {
+    GitVault::open(Vault::open_env()?.root())?.status()
+}
+
+#[tauri::command]
+fn git_pull() -> Result<GitStatus, String> {
+    let vault = Vault::open_env()?;
+    let git = GitVault::open(vault.root())?;
+    git.pull()?;
+    git.status()
+}
+
+#[tauri::command]
+fn git_push() -> Result<GitStatus, String> {
+    let vault = Vault::open_env()?;
+    let git = GitVault::open(vault.root())?;
+    git.push()?;
+    git.status()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -62,7 +87,13 @@ pub fn run() {
             read_entry,
             create_entry,
             update_entry,
-            remove_entry
+            remove_entry,
+            git_status,
+            git_pull,
+            git_push,
+            list_pairings,
+            approve_pairing,
+            revoke_pairing
         ])
         .run(tauri::generate_context!())
         .expect("failed to run Passage");

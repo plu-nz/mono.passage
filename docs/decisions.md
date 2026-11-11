@@ -20,16 +20,20 @@ Este registro separa o que já foi implementado das escolhas ainda provisórias.
 
 ## 3. Conector dos navegadores
 
-**Protótipo implementado:** host Native Messaging com pareamento por código aprovado no terminal, token por instalação, revogação por CLI e leitura limitada à origem HTTPS associada a um campo `url` da entrada. A extensão consulta o host e preenche após escolha do usuário. O estado do GPG é compartilhado pelo sistema. Ainda faltam validação ponta a ponta em Brave/Chrome, aprovação e revogação pela UI desktop, distribuição automática do host e auditoria de segurança antes de considerar o fluxo concluído.
+**Protótipo implementado:** host Native Messaging com pareamento por código aprovado no desktop ou terminal, token por instalação, revogação pela interface ou CLI e leitura limitada à origem HTTPS associada a um campo `url` da entrada. A extensão consulta o host e preenche após escolha do usuário. O estado do GPG é compartilhado pelo sistema. Ainda faltam validação ponta a ponta em Brave/Chrome, distribuição de extensões com IDs estáveis e auditoria de segurança antes de considerar o fluxo concluído. O empacotamento no código inclui o host, mas o release público atual ainda contém só o desktop.
 
 Para preencher, a extensão precisará solicitar acesso para o domínio da aba atual e só injetar credenciais após uma ação do usuário. O protocolo deve associar a resposta à aba e à origem que iniciou o pedido; nunca enviar segredos a uma página arbitrária nem aceitar um domínio fornecido pela própria página.
 
+## Sincronização Git na branch `main`
+
+O desktop mostra o estado do repositório do cofre e oferece baixar/enviar quando há branch com upstream. `pull` exige árvore limpa, busca alterações e só aceita avanço direto. `push` busca o remoto antes de enviar e recusa se ele avançou. Divergência exige resolução manual; o Passage não tenta mesclar arquivos `.gpg`. Essas operações não criam commits: o usuário continua usando `pass git` ou Git para registrar alterações. Há uma janela de concorrência se outro processo modificar o cofre durante fetch, merge ou push; o fluxo ainda precisa de validação com um remoto de teste antes de ser considerado pronto para dados reais.
+
 ## 4. Próximas etapas recomendadas
 
-1. Criar cofre de teste descartável e exercitar leitura no desktop, incluindo `PASSWORD_STORE_DIR`, falha de GPG e atualização após uma alteração pelo terminal.
-2. Implementar host Native Messaging e instalação local para Brave/Chrome com IDs de extensão fixos por distribuição.
-3. Implementar pareamento, revogação e pedidos de preenchimento autorizados pelo desktop, com teste em ambos os navegadores.
-4. Adicionar edição compatível com `pass` e sincronização Git com tratamento explícito de conflitos.
+1. Criar cofre de teste descartável e exercitar leitura e escrita, incluindo `PASSWORD_STORE_DIR`, falha de GPG e alteração externa pelo terminal.
+2. Validar host, pareamento, revogação e preenchimento em instalações reais de Brave e Chrome; definir IDs estáveis para distribuição.
+3. Validar sincronização com remoto Git de teste e conflitos concorrentes; fechar a janela de corrida da edição antes de expô-la na interface.
+4. Empacotar e publicar novo release com host após a matriz de testes; o release atual ainda não o contém.
 5. Projetar biometria e bloqueio considerando a chave GPG e o cache do `gpg-agent`, antes de prometer desbloqueio pela digital no primeiro acesso.
 
 ## 5. Decisões ainda abertas

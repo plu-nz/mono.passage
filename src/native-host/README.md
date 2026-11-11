@@ -2,6 +2,14 @@
 
 O host Native Messaging atende Brave e Chrome usando o cofre GNU `pass` do usuário. Ele é iniciado pelo navegador sob demanda, sem exigir que a janela Tauri esteja aberta. A aprovação por CLI é provisória até existir uma tela de pareamento no desktop.
 
+O instalador de release instala `passage-native-host` junto ao desktop. Para registrar os navegadores, informe os IDs reais das extensões após carregá-las:
+
+```sh
+passage-install-native-host "$HOME/.local/bin/passage-native-host" ID_BRAVE ID_CHROME
+```
+
+Também é possível definir `PASSAGE_BRAVE_EXTENSION_ID` e `PASSAGE_CHROME_EXTENSION_ID` antes de executar o instalador, para registrar ambos automaticamente. Releases antigos, sem host no arquivo, continuam instaláveis; não fornecem conexão com navegadores.
+
 ## Desenvolver e registrar
 
 ```sh

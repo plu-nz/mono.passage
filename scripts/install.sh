@@ -27,7 +27,23 @@ install_root="${XDG_DATA_HOME:-$HOME/.local/share}"
 user_bin="$HOME/.local/bin"
 install -Dm755 "$temp_dir/passage" "$user_bin/.passage.new"
 mv -f "$user_bin/.passage.new" "$user_bin/passage"
+if [ -f "$temp_dir/passage-native-host" ]; then
+  install -Dm755 "$temp_dir/passage-native-host" "$user_bin/.passage-native-host.new"
+  mv -f "$user_bin/.passage-native-host.new" "$user_bin/passage-native-host"
+fi
+if [ -f "$temp_dir/install-native-host.sh" ]; then
+  install -Dm755 "$temp_dir/install-native-host.sh" "$user_bin/passage-install-native-host"
+fi
 install -Dm644 "$temp_dir/nz.plu.passage.png" "$install_root/icons/hicolor/512x512/apps/nz.plu.passage.png"
 install -Dm644 "$temp_dir/nz.plu.passage.desktop" "$install_root/applications/nz.plu.passage.desktop"
 
+if [ -f "$temp_dir/passage-native-host" ] && [ -n "${PASSAGE_BRAVE_EXTENSION_ID:-}" ] && [ -n "${PASSAGE_CHROME_EXTENSION_ID:-}" ]; then
+  if [ -f "$temp_dir/install-native-host.sh" ]; then
+    sh "$temp_dir/install-native-host.sh" "$user_bin/passage-native-host" "$PASSAGE_BRAVE_EXTENSION_ID" "$PASSAGE_CHROME_EXTENSION_ID"
+  fi
+fi
+
 printf 'Passage instalado em %s\n' "$user_bin/passage"
+if [ -f "$temp_dir/passage-native-host" ] && { [ -z "${PASSAGE_BRAVE_EXTENSION_ID:-}" ] || [ -z "${PASSAGE_CHROME_EXTENSION_ID:-}" ]; }; then
+  printf 'Conector instalado. Para registrar Brave e Chrome, execute: %s/passage-install-native-host %s/passage-native-host ID_BRAVE ID_CHROME\n' "$user_bin" "$user_bin"
+fi

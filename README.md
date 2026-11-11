@@ -8,7 +8,7 @@ Este documento registra os requisitos discutidos até agora. Ele descreve o prod
 
 ## Estado do código
 
-O app desktop lista entradas de um cofre GNU pass local, permite buscar por nome e abre uma entrada usando `pass show`. O código da extensão e do host Native Messaging já inclui pareamento por código, busca por URL e preenchimento sob ação do usuário, mas ainda precisa de validação ponta a ponta em Brave e Chrome. O host é instalado manualmente nesta etapa; o instalador público continua distribuindo apenas o desktop. Edição na interface e sincronização Git ainda não estão disponíveis.
+O app desktop lista entradas de um cofre GNU pass local, permite buscar por nome e abre uma entrada usando `pass show`. A branch `main` também contém sincronização Git conservadora, aprovação e revogação de extensões pela interface, e um host Native Messaging com busca por URL e preenchimento após ação do usuário. Ainda faltam validação ponta a ponta em Brave e Chrome e release atualizado; o release público atual continua distribuindo apenas o desktop. Edição de entradas na interface ainda não está disponível.
 
 | Diretório | Responsabilidade |
 | --- | --- |
@@ -26,7 +26,7 @@ pnpm check
 pnpm dev:desktop
 ```
 
-Para gerar a extensão, execute `pnpm build:extension` e carregue `src/extension/.output/chrome-mv3` como extensão descompactada em `brave://extensions` ou `chrome://extensions`. Siga [as instruções do conector local](src/native-host/README.md) para compilá-lo, registrar os IDs das extensões e aprovar o pareamento. Para usar o desktop, instale GNU `pass` e configure um cofre em `~/.password-store` ou defina `PASSWORD_STORE_DIR`. A chave GPG e o `gpg-agent` continuam sob controle do sistema.
+Para gerar a extensão, execute `pnpm build:extension` e carregue `src/extension/.output/chrome-mv3` como extensão descompactada em `brave://extensions` ou `chrome://extensions`. Siga [as instruções do conector local](src/native-host/README.md) para compilá-lo e registrar os IDs das extensões; o código mostrado pelo popup pode ser aprovado na interface desktop ou pelo CLI. Para usar o desktop, instale GNU `pass` e configure um cofre em `~/.password-store` ou defina `PASSWORD_STORE_DIR`. A chave GPG e o `gpg-agent` continuam sob controle do sistema.
 
 ## Instalação no Linux
 

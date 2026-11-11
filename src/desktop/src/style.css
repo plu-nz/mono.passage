@@ -22,4 +22,13 @@ nav { padding: 10px; border-right: 1px solid #3d4942; overflow: auto; } nav p { 
 .password code { overflow-wrap: anywhere; } pre { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5; }
 .hint { margin-top: 30px; color: #9aaba0; font-size: 12px; line-height: 1.5; }
 .error { margin-top: 16px; }
+.panel { margin-top: 20px; padding: 22px; border: 1px solid #3d4942; border-radius: 14px; }
+.panel h2 { margin: 0 0 12px; font-size: 18px; }
+.panel p { color: #b9c4bd; }
+.panel-actions { display: flex; gap: 10px; margin: 14px 0; }
+.panel-actions input { flex: 1; }
+.panel-actions button:disabled { opacity: .5; cursor: default; }
+.panel-error { color: #f5bba9 !important; }
+.pairing { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid #3d4942; overflow-wrap: anywhere; }
+.pairing small { display: block; color: #9aaba0; }
 @media(max-width: 650px) { .shell { padding: 16px; } .workspace { grid-template-columns: 1fr; } nav { max-height: 220px; border-right: 0; border-bottom: 1px solid #3d4942; } }

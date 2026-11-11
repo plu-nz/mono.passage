@@ -30,6 +30,10 @@ pub struct Vault {
 }
 
 impl Vault {
+    pub fn root(&self) -> &Path {
+        &self.root
+    }
+
     pub fn open_env() -> Result<Self, String> {
         let root = if let Some(dir) = env::var_os("PASSWORD_STORE_DIR") {
             PathBuf::from(dir)

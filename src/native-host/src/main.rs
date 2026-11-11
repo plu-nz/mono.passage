@@ -311,6 +311,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         return Ok(());
     }
+    if args.get(1).map(String::as_str) == Some("list-json") {
+        let items = with_state(|s| {
+            Ok(s.authorized
+                .iter()
+                .map(|a| json!({"origin":a.origin,"installationId":a.installation_id}))
+                .collect::<Vec<_>>())
+        })?;
+        println!("{}", serde_json::to_string(&items)?);
+        return Ok(());
+    }
     if args.get(1).map(String::as_str) == Some("revoke") {
         let origin = extension_origin(
             args.get(2)

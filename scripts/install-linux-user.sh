@@ -8,9 +8,13 @@ user_bin="${HOME}/.local/bin"
 cd "$repo_dir"
 pnpm install --frozen-lockfile
 pnpm --filter @passage/desktop tauri build --no-bundle
+cargo build --release --manifest-path src/native-host/Cargo.toml
 
 install -Dm755 src/desktop/src-tauri/target/release/passage_desktop "$user_bin/passage"
+install -Dm755 src/native-host/target/release/passage-native-host "$user_bin/passage-native-host"
+install -Dm755 scripts/install-native-host.sh "$user_bin/passage-install-native-host"
 install -Dm644 src/desktop/src-tauri/icons/icon.png "$install_root/icons/hicolor/512x512/apps/nz.plu.passage.png"
 install -Dm644 scripts/nz.plu.passage.desktop "$install_root/applications/nz.plu.passage.desktop"
 
 printf 'Passage instalado em %s\n' "$user_bin/passage"
+printf 'Registre o conector com: passage-install-native-host %s/passage-native-host ID_BRAVE ID_CHROME\n' "$user_bin"
