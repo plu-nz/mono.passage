@@ -1,6 +1,6 @@
 # Conector local (protótipo)
 
-O host Native Messaging atende Brave e Chrome usando o cofre GNU `pass` do usuário. Ele é iniciado pelo navegador sob demanda, sem exigir que a janela Tauri esteja aberta. A aprovação por CLI é provisória até existir uma tela de pareamento no desktop.
+O host Native Messaging atende Brave e Chrome usando o cofre GNU `pass` do usuário. Ele é iniciado pelo navegador sob demanda, sem exigir que a janela desktop esteja aberta. O desktop e o CLI compartilham o estado de pareamento no pacote Go `internal/pairing`.
 
 O instalador de release instala `passage-native-host` junto ao desktop. Quando o release contém a extensão, o instalador registra automaticamente o ID fixo `edmjpcolampgjbnmldchmnkinmhakjgm` nos navegadores; ainda é necessário carregar a pasta da extensão em cada navegador e aprovar cada pareamento. Para registrar outra compilação manualmente, informe os IDs exibidos pelos navegadores:
 
@@ -13,18 +13,25 @@ Também é possível definir `PASSAGE_BRAVE_EXTENSION_ID` e `PASSAGE_CHROME_EXTE
 ## Desenvolver e registrar
 
 ```sh
-cargo build --manifest-path src/native-host/Cargo.toml
+go build -o src/native-host/build/passage-native-host ./src/native-host
 sh scripts/install-native-host.sh \
-  "$PWD/src/native-host/target/debug/passage-native-host" \
+  "$PWD/src/native-host/build/passage-native-host" \
   ID_MOSTRADO_EM_BRAVE_EXTENSIONS \
   ID_MOSTRADO_EM_CHROME_EXTENSIONS
 ```
 
-Para usar outro `CARGO_TARGET_DIR`, passe o caminho real do binário produzido. Os IDs de extensão aparecem no gerenciador de cada navegador após carregar a extensão descompactada. O script registra manifestos para Brave e Chrome estáveis; também registra perfis Brave Beta, Nightly e Brave Origin já existentes. É preciso Python 3.
+Os IDs de extensão aparecem no gerenciador de cada navegador após carregar a extensão descompactada. O script registra manifestos para Brave e Chrome estáveis; também registra perfis Brave Beta, Nightly e Brave Origin já existentes. É preciso Python 3.
+
+Para testar o protocolo sem tocar no cofre nem nos perfis reais:
+
+```sh
+go test ./internal/pairing ./src/native-host
+python3 src/native-host/tests/integration.py "$PWD/src/native-host/build/passage-native-host"
+```
 
 ## Parear e revogar
 
-O popup solicita pareamento e mostra um código de 12 caracteres que expira em 5 minutos. Confirme localmente:
+O popup solicita pareamento e mostra um código de 12 caracteres que expira em 5 minutos. Confirme na interface desktop ou pelo terminal:
 
 ```sh
 passage-native-host approve CODIGO

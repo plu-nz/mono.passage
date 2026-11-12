@@ -43,7 +43,12 @@ jobs:
       - name: Install Linux build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev build-essential pkg-config
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.0'
+          cache: true
 
       - uses: actions/setup-node@v4
         with:
@@ -53,8 +58,6 @@ jobs:
         with:
           version: 12.18.0
           run_install: false
-
-      - uses: dtolnay/rust-toolchain@stable
 
       - name: Set artifact version
         env:
@@ -66,16 +69,11 @@ jobs:
           from pathlib import Path
 
           version = os.environ['VERSION']
-          for name in ('src/desktop/package.json', 'src/extension/package.json', 'src/desktop/src-tauri/tauri.conf.json'):
+          for name in ('src/desktop/package.json', 'src/extension/package.json'):
               path = Path(name)
               data = json.loads(path.read_text())
               data['version'] = version
               path.write_text(json.dumps(data, indent=2) + '\n')
-          for name in ('src/desktop/src-tauri/Cargo.toml', 'src/native-host/Cargo.toml'):
-              path = Path(name)
-              text = path.read_text()
-              text = text.replace('version = "0.1.0"', f'version = "{version}"', 1)
-              path.write_text(text)
           PY
 
       - name: Build and check
@@ -83,11 +81,10 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm check
           pnpm build:extension
-          pnpm --filter @passage/desktop tauri build --no-bundle
-          cargo test --manifest-path src/desktop/src-tauri/Cargo.toml --lib
-          cargo test --manifest-path src/native-host/Cargo.toml
-          cargo build --release --manifest-path src/native-host/Cargo.toml
-          python3 src/native-host/tests/integration.py src/native-host/target/release/passage-native-host
+          go test ./internal/... ./src/native-host/...
+          go build -tags gtk3 -o src/desktop/build/passage ./src/desktop
+          go build -o src/native-host/build/passage-native-host ./src/native-host
+          python3 src/native-host/tests/integration.py src/native-host/build/passage-native-host
 
       - name: Package
         run: |
