@@ -10,6 +10,7 @@ const [browserBin, hostBin, installer, scenario = 'standard'] = process.argv.sli
 if (!browserBin || !hostBin || !installer) throw new Error('Provide browser, host, and installer paths');
 const extensionDir = resolve('src/extension/.output/chrome-mv3');
 if (!existsSync(join(extensionDir, 'manifest.json'))) throw new Error('Run pnpm build:extension first');
+const expectedId = JSON.parse(readFileSync(resolve('src/extension/identity.json'), 'utf8')).id;
 const root = mkdtempSync(join(tmpdir(), 'passage-browser-test-'));
 // The copy gives each run a fresh extension ID while preserving shipped permissions.
 const testExtensionDir = join(root, 'extension');
@@ -119,6 +120,7 @@ try {
   }
   if (!page) throw new Error('Test page unavailable');
   const extensionId = new URL(worker.url).hostname;
+  if (extensionId !== expectedId) throw new Error(`Extension ID changed: ${extensionId}`);
   const installed = spawnSync(installer, [hostBin, extensionId, extensionId], { env, encoding: 'utf8' });
   if (installed.status !== 0) throw new Error(installed.stderr);
   const chromeManifest = join(config, 'google-chrome', 'NativeMessagingHosts', 'com.plunz.passage.json');

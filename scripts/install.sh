@@ -51,13 +51,21 @@ if [ "$extension_available" = true ]; then
   printf 'Extensão descompactada em %s; carregue essa pasta no Brave ou Chrome e registre os IDs no conector.\n' "$extension_dir"
 fi
 
-if [ -f "$temp_dir/passage-native-host" ] && [ -n "${PASSAGE_BRAVE_EXTENSION_ID:-}" ] && [ -n "${PASSAGE_CHROME_EXTENSION_ID:-}" ]; then
-  if [ -f "$temp_dir/install-native-host.sh" ]; then
-    "$temp_dir/install-native-host.sh" "$user_bin/passage-native-host" "$PASSAGE_BRAVE_EXTENSION_ID" "$PASSAGE_CHROME_EXTENSION_ID"
+host_registered=false
+if [ -f "$temp_dir/passage-native-host" ] && [ -f "$temp_dir/install-native-host.sh" ]; then
+  default_id=''
+  if [ "$extension_available" = true ] && [ -f "$temp_dir/extension-id.txt" ]; then
+    IFS= read -r default_id < "$temp_dir/extension-id.txt"
+  fi
+  brave_id="${PASSAGE_BRAVE_EXTENSION_ID:-$default_id}"
+  chrome_id="${PASSAGE_CHROME_EXTENSION_ID:-$default_id}"
+  if [ -n "$brave_id" ] && [ -n "$chrome_id" ]; then
+    "$temp_dir/install-native-host.sh" "$user_bin/passage-native-host" "$brave_id" "$chrome_id"
+    host_registered=true
   fi
 fi
 
 printf 'Passage instalado em %s\n' "$user_bin/passage"
-if [ -f "$temp_dir/passage-native-host" ] && { [ -z "${PASSAGE_BRAVE_EXTENSION_ID:-}" ] || [ -z "${PASSAGE_CHROME_EXTENSION_ID:-}" ]; }; then
+if [ -f "$temp_dir/passage-native-host" ] && [ "$host_registered" = false ]; then
   printf 'Conector instalado. Para registrar Brave e Chrome, execute: %s/passage-install-native-host %s/passage-native-host ID_BRAVE ID_CHROME\n' "$user_bin" "$user_bin"
 fi

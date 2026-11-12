@@ -16,7 +16,7 @@ Revisão feita com código e cofre descartável. O release público ainda não i
 - O bloqueio do host não limpa o cache de `gpg-agent` nem o acesso pelo terminal. Um pedido que já passou pela última verificação pode responder antes de o bloqueio ser aplicado.
 - Atualizar ou remover uma entrada verifica o hash do arquivo cifrado, mas há uma janela entre a verificação e o subprocesso `pass`.
 - O host é um processo do próprio usuário. Outro processo desse usuário pode invocá-lo; o token e a aprovação limitam acesso, mas não protegem contra um processo local que já controle o usuário ou seu chaveiro.
-- O pacote tem SHA-256 no mesmo release, ainda sem assinatura independente. A extensão é distribuída como arquivo para carregamento manual; IDs e publicação em lojas não estão definidos.
+- O pacote tem SHA-256 no mesmo release, ainda sem assinatura independente. O manifesto usa uma chave pública fixa para manter o ID da extensão descompactada em Brave e Chrome; a chave privada não entra no repositório nem no pacote. O instalador registra esse ID no host. Publicação em loja e eventual migração de ID ainda precisam de decisão.
 - Nomes de entradas e histórico de commits do Git ficam visíveis para quem acessa o repositório privado. Nunca inclua backup da chave privada nem arquivos em texto claro nesse repositório.
 
 ## Critério para publicar
