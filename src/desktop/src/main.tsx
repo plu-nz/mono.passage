@@ -47,6 +47,7 @@ function App() {
   const [totp, setTotp] = React.useState<TotpCode | null>(null);
   const [vaultInfo, setVaultInfo] = React.useState<VaultInfo | null>(null);
   const [vaultPath, setVaultPath] = React.useState('');
+  const [cloneRemote, setCloneRemote] = React.useState('');
   const [keyId, setKeyId] = React.useState('');
   const [vaultError, setVaultError] = React.useState('');
   const [vaultBusy, setVaultBusy] = React.useState(false);
@@ -276,6 +277,22 @@ function App() {
     finally { setVaultBusy(false); }
   }
 
+  async function cloneVault() {
+    setVaultBusy(true);
+    setVaultError('');
+    try {
+      const info = await invoke<VaultInfo>('clone_vault', { path: vaultPath.trim(), url: cloneRemote.trim() });
+      setVaultInfo(info);
+      setVaultPath(info.path);
+      setCloneRemote('');
+      await refresh();
+      await refreshGit();
+      await refreshGithub();
+      await refreshPairings();
+    } catch (cause) { setVaultError(String(cause)); }
+    finally { setVaultBusy(false); }
+  }
+
   return <main className="shell">
     <header><div className="mark" aria-hidden="true">P</div><div><h1>Passage</h1><p>Seu cofre GNU pass no desktop.</p></div></header>
     <section className="panel vault-panel" aria-label="Configuração do cofre">
@@ -284,6 +301,8 @@ function App() {
       <label htmlFor="vault-path">Diretório do cofre</label>
       <div className="panel-actions"><input id="vault-path" value={vaultPath} onChange={event => setVaultPath(event.target.value)} placeholder="/home/usuario/.password-store" autoComplete="off" disabled={vaultBusy || vaultInfo?.source === 'environment'} /><button disabled={vaultBusy || !vaultPath.trim() || vaultInfo?.source === 'environment'} onClick={() => void configureVault('select_vault')}>Abrir existente</button></div>
       <div className="panel-actions"><select aria-label="Chave GPG para o novo cofre" value={keyId} onChange={event => setKeyId(event.target.value)} disabled={vaultBusy || vaultInfo?.source === 'environment'}><option value="">Selecione uma chave GPG</option>{vaultInfo?.gpgKeys.map(key => <option key={key.id} value={key.id}>{key.label} · {key.id.slice(-16)}</option>)}</select><button disabled={vaultBusy || !vaultPath.trim() || !keyId || vaultInfo?.source === 'environment'} onClick={() => void configureVault('create_vault')}>Criar cofre</button></div>
+      <div className="panel-actions"><input aria-label="URL do cofre Git existente" value={cloneRemote} onChange={event => setCloneRemote(event.target.value)} placeholder="URL do repositório Git privado" autoComplete="off" disabled={vaultBusy || vaultInfo?.source === 'environment'} /><button disabled={vaultBusy || !vaultPath.trim() || !cloneRemote.trim() || vaultInfo?.source === 'environment'} onClick={() => void cloneVault()}>Clonar cofre existente</button></div>
+      <p className="hint">Para clonar, informe acima um diretório novo e a URL de um remoto com branch main. A chave GPG privada precisa estar disponível neste computador para abrir as entradas.</p>
       <details className="key-creation"><summary>Criar chave GPG e cofre</summary>
         <p>O GPG abrirá uma janela do sistema para definir a frase secreta. O Passage não recebe essa frase. Se desistir, cancele nessa janela.</p>
         <div className="panel-actions"><input aria-label="Nome da nova chave" value={newKeyName} onChange={event => setNewKeyName(event.target.value)} placeholder="Seu nome" autoComplete="name" disabled={vaultBusy} /><input aria-label="Email da nova chave" type="email" value={newKeyEmail} onChange={event => setNewKeyEmail(event.target.value)} placeholder="seu@email.com" autoComplete="email" disabled={vaultBusy} /></div>

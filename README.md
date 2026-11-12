@@ -59,6 +59,8 @@ Se o cofre já for a raiz de um repositório Git, **Usar neste cofre** configura
 
 No mesmo painel, **Iniciar Git neste cofre** cria um repositório local na branch `main` se o diretório ainda não tiver `.git`. **Adicionar remoto origin** registra a URL informada sem substituir um remoto existente. Crie antes um repositório Git privado vazio. **Publicar cofre novo** verifica que o remoto não tem histórico, cria o primeiro commit somente com `.gpg-id` e arquivos `.gpg` (se ainda não houver commit) e configura o upstream. A ação recusa arquivos extras, links simbólicos e arquivos já preparados no Git; nunca força o envio. Se o remoto já tiver histórico, resolva essa ligação pelo Git antes de sincronizar pelo Passage. A chave privada GPG continua fora do remoto. Alterações futuras podem ser registradas com `pass git` no terminal.
 
+Para recuperar um cofre já publicado em outra instalação, informe um diretório que ainda não existe e a URL do repositório no painel **Cofre**, então clique em **Clonar cofre existente**. O remoto precisa ter a branch `main` e `.gpg-id` na raiz. O Passage seleciona o cofre após o clone; para abrir as entradas, importe separadamente a chave GPG privada correspondente. O clone usa a autenticação Git já disponível no sistema e não modifica um diretório existente.
+
 ### TOTP e bloqueio das extensões
 
 Para gerar um código, armazene um URI `otpauth://totp/...` em uma linha da entrada, como faz o `pass-otp`, abra a entrada e clique em **Gerar código TOTP**. O Passage também lê uma linha `otpauth: URI`. O código fica em memória e some ao expirar ou após fechar a entrada; ele não é gravado no cofre.

@@ -40,6 +40,8 @@ O desktop usa o GitHub CLI (`gh`) para autenticação pelo navegador. O Passage 
 
 O desktop pode inicializar Git no diretório do cofre e adicionar `origin` quando ele não existe. Para um remoto vazio, **Publicar cofre novo** cria o primeiro commit com `.gpg-id` e `.gpg`, recusa arquivos extras ou já preparados no índice e configura o upstream sem `force`. Se já houver um commit local limpo, publica esse commit; portanto o conteúdo de commits criados fora do Passage continua sob responsabilidade do usuário. Um remoto com histórico exige ligação manual. Testes com remotos descartáveis cobrem a publicação inicial, a recusa de arquivo em texto claro e a divergência entre clones. Ainda falta exercício com um remoto privado real.
 
+**Clonar cofre existente** usa `git clone` para um diretório inexistente, exige branch `main` e valida `.gpg-id` antes de selecioná-lo. A chave privada GPG não vem do Git e deve ser importada separadamente. Uma falha após o clone deixa o diretório criado para inspeção, sem selecionar o cofre. A autenticação usa os helpers Git já disponíveis no sistema; a integração com `gh` ainda depende da configuração Git local/global usada no ambiente.
+
 ### Bloqueio e TOTP
 
 O host mantém um estado `locked` persistente. A interface pode bloquear/liberar o acesso das extensões; o host verifica o estado antes e após a leitura. Isso não bloqueia `pass` no terminal nem limpa o cache do `gpg-agent`. Há uma janela residual para um pedido já em andamento entre a última verificação e o envio da resposta; por isso a interface descreve o controle como bloqueio do acesso das extensões, não como bloqueio criptográfico do cofre.

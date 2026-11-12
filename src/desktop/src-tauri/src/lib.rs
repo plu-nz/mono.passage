@@ -58,6 +58,11 @@ fn select_vault(path: String) -> Result<VaultInfo, String> {
 }
 
 #[tauri::command]
+fn clone_vault(path: String, url: String) -> Result<VaultInfo, String> {
+    setup::clone_vault(&path, &url)
+}
+
+#[tauri::command]
 fn create_vault(path: String, key_id: String) -> Result<VaultInfo, String> {
     setup::create_vault(&path, &key_id)
 }
@@ -185,6 +190,7 @@ pub fn run() {
             vault_info,
             gpg_keys,
             select_vault,
+            clone_vault,
             create_vault,
             create_key_and_vault,
             list_entries,

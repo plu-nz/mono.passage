@@ -145,6 +145,49 @@ pub fn select_vault(path: &str) -> Result<VaultInfo, String> {
     vault_info()
 }
 
+pub fn clone_vault(path: &str, url: &str) -> Result<VaultInfo, String> {
+    require_selection_allowed()?;
+    let path = clone_vault_to(Path::new(path), url)?;
+    persist_selection(&path)?;
+    vault_info()
+}
+
+fn clone_vault_to(path: &Path, url: &str) -> Result<PathBuf, String> {
+    let url = url.trim();
+    if url.is_empty() || url.starts_with('-') || url.chars().any(char::is_control) {
+        return Err("URL do remoto Git inválida".into());
+    }
+    validate_new_vault_path(path.to_str().ok_or("Caminho do cofre inválido")?)?;
+    if path.exists() {
+        return Err("Escolha um diretório que ainda não existe para clonar o cofre".into());
+    }
+    let output = Command::new("git")
+        .args([
+            "clone",
+            "--no-tags",
+            "--single-branch",
+            "--branch",
+            "main",
+            "--",
+            url,
+        ])
+        .arg(path)
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .env("GIT_ASKPASS", "/bin/false")
+        .output()
+        .map_err(|_| "Git não está instalado")?;
+    if !output.status.success() {
+        return Err("Não foi possível clonar o cofre. Verifique URL, acesso e branch main. Se o Git criou o diretório, revise-o antes de tentar novamente.".into());
+    }
+    let canonical = path
+        .canonicalize()
+        .map_err(|_| "Cofre clonado, mas caminho indisponível")?;
+    if !is_initialized(&canonical) {
+        return Err("O repositório foi clonado, mas não contém .gpg-id na raiz. Revise o diretório criado; ele não foi selecionado como cofre.".into());
+    }
+    Ok(canonical)
+}
+
 pub fn create_vault(path: &str, key_id: &str) -> Result<VaultInfo, String> {
     require_selection_allowed()?;
     if !key_id_is_valid(key_id)
@@ -406,6 +449,55 @@ fn parse_gpg_keys(output: &[u8]) -> Vec<GpgKey> {
 mod tests {
     use super::*;
     use crate::vault::Vault;
+
+    #[test]
+    fn clones_existing_vault_without_overwriting_directory() {
+        let root = env::temp_dir().join(format!(
+            "passage-clone-test-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        fs::create_dir_all(&root).unwrap();
+        let source = root.join("source");
+        fs::create_dir(&source).unwrap();
+        for args in [
+            vec!["init", "-b", "main"],
+            vec!["config", "user.name", "Passage Test"],
+            vec!["config", "user.email", "test@example.invalid"],
+        ] {
+            assert!(Command::new("git")
+                .args(args)
+                .current_dir(&source)
+                .status()
+                .unwrap()
+                .success());
+        }
+        fs::write(source.join(".gpg-id"), b"test-key\n").unwrap();
+        fs::write(source.join("entry.gpg"), b"ciphertext").unwrap();
+        assert!(Command::new("git")
+            .args(["add", ".gpg-id", "entry.gpg"])
+            .current_dir(&source)
+            .status()
+            .unwrap()
+            .success());
+        assert!(Command::new("git")
+            .args(["commit", "-m", "initial"])
+            .current_dir(&source)
+            .output()
+            .unwrap()
+            .status
+            .success());
+        let target = root.join("restored");
+        let cloned = clone_vault_to(&target, source.to_str().unwrap()).unwrap();
+        assert_eq!(cloned, target);
+        assert_eq!(fs::read(target.join("entry.gpg")).unwrap(), b"ciphertext");
+        assert!(clone_vault_to(&target, source.to_str().unwrap()).is_err());
+        assert_eq!(fs::read(target.join("entry.gpg")).unwrap(), b"ciphertext");
+        fs::remove_dir_all(root).unwrap();
+    }
 
     #[test]
     fn key_ids_reject_options_and_short_ids() {
