@@ -32,13 +32,13 @@ Para preencher, a extensão precisará solicitar acesso para o domínio da aba a
 
 ## Sincronização Git na branch `main`
 
-O desktop mostra o estado do repositório do cofre e oferece baixar/enviar quando há branch com upstream. `pull` exige árvore limpa, busca alterações e só aceita avanço direto. `push` busca o remoto antes de enviar e recusa se ele avançou. Divergência exige resolução manual; o Passage não tenta mesclar arquivos `.gpg`. Essas operações não criam commits: o usuário continua usando `pass git` ou Git para registrar alterações. Há uma janela de concorrência se outro processo modificar o cofre durante fetch, merge ou push; o fluxo ainda precisa de validação com um remoto de teste antes de ser considerado pronto para dados reais.
+O desktop mostra o estado do repositório do cofre e oferece baixar/enviar quando há branch com upstream. `pull` exige árvore limpa, busca alterações e só aceita avanço direto. `push` busca o remoto antes de enviar e recusa se ele avançou. Divergência exige resolução manual; o Passage não tenta mesclar arquivos `.gpg`. Baixar e Enviar não criam commits: o usuário continua usando `pass git` ou Git para registrar alterações posteriores ao primeiro envio. Há uma janela de concorrência se outro processo modificar o cofre durante fetch, merge ou push; o fluxo foi validado com remoto local descartável, mas ainda não com servidor privado real.
 
 ### Autenticação GitHub
 
 O desktop usa o GitHub CLI (`gh`) para autenticação pelo navegador. O Passage exibe apenas a conta ativa, abre o fluxo do CLI no terminal padrão e não recebe o token. Para um cofre que já seja um repositório Git, configura o helper de credenciais de `github.com` somente no `.git/config` local; não altera remotos nem cria repositórios. O armazenamento do token segue o comportamento do `gh`, incluindo seu fallback em arquivo local quando o keyring não funciona. A integração não substitui autenticação SSH ou de outros servidores Git.
 
-O desktop agora pode inicializar Git no diretório do cofre e adicionar `origin` quando ele não existe. Não cria commits nem força a ligação com um remoto que já tenha histórico. Teste automatizado com dois clones divergentes confirma que pull e push recusam a divergência sem substituir o HEAD local. Ainda falta exercício com um remoto privado real e configuração inicial de upstream pela interface.
+O desktop pode inicializar Git no diretório do cofre e adicionar `origin` quando ele não existe. Para um remoto vazio, **Publicar cofre novo** cria o primeiro commit com `.gpg-id` e `.gpg`, recusa arquivos extras ou já preparados no índice e configura o upstream sem `force`. Se já houver um commit local limpo, publica esse commit; portanto o conteúdo de commits criados fora do Passage continua sob responsabilidade do usuário. Um remoto com histórico exige ligação manual. Testes com remotos descartáveis cobrem a publicação inicial, a recusa de arquivo em texto claro e a divergência entre clones. Ainda falta exercício com um remoto privado real.
 
 ### Bloqueio e TOTP
 

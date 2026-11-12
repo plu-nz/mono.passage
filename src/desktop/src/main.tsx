@@ -189,7 +189,7 @@ function App() {
     catch (cause) { setGitError(String(cause)); await refreshGit(); }
   }
 
-  async function setupGit(operation: 'git_initialize' | 'git_set_remote') {
+  async function setupGit(operation: 'git_initialize' | 'git_set_remote' | 'git_publish_new_vault') {
     setGitError('');
     try {
       setGit(await invoke<GitStatus>(operation, operation === 'git_set_remote' ? { url: gitRemote.trim() } : {}));
@@ -320,7 +320,7 @@ function App() {
       <p className="hint">O login abre o GitHub CLI em um terminal. Depois de concluir no navegador, clique em Verificar conta. A conta é guardada pelo gh; o Passage não armazena o token. Usar neste cofre configura somente o repositório Git local para remotos HTTPS do GitHub.</p>
       {git ? <p>Branch {git.branch}{git.upstream ? ` · upstream ${git.upstream}` : ' · sem upstream'} · {git.dirty ? 'alterações locais' : 'sem alterações locais'} · ↑{git.ahead} ↓{git.behind}</p> : <p>Este cofre ainda não está pronto para sincronização Git.</p>}
       {!git && state.kind === 'available' && <button onClick={() => void setupGit('git_initialize')}>Iniciar Git neste cofre</button>}
-      {git && !git.upstream && <><div className="panel-actions"><input aria-label="URL do remoto Git origin" value={gitRemote} onChange={event => setGitRemote(event.target.value)} placeholder="URL HTTPS, SSH ou caminho do remoto" autoComplete="off" /><button disabled={!gitRemote.trim()} onClick={() => void setupGit('git_set_remote')}>Adicionar remoto origin</button></div><p className="hint">O Passage não cria commits. Registre seletivamente somente os arquivos .gpg e .gpg-id com <code>pass git add</code> e <code>pass git commit</code>, e configure o upstream com <code>pass git push -u origin main</code>. Confira se o cofre não contém cópias da chave privada ou arquivos em texto claro.</p></>}
+      {git && !git.upstream && <><div className="panel-actions"><input aria-label="URL do remoto Git origin" value={gitRemote} onChange={event => setGitRemote(event.target.value)} placeholder="URL HTTPS, SSH ou caminho do remoto" autoComplete="off" /><button disabled={!gitRemote.trim()} onClick={() => void setupGit('git_set_remote')}>Adicionar remoto origin</button></div><button onClick={() => void setupGit('git_publish_new_vault')}>Publicar cofre novo</button><p className="hint">Esta ação cria o primeiro commit apenas com arquivos .gpg e .gpg-id e configura o upstream, se o remoto estiver vazio. Para um remoto com histórico, conecte pelo Git. Alterações futuras continuam disponíveis por <code>pass git</code>.</p></>}
       <div className="panel-actions"><button onClick={() => void refreshGit()}>Verificar</button><button disabled={!git} onClick={() => void sync('git_pull')}>Baixar</button><button disabled={!git} onClick={() => void sync('git_push')}>Enviar</button></div>
       {gitError && <p className="panel-error" role="alert">{gitError}</p>}
       <p className="hint">Configure o remoto pelo Git ou por <code>pass git</code>. Conflitos e alterações locais impedem a sincronização automática.</p>

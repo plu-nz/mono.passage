@@ -141,6 +141,11 @@ fn git_set_remote(url: String) -> Result<GitStatus, String> {
 }
 
 #[tauri::command]
+fn git_publish_new_vault() -> Result<GitStatus, String> {
+    GitVault::open(Vault::open_env()?.root())?.publish_new_vault()
+}
+
+#[tauri::command]
 fn github_status() -> github::GithubStatus {
     github::status(Vault::open_env().ok().as_ref().map(Vault::root))
 }
@@ -193,6 +198,7 @@ pub fn run() {
             git_status,
             git_initialize,
             git_set_remote,
+            git_publish_new_vault,
             github_status,
             github_login,
             github_configure_vault,

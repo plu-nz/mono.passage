@@ -1,5 +1,6 @@
 use serde::Serialize;
 use std::{
+    fs,
     path::{Path, PathBuf},
     process::Command,
 };
@@ -170,6 +171,86 @@ impl GitVault {
             return Err("Branch remota inválida".into());
         }
         self.output(&["push", &remote, &format!("HEAD:{merge_ref}")])?;
+        Ok(())
+    }
+
+    pub fn publish_new_vault(&self) -> Result<GitStatus, String> {
+        let status = self.status()?;
+        if status.upstream.is_some() {
+            return Err("Este cofre já tem upstream. Use Enviar para sincronizar.".into());
+        }
+        if self.try_output(&["remote", "get-url", "origin"]).is_none() {
+            return Err("Adicione um remoto origin antes de publicar o cofre.".into());
+        }
+        if !self.output(&["ls-remote", "origin"])?.trim().is_empty() {
+            return Err(
+                "O remoto já contém histórico. Conecte esse cofre manualmente pelo Git.".into(),
+            );
+        }
+        if self
+            .try_output(&["rev-parse", "--verify", "HEAD"])
+            .is_none()
+        {
+            if !self
+                .output(&["diff", "--cached", "--name-only"])?
+                .is_empty()
+            {
+                return Err("Há arquivos preparados no Git. Revise-os antes de publicar.".into());
+            }
+            let mut files = vec![".gpg-id".to_string()];
+            self.collect_vault_files(&self.root, &mut files)?;
+            let mut args = vec!["add", "--"];
+            args.extend(files.iter().map(String::as_str));
+            self.output(&args)?;
+            self.output(&["commit", "-m", "Initialize encrypted vault"])
+                .map_err(|_| {
+                    "Falha ao criar commit. Configure user.name e user.email no Git.".to_string()
+                })?;
+        } else if status.dirty {
+            return Err("Há alterações locais. Registre ou descarte antes de publicar.".into());
+        }
+        let branch = self.status()?.branch;
+        self.output(&[
+            "push",
+            "--set-upstream",
+            "origin",
+            &format!("HEAD:refs/heads/{branch}"),
+        ])?;
+        self.status()
+    }
+
+    fn collect_vault_files(&self, directory: &Path, files: &mut Vec<String>) -> Result<(), String> {
+        for entry in fs::read_dir(directory).map_err(|_| "Não foi possível ler o cofre")? {
+            let entry = entry.map_err(|_| "Não foi possível ler o cofre")?;
+            let path = entry.path();
+            let relative = path
+                .strip_prefix(&self.root)
+                .map_err(|_| "Caminho inválido")?;
+            if relative == Path::new(".git") {
+                continue;
+            }
+            let kind = entry
+                .file_type()
+                .map_err(|_| "Não foi possível ler o cofre")?;
+            if kind.is_dir() {
+                self.collect_vault_files(&path, files)?;
+            } else if kind.is_file() && relative != Path::new(".gpg-id") {
+                if path.file_name().is_some_and(|name| name == ".gpg-id")
+                    || path.extension().is_some_and(|ext| ext == "gpg")
+                {
+                    files.push(relative.to_string_lossy().into_owned());
+                } else {
+                    return Err(
+                        "O cofre contém arquivos além de .gpg e .gpg-id. Revise antes de publicar."
+                            .into(),
+                    );
+                }
+            } else if !kind.is_file() {
+                return Err(
+                    "O cofre contém links ou arquivos especiais. Revise antes de publicar.".into(),
+                );
+            }
+        }
         Ok(())
     }
 
@@ -401,6 +482,58 @@ mod tests {
             "https://github.com/example/vault.git"
         );
         assert!(GitVault::initialize(&local).is_err());
+    }
+
+    #[test]
+    fn publishes_only_encrypted_vault_to_empty_remote() {
+        let f = Fixture::new();
+        let bare = f.root.join("remote.git");
+        f.git(&f.root, &["init", "--bare", bare.to_str().unwrap()]);
+        let local = f.root.join("vault");
+        fs::create_dir(&local).unwrap();
+        fs::write(local.join(".gpg-id"), b"test-key\n").unwrap();
+        fs::create_dir(local.join("nested")).unwrap();
+        fs::write(local.join("nested/entry.gpg"), b"ciphertext").unwrap();
+        GitVault::initialize(&local).unwrap();
+        f.git(&local, &["config", "user.name", "Passage Test"]);
+        f.git(&local, &["config", "user.email", "test@example.invalid"]);
+        let git = GitVault::open(&local).unwrap();
+        git.set_remote(bare.to_str().unwrap()).unwrap();
+        let status = git.publish_new_vault().unwrap();
+        assert_eq!(status.upstream.as_deref(), Some("origin/main"));
+        assert!(!status.dirty);
+        assert_eq!(
+            git.output(&["ls-files"])
+                .unwrap()
+                .lines()
+                .collect::<Vec<_>>(),
+            [".gpg-id", "nested/entry.gpg"]
+        );
+        assert!(git.publish_new_vault().is_err());
+    }
+
+    #[test]
+    fn refuses_plaintext_and_existing_remote_history() {
+        let f = Fixture::new();
+        let bare = f.root.join("remote.git");
+        f.git(&f.root, &["init", "--bare", bare.to_str().unwrap()]);
+        let local = f.root.join("vault");
+        fs::create_dir(&local).unwrap();
+        fs::write(local.join(".gpg-id"), b"test-key\n").unwrap();
+        GitVault::initialize(&local).unwrap();
+        f.git(&local, &["config", "user.name", "Passage Test"]);
+        f.git(&local, &["config", "user.email", "test@example.invalid"]);
+        let git = GitVault::open(&local).unwrap();
+        git.set_remote(bare.to_str().unwrap()).unwrap();
+        fs::write(local.join("secret.txt"), b"plaintext").unwrap();
+        assert!(git.publish_new_vault().unwrap_err().contains("além de"));
+        assert!(git.try_output(&["rev-parse", "--verify", "HEAD"]).is_none());
+        fs::remove_file(local.join("secret.txt")).unwrap();
+        f.git(&local, &["add", ".gpg-id"]);
+        f.git(&local, &["commit", "-m", "initial"]);
+        f.git(&local, &["push", "origin", "main"]);
+        assert!(git.publish_new_vault().unwrap_err().contains("histórico"));
+        assert!(git.status().unwrap().upstream.is_none());
     }
 
     #[test]
