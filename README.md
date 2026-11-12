@@ -79,14 +79,14 @@ curl -LsSf https://passage.plu.nz/install.sh | sh
 
 O script baixa o binário pronto do [release mais recente](https://github.com/plu-nz/passage/releases/latest), verifica o SHA-256 e instala `~/.local/bin/passage` com um atalho no menu. Releases que incluam a extensão também a instalam descompactada em `~/.local/share/passage/extension-chromium` (ou em `XDG_DATA_HOME/passage/extension-chromium`) e registram automaticamente o host para Brave e Chrome. Carregue essa pasta uma vez em `brave://extensions` e `chrome://extensions`, com o modo de desenvolvedor ativado, e aprove cada navegador no painel **Extensões autorizadas**. O ID da extensão descompactada é fixo: `edmjpcolampgjbnmldchmnkinmhakjgm`. Não é preciso clonar o repositório, nem instalar Node.js, pnpm ou Rust. GNU `pass`, GPG, Python 3 e as bibliotecas gráficas do Tauri ainda são dependências de execução. `~/.local/bin` deve estar no `PATH` da sessão.
 
-O mesmo comando atualiza uma instalação existente para a release mais recente. Feche e abra o Passage após atualizar. A versão instalada muda apenas quando uma nova release é publicada.
+O mesmo comando atualiza uma instalação existente para a release mais recente. Feche e abra o Passage após atualizar e clique em **Recarregar** na extensão em `brave://extensions` e `chrome://extensions` para aplicar a versão nova. A versão instalada muda apenas quando uma nova release é publicada.
 
 A chave pública da identidade da extensão está em `src/extension/identity.json`. A chave privada correspondente foi gerada fora do repositório, em `~/.local/share/passage/signing/extension.pem`, com permissão de acesso somente ao usuário. Faça backup **cifrado** dela fora do cofre Git; não a inclua no repositório nem no pacote. Ela será necessária se uma distribuição CRX assinada com o mesmo ID for adotada. A extensão descompactada funciona apenas com a chave pública do manifesto. Uma futura publicação em loja precisa confirmar como preservar o mesmo ID antes da migração.
 
 Para publicar uma nova versão Linux a partir de `main`, execute com acesso de escrita ao repositório:
 
 ```sh
-gh workflow run release-linux.yml --ref main -f version=0.1.1
+gh workflow run release-linux.yml --ref main -f version=0.2.2
 gh run watch
 ```
 

@@ -22,4 +22,4 @@ Revisão feita com código e cofre descartável. Em perfis temporários do Brave
 
 ## Critério para publicar
 
-A matriz Brave/Chrome, a instalação e atualização sem checkout local, o clone com remoto privado e os testes de conflito foram executados com dados descartáveis. O release ainda deve passar pelo workflow e por uma instalação de verificação após a publicação.
+A matriz Brave/Chrome, a instalação e atualização sem checkout local, o clone com remoto privado e os testes de conflito foram executados com dados descartáveis. O workflow do release `v0.2.0` passou e o instalador público instalou desktop, host, extensão e manifestos em um HOME descartável e no usuário local. A versão corretiva seguinte também versiona o manifesto da extensão.
