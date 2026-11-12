@@ -1,7 +1,7 @@
 import { NATIVE_HOST_NAME } from '@passage/core';
 
 type NativeReply = Record<string, unknown>;
-type PopupRequest = { type: 'status' | 'pair' | 'pairStatus' | 'list' } | { type: 'fill'; id: string };
+type PopupRequest = { type: 'status' | 'pair' | 'pairStatus' | 'list' } | { type: 'fill'; id: string; tabId: number; url: string };
 
 const identifier = () => crypto.randomUUID();
 
@@ -33,7 +33,7 @@ async function activeTab() {
   if (!tab?.id || !tab.url) throw new Error('Aba ativa indisponível.');
   const url = new URL(tab.url);
   if (url.protocol !== 'https:') throw new Error('O preenchimento requer uma página HTTPS.');
-  return { id: tab.id, origin: url.origin };
+  return { id: tab.id, origin: url.origin, url: tab.url };
 }
 
 async function handle(message: PopupRequest): Promise<NativeReply> {
@@ -50,19 +50,22 @@ async function handle(message: PopupRequest): Promise<NativeReply> {
   }
   if (message.type === 'list') {
     const tab = await activeTab();
-    return native({ type: 'listForOrigin', ...await credentials(), origin: tab.origin });
+    const response = await native({ type: 'listForOrigin', ...await credentials(), origin: tab.origin });
+    return { ...response, tabId: tab.id, url: tab.url };
   }
   if (message.type === 'fill') {
-    if (typeof message.id !== 'string' || !message.id) throw new Error('Entrada inválida.');
+    if (typeof message.id !== 'string' || !message.id || !Number.isInteger(message.tabId) || typeof message.url !== 'string') throw new Error('Entrada inválida.');
     const tab = await activeTab();
+    if (tab.id !== message.tabId || tab.url !== message.url) throw new Error('A aba mudou desde a escolha da entrada.');
     const response = await native({ type: 'readForOrigin', ...await credentials(), origin: tab.origin, id: message.id });
     if (response.type !== 'secret' || typeof response.password !== 'string') throw new Error('Resposta de segredo inválida.');
     const current = await browser.tabs.get(tab.id);
-    if (!current.url || new URL(current.url).origin !== tab.origin) throw new Error('A aba mudou antes do preenchimento.');
+    const active = await browser.tabs.query({ active: true, currentWindow: true });
+    if (current.url !== tab.url || active[0]?.id !== tab.id) throw new Error('A aba mudou antes do preenchimento.');
     const result = await browser.scripting.executeScript({
       target: { tabId: tab.id },
-      func: (origin: string, username: string, password: string) => {
-        if (location.origin !== origin || window.top !== window) return false;
+      func: (url: string, username: string, password: string) => {
+        if (location.href !== url || window.top !== window) return false;
         const fields = [...document.querySelectorAll('input')].filter((item): item is HTMLInputElement => item instanceof HTMLInputElement && !item.disabled && !item.readOnly);
         const passwordField = fields.find(item => item.type === 'password');
         if (!passwordField) return false;
@@ -77,7 +80,7 @@ async function handle(message: PopupRequest): Promise<NativeReply> {
         setValue(passwordField, password);
         return true;
       },
-      args: [tab.origin, typeof response.username === 'string' ? response.username : '', response.password],
+      args: [tab.url, typeof response.username === 'string' ? response.username : '', response.password],
     });
     return { type: result[0]?.result ? 'filled' : 'noFields' };
   }

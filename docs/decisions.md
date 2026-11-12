@@ -24,7 +24,7 @@ Este registro separa o que já foi implementado das escolhas ainda provisórias.
 
 ## 3. Conector dos navegadores
 
-**Protótipo implementado:** host Native Messaging com pareamento por código aprovado no desktop ou terminal, token por instalação vinculado ao diretório do cofre, revogação pela interface ou CLI e leitura limitada à origem HTTPS associada a um campo `url` da entrada. Trocar de cofre exige novo pareamento. A extensão consulta o host e preenche após escolha do usuário. O estado do GPG é compartilhado pelo sistema. Testes de integração diretos passaram; a extensão real no Brave Origin, com perfil e cofre descartáveis, conseguiu consultar, parear, listar, ler e observar o bloqueio via Native Messaging. Ainda faltam preenchimento real de formulário nos dois navegadores, validação no Chrome, distribuição com IDs estáveis e revisão final antes de considerar o fluxo concluído. O empacotamento no código inclui o host, mas o release público atual ainda contém só o desktop.
+**Protótipo implementado:** host Native Messaging com pareamento por código aprovado no desktop ou terminal, token por instalação vinculado ao diretório do cofre, revogação pela interface ou CLI e leitura limitada à origem HTTPS associada a um campo `url` da entrada. Trocar de cofre exige novo pareamento. A extensão consulta o host e preenche após escolha do usuário. O estado do GPG é compartilhado pelo sistema. Testes de integração diretos passaram. Em perfis descartáveis de Brave Origin e Chrome for Testing, o popup real pareou, listou e preencheu um formulário HTTPS com o manifesto original; também recusou o preenchimento após navegação da mesma aba para outra URL. Ainda faltam a matriz de formulários, a instalação manual no Chrome estável, distribuição com IDs estáveis e revisão final antes de considerar o fluxo concluído. O empacotamento no código inclui o host, mas o release público atual ainda contém só o desktop.
 
 Para preencher, a extensão precisará solicitar acesso para o domínio da aba atual e só injetar credenciais após uma ação do usuário. O protocolo deve associar a resposta à aba e à origem que iniciou o pedido; nunca enviar segredos a uma página arbitrária nem aceitar um domínio fornecido pela própria página.
 
@@ -47,7 +47,7 @@ O desktop lê URI `otpauth://totp/...` em linha própria, como no `pass-otp`, e 
 ## 4. Próximas etapas recomendadas
 
 1. Criar cofre de teste descartável e exercitar leitura e escrita, incluindo `PASSWORD_STORE_DIR`, falha de GPG e alteração externa pelo terminal.
-2. Validar host, pareamento, revogação e preenchimento em instalações reais de Brave e Chrome; definir IDs estáveis para distribuição.
+2. Validar instalação manual no Chrome estável e uma matriz de formulários nos dois navegadores; definir IDs estáveis para distribuição.
 3. Validar sincronização com remoto Git de teste e conflitos concorrentes; reduzir a janela de corrida da edição antes de recomendar dados reais.
 4. Empacotar e publicar novo release com host e extensão após a matriz de testes; o release atual ainda não os contém. O workflow já foi preparado para anexar a extensão como arquivo.
 5. Projetar biometria e bloqueio considerando a chave GPG e o cache do `gpg-agent`, antes de prometer desbloqueio pela digital no primeiro acesso.

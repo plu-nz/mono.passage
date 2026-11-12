@@ -8,7 +8,7 @@ Este documento registra os requisitos discutidos até agora. Ele descreve o prod
 
 ## Estado do código
 
-O app desktop permite escolher um cofre GNU pass existente, criar outro com uma chave GPG nova ou já disponível, listar, buscar, abrir, criar e editar entradas, gerar TOTP e bloquear o acesso das extensões. A branch `main` também contém conexão à conta GitHub pelo GitHub CLI, inicialização do Git no cofre, configuração do remoto, sincronização Git conservadora, aprovação e revogação de extensões pela interface, e um host Native Messaging com busca por URL e preenchimento após ação do usuário. Ainda faltam validação ponta a ponta em Brave e Chrome e release atualizado; o release público atual continua distribuindo apenas o desktop anterior.
+O app desktop permite escolher um cofre GNU pass existente, criar outro com uma chave GPG nova ou já disponível, listar, buscar, abrir, criar e editar entradas, gerar TOTP e bloquear o acesso das extensões. A branch `main` também contém conexão à conta GitHub pelo GitHub CLI, inicialização do Git no cofre, configuração do remoto, sincronização Git conservadora, aprovação e revogação de extensões pela interface, e um host Native Messaging com busca por URL e preenchimento após ação do usuário. O preenchimento foi validado em perfis descartáveis de Brave Origin e Chrome for Testing; ainda faltam a matriz de formulários, instalação manual no Chrome estável e release atualizado. O release público atual continua distribuindo apenas o desktop anterior.
 
 | Diretório | Responsabilidade |
 | --- | --- |
@@ -27,6 +27,8 @@ pnpm dev:desktop
 ```
 
 Para gerar a extensão, execute `pnpm build:extension` e carregue `src/extension/.output/chrome-mv3` como extensão descompactada em `brave://extensions` ou `chrome://extensions`. Siga [as instruções do conector local](src/native-host/README.md) para compilá-lo e registrar os IDs das extensões; o código mostrado pelo popup pode ser aprovado na interface desktop ou pelo CLI. Para usar o desktop, instale GNU `pass` e GPG. A chave GPG e o `gpg-agent` continuam sob controle do sistema.
+
+O teste de navegador usa um cofre, servidor HTTPS e perfis descartáveis, com o manifesto original da extensão. Após compilar extensão e host, execute `node src/extension/tests/browser-smoke.mjs CAMINHO_DO_NAVEGADOR CAMINHO_DO_HOST CAMINHO_DO_INSTALADOR_DO_HOST`. O roteiro foi executado com Brave Origin e Chrome for Testing; exige OpenSSL. Ele verifica pareamento, lista, preenchimento e recusa após navegação. O Chrome estável recente não aceita a flag `--load-extension` usada por esse teste.
 
 ### Abrir ou criar um cofre no desktop
 

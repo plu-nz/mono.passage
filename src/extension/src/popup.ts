@@ -22,13 +22,13 @@ function showError(error: unknown) {
 
 async function loadEntries() {
   const response = await request({ type: 'list' });
-  if (response.type !== 'entries' || !Array.isArray(response.entries)) throw new Error('Resposta inválida do conector.');
+  if (response.type !== 'entries' || !Array.isArray(response.entries) || !Number.isInteger(response.tabId) || typeof response.url !== 'string') throw new Error('Resposta inválida do conector.');
   status.textContent = response.entries.length ? 'Escolha uma entrada para preencher.' : 'Nenhuma entrada corresponde a este site.';
   entries.replaceChildren();
   for (const entry of response.entries) {
     if (!entry || typeof entry.id !== 'string' || typeof entry.title !== 'string') continue;
     entries.append(button(`${entry.title}${typeof entry.username === 'string' ? ` · ${entry.username}` : ''}`, async () => {
-      const result = await request({ type: 'fill', id: entry.id });
+      const result = await request({ type: 'fill', id: entry.id, tabId: response.tabId, url: response.url });
       status.textContent = result.type === 'filled' ? 'Credenciais preenchidas.' : 'Campo de senha não encontrado nesta página.';
     }));
   }
