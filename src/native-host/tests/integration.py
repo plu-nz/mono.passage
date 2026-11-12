@@ -32,7 +32,7 @@ class NativeHostIntegration(unittest.TestCase):
             "#!/bin/sh\n"
             'if [ "$1" = show ]; then\n'
             '  if [ "${PASSAGE_TEST_DELAY:-}" = 1 ]; then touch "$PASSAGE_TEST_MARKER"; sleep 1; fi\n'
-            "  printf 'test-secret\\nlogin: tester\\nurl: https://example.test/login\\n'\n"
+            "  printf 'safe\\nlogin: tester\\nurl: https://example.test/login\\n'\n"
             "  exit 0\n"
             "fi\nexit 1\n"
         )
@@ -84,12 +84,12 @@ class NativeHostIntegration(unittest.TestCase):
         fields_b = {"installationId": "chrome-installation", "token": token_b, "origin": "https://example.test"}
         self.cli("revoke", ORIGIN_A, "brave-installation")
         self.assertEqual(self.request(ORIGIN_A, "listForOrigin", **fields_a)["type"], "error")
-        self.assertEqual(self.request(ORIGIN_B, "readForOrigin", id="example.test", **fields_b)["password"], "test-secret")
+        self.assertEqual(self.request(ORIGIN_B, "readForOrigin", id="example.test", **fields_b)["password"], "safe")
 
     def test_lock_persists_and_rejects_read_started_before_lock(self):
         token = self.pair(ORIGIN_A, "installation")
         fields = {"installationId": "installation", "token": token, "origin": "https://example.test", "id": "example.test"}
-        self.assertEqual(self.request(ORIGIN_A, "readForOrigin", **fields)["password"], "test-secret")
+        self.assertEqual(self.request(ORIGIN_A, "readForOrigin", **fields)["password"], "safe")
 
         delayed_env = {**self.env, "PASSAGE_TEST_DELAY": "1"}
         process = subprocess.Popen(
@@ -111,7 +111,7 @@ class NativeHostIntegration(unittest.TestCase):
         self.assertEqual(process.returncode, 0)
         self.assertEqual(self.request(ORIGIN_A, "status", installationId="installation")["locked"], True)
         self.cli("unlock")
-        self.assertEqual(self.request(ORIGIN_A, "readForOrigin", **fields)["password"], "test-secret")
+        self.assertEqual(self.request(ORIGIN_A, "readForOrigin", **fields)["password"], "safe")
 
 
 if __name__ == "__main__":

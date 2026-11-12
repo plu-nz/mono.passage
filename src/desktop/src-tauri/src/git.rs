@@ -606,7 +606,7 @@ mod tests {
                     "--pinentry-mode",
                     "loopback",
                     "--passphrase",
-                    "passage-test",
+                    "safe",
                     "--symmetric",
                     "--output",
                 ])

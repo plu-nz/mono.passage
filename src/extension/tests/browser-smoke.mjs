@@ -49,7 +49,7 @@ await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const site = scenario === 'githubLive' ? 'https://github.com/login' : scenario === 'herokuLive' ? 'https://the-internet.herokuapp.com/login' : `https://localhost:${server.address().port}`;
 writeFileSync(join(store, '.gpg-id'), 'test-key\n');
 writeFileSync(join(store, 'test.gpg'), 'ciphertext');
-writeFileSync(join(bin, 'pass'), `#!/bin/sh\nif [ "$1" = show ]; then printf 'test-password\\nlogin: tester\\nurl: ${site}\\n'; exit 0; fi\nexit 1\n`, { mode: 0o700 });
+writeFileSync(join(bin, 'pass'), `#!/bin/sh\nif [ "$1" = show ]; then printf 'safe\\nlogin: tester\\nurl: ${site}\\n'; exit 0; fi\nexit 1\n`, { mode: 0o700 });
 const env = { ...process.env, HOME: home, XDG_CONFIG_HOME: config, PASSWORD_STORE_DIR: store, PATH: bin + ':' + process.env.PATH };
 const legacyLoad = browserBin.includes('google-chrome-stable') ? [] : ['--disable-extensions-except=' + testExtensionDir, '--load-extension=' + testExtensionDir];
 const child = spawn(browserBin, [...(process.env.PASSAGE_BROWSER_HEADED ? [] : ['--headless=new']), '--no-sandbox', '--disable-gpu', '--no-first-run', '--ignore-certificate-errors', '--enable-unsafe-extension-debugging', '--remote-allow-origins=*', '--remote-debugging-port=0', '--user-data-dir=' + join(root, 'profile'), ...legacyLoad, site], { env, stdio: 'ignore' });
@@ -176,7 +176,7 @@ try {
   const userSelector = scenario === 'githubLive' ? '#login_field' : scenario === 'herokuLive' ? '#username' : '#user';
   const passwordSelector = '#password';
   const values = await evaluate(pageWs, `({user:document.querySelector('${userSelector}')?.value || '',password:document.querySelector('${passwordSelector}')?.value || '',inputs:Number(document.body.dataset.inputs||0),changes:Number(document.body.dataset.changes||0)})`);
-  const expectedValues = { standard: ['tester', 'test-password'], usernameOnly: ['tester', ''], passwordOnly: ['', 'test-password'], autocompleteOff: ['tester', 'test-password'], githubLive: ['tester', 'test-password'], herokuLive: ['tester', 'test-password'] }[scenario] || ['', ''];
+  const expectedValues = { standard: ['tester', 'safe'], usernameOnly: ['tester', ''], passwordOnly: ['', 'safe'], autocompleteOff: ['tester', 'safe'], githubLive: ['tester', 'safe'], herokuLive: ['tester', 'safe'] }[scenario] || ['', ''];
   const eventsExpected = ['standard', 'usernameOnly', 'passwordOnly', 'autocompleteOff'].includes(scenario);
   if (values.user !== expectedValues[0] || values.password !== expectedValues[1] || (eventsExpected && (!values.inputs || !values.changes))) {
     const status = await evaluate(popupWs, `document.querySelector('#status')?.textContent || ''`);
