@@ -22,6 +22,7 @@ function App() {
   const [state, setState] = React.useState<VaultState>({ kind: 'unavailable', reason: 'Verificando o ambiente local…' });
   const [entries, setEntries] = React.useState<Entry[]>([]);
   const [query, setQuery] = React.useState('');
+  const [activeTab, setActiveTab] = React.useState<'vault' | 'sync' | 'extensions' | 'settings'>('vault');
   const [selected, setSelected] = React.useState<string | null>(null);
   const [secret, setSecret] = React.useState<Secret | null>(null);
   const [error, setError] = React.useState('');
@@ -306,8 +307,10 @@ function App() {
   }
 
   return <main className="shell">
-    <header><div className="mark" aria-hidden="true">P</div><div><h1>Passage</h1><p>Seu cofre GNU pass no desktop.</p></div></header>
-    <section className="panel vault-panel" aria-label="Configuração do cofre">
+    <header className="app-header"><div className="brand"><div className="mark" aria-hidden="true">P</div><div><h1>Passage</h1><p>Seu cofre GNU pass</p></div></div><div className="header-status"><span className={state.kind === 'available' ? 'status-dot ready' : 'status-dot'} />{state.kind === 'available' ? 'Cofre disponível' : 'Cofre indisponível'}</div></header>
+    <div className="app-body"><div className="context-bar"><span>Cofre <code>{vaultInfo?.path || 'verificando…'}</code></span><span>{git?.upstream ? `Git · ↑${git.ahead} ↓${git.behind}` : 'Armazenamento local'}</span></div>
+    <nav className="app-tabs" aria-label="Seções"><button className={activeTab === 'vault' ? 'active' : ''} onClick={() => setActiveTab('vault')}>Cofre</button><button className={activeTab === 'sync' ? 'active' : ''} onClick={() => setActiveTab('sync')}>Git Sync</button><button className={activeTab === 'extensions' ? 'active' : ''} onClick={() => setActiveTab('extensions')}>Extensões</button><button className={activeTab === 'settings' ? 'active' : ''} onClick={() => setActiveTab('settings')}>Configurações</button></nav>
+    {activeTab === 'settings' && <section className="panel vault-panel" aria-label="Configuração do cofre">
       <h2>Cofre</h2>
       <p className="hint">Diretório ativo: <code>{vaultInfo?.path || 'verificando…'}</code>{vaultInfo?.source === 'environment' ? ' · definido por PASSWORD_STORE_DIR' : ''}</p>
       <label htmlFor="vault-path">Diretório do cofre</label>
@@ -324,10 +327,10 @@ function App() {
       {vaultInfo && <p className="hint">{!vaultInfo.passInstalled ? 'GNU pass não encontrado. ' : ''}{!vaultInfo.gpgInstalled ? 'GPG não encontrado. ' : ''}{vaultInfo.initialized ? `Inicializado para: ${vaultInfo.recipientIds.join(', ') || 'chave não identificada'}.` : 'Cofre ainda não inicializado.'} {vaultInfo.gpgKeys.length === 0 && vaultInfo.gpgInstalled ? 'Nenhuma chave GPG privada encontrada. Crie ou importe uma chave antes de criar o cofre.' : ''}</p>}
       <button onClick={() => void refreshVaultInfo()} disabled={vaultBusy}>Verificar chaves e cofre</button>
       {vaultError && <p className="panel-error" role="alert">{vaultError}</p>}
-    </section>
-    {state.kind === 'unavailable' ? <section className="notice">{state.reason}</section> : <>
-      <div className="toolbar"><input aria-label="Buscar entradas" placeholder="Buscar no cofre" value={query} onChange={event => setQuery(event.target.value)} /><button onClick={startCreate}>Nova entrada</button><button onClick={() => void refresh()}>Atualizar</button></div>
-      <div className="workspace"><nav aria-label="Entradas do cofre">{filtered.length ? filtered.map(entry => <button className={selected === entry.id ? 'entry selected' : 'entry'} key={entry.id} onClick={() => void openEntry(entry.id)}>{entry.id}</button>) : <p>Nenhuma entrada encontrada.</p>}</nav>
+    </section>}
+    {activeTab === 'vault' && (state.kind === 'unavailable' ? <section className="notice">{state.reason}</section> : <>
+      <div className="toolbar"><input aria-label="Buscar entradas" placeholder="Buscar no cofre…" value={query} onChange={event => setQuery(event.target.value)} /><button onClick={startCreate}>Nova entrada</button><button onClick={() => void refresh()}>Atualizar</button></div>
+      <div className="workspace"><nav aria-label="Entradas do cofre">{filtered.length ? filtered.map(entry => <button className={selected === entry.id ? 'entry selected' : 'entry'} key={entry.id} onClick={() => void openEntry(entry.id)}><span className="entry-icon" aria-hidden="true">{entry.title.slice(0, 2).toUpperCase()}</span><span className="entry-text"><strong>{entry.title}</strong><small>{entry.id}</small></span><span className="entry-chevron" aria-hidden="true">›</span></button>) : <p>Nenhuma entrada encontrada.</p>}</nav>
       <section className="detail" aria-label="Detalhes da entrada">{editing ? <>
         <h2>{creating ? 'Nova entrada' : `Editar ${selected}`}</h2>
         <div className="entry-form">
@@ -339,10 +342,10 @@ function App() {
           <p className="hint">A primeira linha é a senha. Os campos continuam legíveis pelo GNU pass.</p>
           <div className="form-actions"><button disabled={entryBusy || !entryId.trim() || !entryPassword} onClick={() => void saveEntry()}>{entryBusy ? 'Salvando…' : 'Salvar'}</button><button disabled={entryBusy} onClick={() => { setEditing(false); setCreating(false); setEntryPassword(''); setEntryDetails(''); }}>Cancelar</button></div>
         </div>
-      </> : selected ? <><h2>{selected}</h2>{secret ? <><label>Senha</label><div className="password"><code>{visible ? secret.password : '••••••••••••'}</code><button onClick={() => setVisible(!visible)}>{visible ? 'Ocultar' : 'Mostrar'}</button></div>{secret.details && <><label>Outros campos</label><pre>{displayDetails(secret.details)}</pre></>}<button onClick={startEdit}>Editar</button><button disabled={entryBusy} onClick={() => void deleteEntry()}>Excluir</button><button onClick={() => void showTotp()}>Gerar código TOTP</button>{totp && <p role="status">Código TOTP: <code>{totp.code}</code> · válido por até {Math.max(0, Math.ceil(totp.validUntil - Date.now() / 1000))} s</p>}<p className="hint">O conteúdo é removido da tela após 30 segundos. O gpg-agent pode continuar com a chave em cache.</p></> : <p>Abra a entrada para ver seu conteúdo.</p>}</> : <p>Selecione uma entrada.</p>}</section></div>
-    </>}
+      </> : selected ? <><div className="detail-heading"><div><small>ENTRADA DO COFRE</small><h2>{selected}</h2></div><button onClick={startEdit} disabled={!secret}>Editar</button></div>{secret ? <>{secret.username && <div className="field-card"><label>Usuário</label><div className="field-value">{secret.username}</div></div>}{secret.urls.length > 0 && <div className="field-card"><label>URL</label><div className="field-value">{secret.urls[0]}</div></div>}<div className="field-card"><label>Senha</label><div className="password"><code>{visible ? secret.password : '••••••••••••'}</code><button onClick={() => setVisible(!visible)}>{visible ? 'Ocultar' : 'Mostrar'}</button></div></div>{secret.details && <div className="field-card"><label>Outros campos</label><pre>{displayDetails(secret.details)}</pre></div>}<button disabled={entryBusy} onClick={() => void deleteEntry()}>Excluir</button><button onClick={() => void showTotp()}>Gerar código TOTP</button>{totp && <p role="status">Código TOTP: <code>{totp.code}</code> · válido por até {Math.max(0, Math.ceil(totp.validUntil - Date.now() / 1000))} s</p>}<p className="hint">O conteúdo é removido da tela após 30 segundos. O gpg-agent pode continuar com a chave em cache.</p></> : <p>Abra a entrada para ver seu conteúdo.</p>}</> : <p>Selecione uma entrada.</p>}</section></div>
+    </>)}
     {error && <p className="error" role="alert">{error}</p>}
-    <section className="panel" aria-label="Sincronização Git">
+    {activeTab === 'sync' && <section className="panel" aria-label="Sincronização Git">
       <h2>Sincronização Git</h2>
       <h3>GitHub</h3>
       <p>{!github ? 'Verificando a conta…' : !github.cli_installed ? 'Instale o GitHub CLI (gh) para conectar sua conta.' : github.login ? `Conectado como @${github.login}.` : 'Nenhuma conta do GitHub conectada pelo gh.'} {github?.vault_git_configured ? 'Este cofre usa a conta do gh para remotos HTTPS do GitHub.' : ''}</p>
@@ -356,8 +359,8 @@ function App() {
       {git && git.ahead > 0 && git.behind > 0 && <><button onClick={() => void setupGit('git_merge_preserving_both')}>Preservar ambas as versões</button><p className="hint">Mescla os commits e, se a mesma entrada .gpg mudou nos dois dispositivos, mantém a versão local e salva a remota como outra entrada cifrada. Conflitos na chave .gpg-id exigem resolução manual. O envio ao remoto continua separado.</p></>}
       {gitError && <p className="panel-error" role="alert">{gitError}</p>}
       <p className="hint">Configure o remoto pelo Git ou por <code>pass git</code>. Conflitos e alterações locais impedem a sincronização automática.</p>
-    </section>
-    <section className="panel" aria-label="Extensões autorizadas">
+    </section>}
+    {activeTab === 'extensions' && <section className="panel" aria-label="Extensões autorizadas">
       <h2>Extensões autorizadas</h2>
       <p>{browserLocked === null ? 'Estado de acesso indisponível.' : browserLocked ? 'Acesso das extensões bloqueado.' : 'Acesso das extensões liberado.'} O bloqueio não fecha o cache do GPG nem impede o uso de pass no terminal.</p>
       <div className="panel-actions"><button disabled={browserLocked !== false} onClick={() => void changeBrowserLock(true)}>Bloquear extensões</button><button disabled={browserLocked !== true} onClick={() => void changeBrowserLock(false)}>Liberar extensões</button><button onClick={() => void refreshBrowserLock()}>Verificar bloqueio</button></div>
@@ -367,7 +370,8 @@ function App() {
       {pairings.map(pairing => <div className="pairing" key={`${pairing.origin}:${pairing.installationId}`}><span>{pairing.origin}<small>{pairing.installationId}</small></span><button onClick={() => void revokePairing(pairing)}>Revogar</button></div>)}
       <button onClick={() => void refreshPairings()}>Atualizar lista</button>
       {pairingError && <p className="panel-error" role="alert">{pairingError}</p>}
-    </section>
+    </section>}
+    </div>
   </main>;
 }
 

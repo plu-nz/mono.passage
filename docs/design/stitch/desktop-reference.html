@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Passage - GNU Pass Native Desktop Client</title>
+<!-- Tailwind CSS v3 -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Fonts: Inter & JetBrains Mono for authentic Linux dev aesthetic -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&amp;family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['"JetBrains Mono"', '"Fira Code"', 'monospace'],
+          },
+          colors: {
+            vault: {
+              950: '#080a0f',
+              900: '#10141f',
+              850: '#161b29',
+              800: '#1d2335',
+              750: '#252d43',
+              700: '#2f3954',
+              600: '#435174',
+              accent: '#38bdf8',
+              emerald: '#10b981',
+              amber: '#f59e0b',
+              danger: '#f43f5e',
+            }
+          }
+        }
+      }
+    };
+  </script>
+<style>
+    body {
+      background-color: #0b0e14;
+      color: #f1f5f9;
+      font-family: 'Inter', sans-serif;
+      user-select: none;
+      -webkit-font-smoothing: antialiased;
+    }
+    .grid-backdrop {
+      background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.04) 1px, transparent 0);
+      background-size: 24px 24px;
+    }
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #252d43;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #435174;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.35; transform: scale(0.9); }
+    }
+    .status-pulse {
+      animation: pulse-dot 2.2s infinite ease-in-out;
+    }
+    .toast-anim {
+      animation: toastIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes toastIn {
+      from { transform: translate(-50%, 16px); opacity: 0; }
+      to { transform: translate(-50%, 0); opacity: 1; }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-start items-center p-3 sm:p-6 grid-backdrop bg-[#0b0e14]">
+<!-- Toast Notification element -->
+<div class="fixed top-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none transition-all duration-300 opacity-0 hidden" id="toast">
+<div class="bg-emerald-950/95 border border-emerald-500/70 text-emerald-200 px-4 py-2 rounded-full text-xs font-medium shadow-2xl backdrop-blur flex items-center gap-2">
+<svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span id="toast-message">Copiado para a área de transferência!</span>
+</div>
+</div>
+<!-- TOP WORKSPACE PRESET CONTROLLER -->
+<div class="w-full max-w-5xl mb-4 flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 bg-vault-900/90 border border-vault-750/70 rounded-xl shadow-xl text-xs font-mono backdrop-blur">
+<div class="flex items-center gap-2 text-slate-300">
+<span class="w-2.5 h-2.5 rounded-full bg-emerald-400 status-pulse"></span>
+<span class="font-semibold tracking-wider text-slate-100">PASSAGE DESKTOP</span>
+<span class="text-slate-600 hidden sm:inline">|</span>
+<span class="text-slate-400 hidden sm:inline">GPG: 844C3B20CC93... (Henrique Castro)</span>
+</div>
+<!-- Window Size Simulation Controls -->
+<div class="flex items-center gap-1.5 bg-vault-950 p-1 rounded-lg border border-vault-800">
+<span class="text-[10px] text-slate-400 px-2 uppercase font-medium">Viewport:</span>
+<button class="px-2.5 py-1 rounded text-slate-400 hover:text-slate-200 transition-colors" onclick="setWindowWidth(360, this)">360px</button>
+<button class="px-2.5 py-1 rounded bg-emerald-600/90 text-white font-bold shadow transition-colors" onclick="setWindowWidth(420, this)">420px <span class="text-[9px] uppercase tracking-wide opacity-80">(Target)</span></button>
+<button class="px-2.5 py-1 rounded text-slate-400 hover:text-slate-200 transition-colors" onclick="setWindowWidth(640, this)">640px</button>
+<button class="px-2.5 py-1 rounded text-slate-400 hover:text-slate-200 transition-colors" onclick="setWindowWidth(1080, this)">1080px <span class="text-[9px] uppercase tracking-wide text-vault-accent">(Dual)</span></button>
+</div>
+</div>
+<!-- PASSAGE APPLICATION WINDOW -->
+<div class="transition-all duration-300 ease-out bg-vault-900 border border-slate-700/60 rounded-2xl shadow-2xl shadow-black/90 flex flex-col overflow-hidden min-h-[670px] relative text-slate-200 border-[#1e2638]" id="app-window" style="width: 100%; max-width: 420px;">
+<!-- LINUX CSD TITLEBAR -->
+<header class="h-10 bg-vault-950 border-b border-vault-800/90 px-3 flex items-center justify-between select-none">
+<div class="flex items-center gap-2">
+<div class="w-5 h-5 rounded bg-emerald-500/20 border border-emerald-500/50 text-emerald-400 flex items-center justify-center font-bold text-xs">P</div>
+<span class="font-semibold text-xs tracking-wide text-slate-100">Passage</span>
+<div class="hidden sm:flex items-center gap-1.5 font-mono text-[10px] text-slate-400 bg-vault-900 px-2 py-0.5 rounded border border-vault-800">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+<span>Vault: ~/.password-store</span>
+</div>
+</div>
+<!-- Linux Window Control Dots -->
+<div class="flex items-center gap-2">
+<button class="p-1 rounded text-slate-400 hover:text-white hover:bg-vault-800 transition" id="quick-lock-btn" onclick="toggleLockState()" title="Trancar cofre (GPG agent cache)">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><rect height="11" rx="2" ry="2" stroke-width="2" width="18" x="3" y="11"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke-width="2"></path></svg>
+</button>
+<div class="w-[1px] h-3 bg-vault-800 mx-0.5"></div>
+<button class="w-3.5 h-3.5 rounded-full bg-slate-700/80 hover:bg-slate-600 flex items-center justify-center text-slate-300"></button>
+<button class="w-3.5 h-3.5 rounded-full bg-slate-700/80 hover:bg-slate-600 flex items-center justify-center text-slate-300"></button>
+<button class="w-3.5 h-3.5 rounded-full bg-rose-600/80 hover:bg-rose-500 flex items-center justify-center text-white"></button>
+</div>
+</header>
+<!-- TOP HEADER UTILITY BAR -->
+<div class="px-3.5 py-2.5 bg-vault-950/70 border-b border-vault-800 flex items-center justify-between text-xs">
+<div class="flex items-center gap-2">
+<div class="p-1 rounded bg-vault-850 text-slate-300">
+<svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<div>
+<span class="font-bold text-slate-100 tracking-tight">Passage</span>
+<span class="text-[10px] text-slate-400 ml-1 font-mono">v1.2</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<!-- Git Sync Status Pill Button -->
+<button class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-800 hover:bg-emerald-900/60 transition text-[11px] font-mono" onclick="switchTab('sync')">
+<svg class="w-3 h-3 text-emerald-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span>Synced 2m ago</span>
+</button>
+<!-- Settings Icon -->
+<button class="p-1.5 rounded hover:bg-vault-800 text-slate-400 hover:text-slate-200 transition" onclick="showToast('Configurações do Passage &amp; GPG')" title="Configurações">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><circle cx="12" cy="12" r="3" stroke-width="2"></circle></svg>
+</button>
+</div>
+</div>
+<!-- LOCKED VAULT SCREEN (GPG PINENTRY SIMULATION) -->
+<div class="hidden flex-1 p-6 flex flex-col justify-center items-center text-center bg-vault-950/95" id="view-locked">
+<div class="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mb-4 shadow-inner">
+<svg class="w-7 h-7" fill="none" stroke="currentColor" viewbox="0 0 24 24"><rect height="11" rx="2" ry="2" stroke-width="2" width="18" x="3" y="11"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke-width="2"></path></svg>
+</div>
+<h2 class="text-base font-semibold text-slate-100 mb-1">Cofre GPG Trancado</h2>
+<p class="text-xs text-slate-400 max-w-xs mb-4">
+        O cache do gpg-agent expirou. Insira a senha mestra ou toque na YubiKey para decriptar ~/.password-store.
+      </p>
+<div class="w-full max-w-xs bg-vault-900 p-3 rounded-xl border border-vault-800 mb-4 text-left font-mono text-xs">
+<div class="text-[10px] text-slate-400 mb-0.5">CHAVE RECEPTORA:</div>
+<div class="text-slate-200 font-semibold truncate">Henrique Castro &lt;henrique@...&gt;</div>
+<div class="text-[10px] text-vault-accent mt-0.5">ID: 844C 3B20 CC93 90C8</div>
+</div>
+<form class="w-full max-w-xs flex flex-col gap-2.5" onsubmit="event.preventDefault(); unlockVault();">
+<input class="w-full bg-vault-900 border border-vault-750 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-3 py-2 text-xs font-mono text-white placeholder-slate-500 outline-none" placeholder="Senha do pinentry..." type="password" value="••••••••••••"/>
+<button class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs py-2 rounded-lg transition flex items-center justify-center gap-2 shadow" type="submit">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span>Desbloquear Cofre</span>
+</button>
+</form>
+</div>
+<!-- TAB 1: VAULT VIEW (LIST + DETAIL) -->
+<div class="flex-1 flex flex-col overflow-hidden" id="tab-vault">
+<!-- Search & Filters -->
+<div class="p-2.5 border-b border-vault-800 bg-vault-950/40 space-y-2">
+<div class="relative flex items-center">
+<svg class="w-3.5 h-3.5 absolute left-3 text-slate-400 pointer-events-none" fill="none" stroke="currentColor" viewbox="0 0 24 24"><circle cx="11" cy="11" r="8" stroke-width="2"></circle><path d="m21 21-4.3-4.3" stroke-width="2"></path></svg>
+<input class="w-full bg-vault-950 border border-vault-750 focus:border-vault-accent focus:ring-1 focus:ring-vault-accent rounded-lg pl-9 pr-7 py-1.5 text-xs text-slate-100 placeholder-slate-400 font-mono outline-none" id="search-input" onkeyup="filterCredentials()" placeholder="Buscar no cofre... ⌘K ou /" type="text"/>
+<span class="absolute right-2 text-[10px] font-mono text-slate-400 bg-vault-900 px-1 rounded border border-vault-800">/</span>
+</div>
+<!-- Filter Tags -->
+<div class="flex items-center gap-1.5 overflow-x-auto text-[11px] pb-0.5 font-mono scrollbar-none">
+<button class="filter-btn px-2.5 py-0.5 rounded-full border border-slate-600 bg-vault-750 text-white font-medium" onclick="setCategoryFilter('all', this)">All</button>
+<button class="filter-btn px-2.5 py-0.5 rounded-full border border-vault-800 text-slate-400 hover:text-slate-200" onclick="setCategoryFilter('favorites', this)">★ Favorites</button>
+<button class="filter-btn px-2.5 py-0.5 rounded-full border border-vault-800 text-slate-400 hover:text-slate-200" onclick="setCategoryFilter('logins', this)">Logins</button>
+<button class="filter-btn px-2.5 py-0.5 rounded-full border border-vault-800 text-slate-400 hover:text-slate-200" onclick="setCategoryFilter('servers', this)">Servers</button>
+<button class="filter-btn px-2.5 py-0.5 rounded-full border border-vault-800 text-slate-400 hover:text-slate-200" onclick="setCategoryFilter('keys', this)">Keys</button>
+</div>
+</div>
+<!-- Main Layout Body: Splits into Master-Detail on wide screen -->
+<div class="flex-1 flex overflow-hidden" id="view-splitter">
+<!-- LEFT: CREDENTIAL LIST -->
+<div class="flex-1 flex flex-col bg-vault-900 overflow-y-auto divide-y divide-vault-800/60" id="pane-list">
+<!-- Item 1: GitHub -->
+<div class="credential-item active-entry px-3.5 py-3 cursor-pointer transition flex items-center justify-between group bg-vault-800/80 border-l-2 border-emerald-400" id="item-github" onclick="selectEntry('github')">
+<div class="flex items-center gap-3 min-w-0 pr-2">
+<div class="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs font-mono bg-purple-900/60 text-purple-300 border border-purple-700/50 shrink-0">
+                GH
+              </div>
+<div class="min-w-0">
+<div class="flex items-center gap-1.5">
+<span class="text-xs font-semibold text-slate-100 truncate group-hover:text-emerald-300">GitHub</span>
+<span class="text-[9px] px-1 py-0.2 rounded bg-purple-950 text-purple-300 border border-purple-800/80 font-mono">dev</span>
+</div>
+<div class="text-[11px] font-mono text-slate-400 truncate">@xonha • id_rsa • token</div>
+</div>
+</div>
+<!-- Quick Actions -->
+<div class="flex items-center gap-1 shrink-0">
+<button class="p-1.5 rounded bg-vault-950 hover:bg-vault-700 text-slate-400 hover:text-emerald-400 transition" onclick="event.stopPropagation(); copyText('v9$K#mP82!xL@90qA-linux', 'Senha do GitHub');" title="Copiar Senha">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+<button class="p-1.5 rounded bg-vault-950 hover:bg-vault-700 text-slate-400 hover:text-cyan-400 transition" onclick="event.stopPropagation(); copyText('xonha', 'Usuário GitHub');" title="Copiar Usuário">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><rect height="14" rx="2" stroke-width="2" width="14" x="8" y="8"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" stroke-width="2"></path></svg>
+</button>
+</div>
+</div>
+<!-- Item 2: AWS Root -->
+<div class="credential-item px-3.5 py-3 cursor-pointer transition flex items-center justify-between group hover:bg-vault-850/60" id="item-aws" onclick="selectEntry('aws')">
+<div class="flex items-center gap-3 min-w-0 pr-2">
+<div class="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs font-mono bg-amber-900/60 text-amber-300 border border-amber-700/50 shrink-0">
+                AW
+              </div>
+<div class="min-w-0">
+<div class="flex items-center gap-1.5">
+<span class="text-xs font-semibold text-slate-100 truncate group-hover:text-emerald-300">AWS Root &amp; IAM</span>
+<span class="text-[9px] px-1 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-mono font-bold">2FA TOTP</span>
+</div>
+<div class="text-[11px] font-mono text-slate-400 truncate">henrique@acme-infra.io</div>
+</div>
+</div>
+<div class="flex items-center gap-1 shrink-0">
+<button class="p-1.5 rounded bg-vault-950 hover:bg-vault-700 text-slate-400 hover:text-emerald-400 transition" onclick="event.stopPropagation(); copyText('Z#92(kLq-99a_OpVn!x1', 'Senha da AWS');" title="Copiar Senha">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+</div>
+</div>
+<!-- Item 3: Proton Mail -->
+<div class="credential-item px-3.5 py-3 cursor-pointer transition flex items-center justify-between group hover:bg-vault-850/60" id="item-proton" onclick="selectEntry('proton')">
+<div class="flex items-center gap-3 min-w-0 pr-2">
+<div class="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs font-mono bg-indigo-900/60 text-indigo-300 border border-indigo-700/50 shrink-0">
+                PM
+              </div>
+<div class="min-w-0">
+<div class="flex items-center gap-1.5">
+<span class="text-xs font-semibold text-slate-100 truncate group-hover:text-emerald-300">Proton Mail</span>
+</div>
+<div class="text-[11px] font-mono text-slate-400 truncate">contact@domain.tld</div>
+</div>
+</div>
+<div class="flex items-center gap-1 shrink-0">
+<button class="p-1.5 rounded bg-vault-950 hover:bg-vault-700 text-slate-400 hover:text-emerald-400 transition" onclick="event.stopPropagation(); copyText('k$82Nx#9VLa@2025!Pass', 'Senha Proton');" title="Copiar Senha">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+</div>
+</div>
+<!-- Item 4: DigitalOcean -->
+<div class="credential-item px-3.5 py-3 cursor-pointer transition flex items-center justify-between group hover:bg-vault-850/60" id="item-digitalocean" onclick="selectEntry('digitalocean')">
+<div class="flex items-center gap-3 min-w-0 pr-2">
+<div class="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs font-mono bg-blue-900/60 text-blue-300 border border-blue-700/50 shrink-0">
+                DO
+              </div>
+<div class="min-w-0">
+<div class="flex items-center gap-1.5">
+<span class="text-xs font-semibold text-slate-100 truncate group-hover:text-emerald-300">DigitalOcean API</span>
+<span class="text-[9px] px-1 py-0.2 rounded bg-blue-950 text-blue-300 border border-blue-800 font-mono">token</span>
+</div>
+<div class="text-[11px] font-mono text-slate-400 truncate">infra-production-token</div>
+</div>
+</div>
+<div class="flex items-center gap-1 shrink-0">
+<button class="p-1.5 rounded bg-vault-950 hover:bg-vault-700 text-slate-400 hover:text-emerald-400 transition" onclick="event.stopPropagation(); copyText('dop_v1_99a82f0bcdae812', 'Token DigitalOcean');" title="Copiar Token">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+</div>
+</div>
+<!-- Item 5: Google Workspace -->
+<div class="credential-item px-3.5 py-3 cursor-pointer transition flex items-center justify-between group hover:bg-vault-850/60" id="item-google" onclick="selectEntry('google')">
+<div class="flex items-center gap-3 min-w-0 pr-2">
+<div class="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs font-mono bg-rose-900/60 text-rose-300 border border-rose-700/50 shrink-0">
+                GW
+              </div>
+<div class="min-w-0">
+<div class="flex items-center gap-1.5">
+<span class="text-xs font-semibold text-slate-100 truncate group-hover:text-emerald-300">Google Workspace</span>
+</div>
+<div class="text-[11px] font-mono text-slate-400 truncate">admin@passage.dev</div>
+</div>
+</div>
+<div class="flex items-center gap-1 shrink-0">
+<button class="p-1.5 rounded bg-vault-950 hover:bg-vault-700 text-slate-400 hover:text-emerald-400 transition" onclick="event.stopPropagation(); copyText('G!Workspace992@Pass#Org', 'Senha Google');" title="Copiar Senha">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+</div>
+</div>
+</div>
+<!-- RIGHT: DETAIL PANE (Visible by default or side-by-side) -->
+<div class="hidden sm:flex flex-1 flex-col bg-vault-900 border-l border-vault-800 overflow-y-auto" id="pane-detail">
+<!-- Detail Header -->
+<div class="p-3.5 border-b border-vault-800 bg-vault-950/60 flex items-center justify-between">
+<div class="flex items-center gap-2 min-w-0">
+<button class="sm:hidden p-1 rounded hover:bg-vault-800 text-slate-400" onclick="backToListOnCompact()">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M15 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+<div class="min-w-0">
+<div class="flex items-center gap-2">
+<h2 class="text-sm font-semibold text-white truncate" id="detail-title">GitHub (@xonha)</h2>
+<button class="text-amber-400 hover:text-amber-300" onclick="toggleStar(this)">
+<svg class="w-4 h-4 fill-current" viewbox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+</button>
+</div>
+<p class="text-[10px] font-mono text-slate-400 truncate" id="detail-path">
+                  ~/.password-store/dev/github.gpg
+                </p>
+</div>
+</div>
+<div class="flex items-center gap-1 shrink-0">
+<button class="p-1.5 rounded bg-vault-800 hover:bg-vault-750 text-slate-300 border border-vault-700 text-xs flex items-center gap-1" onclick="showToast('Modo de edição habilitado')">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="hidden sm:inline">Editar</span>
+</button>
+</div>
+</div>
+<!-- Detail Fields -->
+<div class="p-3.5 space-y-3.5 text-xs">
+<!-- GPG Recipient Info Banner -->
+<div class="p-2.5 rounded-lg bg-vault-950 border border-vault-800 flex items-center justify-between font-mono text-[11px]">
+<div class="flex items-center gap-2 truncate text-slate-400">
+<svg class="w-4 h-4 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="truncate">GPG: <strong class="text-slate-200">844C3B20CC9390C8</strong> (Henrique Castro)</span>
+</div>
+<span class="text-[9px] bg-emerald-950 text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-800 shrink-0">Encrypted</span>
+</div>
+<!-- Username Field -->
+<div class="bg-vault-950 p-2.5 rounded-xl border border-vault-800 space-y-1">
+<div class="flex items-center justify-between text-[10px] text-slate-400 font-mono">
+<span>USUÁRIO / CONTA</span>
+<span class="text-slate-400">pass entry line 2</span>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-xs font-mono text-slate-100 font-medium select-all" id="detail-username">xonha</span>
+<button class="px-2.5 py-1 bg-vault-800 hover:bg-vault-700 text-slate-200 rounded text-[11px] flex items-center gap-1 font-mono transition" onclick="copyDetailUsername()">
+<svg class="w-3 h-3 text-cyan-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><rect height="14" rx="2" stroke-width="2" width="14" x="8" y="8"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" stroke-width="2"></path></svg>
+<span>Copiar</span>
+</button>
+</div>
+</div>
+<!-- Password Field -->
+<div class="bg-vault-950 p-2.5 rounded-xl border border-vault-800 space-y-2">
+<div class="flex items-center justify-between text-[10px] text-slate-400 font-mono">
+<span>SENHA CRIPTOGRAFADA (GPG)</span>
+<span class="text-emerald-400 font-semibold">128-bit Entropia</span>
+</div>
+<div class="flex items-center justify-between gap-2">
+<span class="text-xs font-mono tracking-widest text-slate-200 select-all truncate" id="detail-password-masked">••••••••••••••••••••</span>
+<span class="hidden text-xs font-mono text-emerald-300 select-all truncate" id="detail-password-plain">v9$K#mP82!xL@90qA-linux</span>
+<div class="flex items-center gap-1 shrink-0">
+<button class="p-1 rounded bg-vault-850 hover:bg-vault-750 text-slate-400 hover:text-slate-200 transition" onclick="togglePasswordVisibility()" title="Revelar senha">
+<svg class="w-3.5 h-3.5" fill="none" id="eye-icon" stroke="currentColor" viewbox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+<button class="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-600 text-white rounded text-[11px] font-medium flex items-center gap-1 font-mono transition shadow" onclick="copyDetailPassword()">
+<svg class="w-3 h-3" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span>Copiar</span>
+</button>
+</div>
+</div>
+<!-- Entropy Bar -->
+<div class="w-full bg-vault-850 h-1 rounded-full overflow-hidden">
+<div class="bg-emerald-400 h-full w-[90%] rounded-full"></div>
+</div>
+</div>
+<!-- TOTP Card (RFC 6238) -->
+<div class="bg-vault-950 p-3 rounded-xl border border-vault-800 flex items-center justify-between">
+<div class="space-y-0.5">
+<div class="flex items-center gap-1.5 text-[10px] text-slate-400 font-mono">
+<svg class="w-3 h-3 text-vault-accent" fill="none" stroke="currentColor" viewbox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"></circle><path d="M12 6v6l4 2" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span>CÓDIGO TOTP 2FA</span>
+</div>
+<div class="text-lg font-mono font-bold tracking-widest text-vault-accent" id="totp-code">
+                  749 201
+                </div>
+</div>
+<!-- Animated Donut Countdown Timer -->
+<div class="flex items-center gap-2.5">
+<div class="relative w-8 h-8 flex items-center justify-center">
+<svg class="w-full h-full -rotate-90" viewbox="0 0 36 36">
+<path class="text-vault-800" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3.5"></path>
+<path class="text-vault-accent transition-all duration-1000 ease-linear" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" id="totp-ring" stroke="currentColor" stroke-dasharray="75, 100" stroke-linecap="round" stroke-width="3.5"></path>
+</svg>
+<span class="absolute text-[10px] font-mono text-slate-200 font-semibold" id="totp-seconds">22</span>
+</div>
+<button class="px-2 py-1 bg-vault-800 hover:bg-vault-700 text-slate-200 rounded text-[11px] font-mono transition" onclick="copyTotpCode()">
+                  Copiar TOTP
+                </button>
+</div>
+</div>
+<!-- URL Field with Open Action -->
+<div class="bg-vault-950 p-2.5 rounded-xl border border-vault-800 flex items-center justify-between text-xs font-mono">
+<div class="truncate text-slate-300 pr-2">
+<span class="text-[10px] text-slate-400 block">URL</span>
+<span id="detail-url">https://github.com</span>
+</div>
+<a class="p-1.5 rounded hover:bg-vault-800 text-vault-accent flex items-center gap-1 transition" href="https://github.com" id="detail-url-link" rel="noreferrer" target="_blank" title="Abrir no navegador">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</a>
+</div>
+<!-- Notes & Git Commit Status -->
+<div class="bg-vault-950/60 p-3 rounded-xl border border-vault-800 text-[11px] font-mono space-y-1.5 text-slate-400">
+<div class="flex justify-between items-center pb-1 border-b border-vault-800">
+<span class="text-slate-400 text-[10px] uppercase font-bold tracking-wider">STATUS GIT</span>
+<span class="text-emerald-400 flex items-center gap-1 text-[10px]">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Committed to origin/main (4d2f8e1)
+                </span>
+</div>
+<div class="pt-1">
+<div class="text-[10px] text-slate-400 mb-0.5">NOTAS / GPG MULTILINE:</div>
+<pre class="text-[11px] text-slate-300 whitespace-pre-wrap bg-vault-900 p-2 rounded border border-vault-800 font-mono" id="detail-notes">SSH key: ~/.ssh/id_ed25519_gh
+GPG Signing Subkey ID: 0x981A72FE
+Personal access token expires in 90 days.</pre>
+</div>
+</div>
+<!-- Detail Action Buttons -->
+<div class="flex items-center gap-2 pt-1 font-mono text-xs">
+<button class="flex-1 py-1.5 bg-vault-800 hover:bg-vault-750 text-slate-200 rounded border border-vault-700 transition" onclick="showToast('Abrindo editor de segredo')">
+                Edit Credential
+              </button>
+<button class="px-3 py-1.5 bg-vault-800 hover:bg-vault-750 text-slate-300 rounded border border-vault-700 transition" onclick="showToast('Git log para dev/github.gpg: 3 revisões')">
+                History
+              </button>
+<button class="p-1.5 bg-vault-800 hover:bg-rose-950 hover:text-rose-300 text-slate-400 rounded border border-vault-700 transition" onclick="showToast('Confirme exclusão via terminal ou diálogo')" title="Excluir">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- TAB 2: GIT SYNC VIEW -->
+<div class="hidden flex-1 p-4 bg-vault-900 overflow-y-auto space-y-4" id="tab-sync">
+<div class="bg-vault-950 p-4 rounded-xl border border-vault-800 space-y-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<svg class="w-5 h-5 text-vault-accent" fill="none" stroke="currentColor" viewbox="0 0 24 24"><circle cx="6" cy="6" r="3" stroke-width="2"></circle><circle cx="6" cy="18" r="3" stroke-width="2"></circle><circle cx="18" cy="9" r="3" stroke-width="2"></circle><path d="M6 9v6M9 9l6-3M9 15l6-3" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<h3 class="text-xs font-semibold text-slate-100">Repositório Git do Pass</h3>
+</div>
+<span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
+            origin/main: up to date
+          </span>
+</div>
+<p class="text-xs text-slate-300 leading-relaxed">
+          O cofre ~/.password-store é sincronizado automaticamente a cada modificação com push assinado via chave SSH/GPG.
+        </p>
+<!-- Git Statistics grid -->
+<div class="grid grid-cols-3 gap-2 font-mono text-center text-xs">
+<div class="bg-vault-900 p-2.5 rounded-lg border border-vault-800">
+<div class="text-[10px] text-slate-400">STATUS</div>
+<div class="text-emerald-400 font-bold mt-0.5">Limpo</div>
+</div>
+<div class="bg-vault-900 p-2.5 rounded-lg border border-vault-800">
+<div class="text-[10px] text-slate-400">LOCAL CHANGES</div>
+<div class="text-slate-200 font-bold mt-0.5">0 arquivos</div>
+</div>
+<div class="bg-vault-900 p-2.5 rounded-lg border border-vault-800">
+<div class="text-[10px] text-slate-400">LAST SYNC</div>
+<div class="text-slate-200 font-bold mt-0.5">2m atrás</div>
+</div>
+</div>
+<!-- Git Action Buttons -->
+<div class="flex flex-wrap gap-2 pt-1 font-mono text-xs">
+<button class="px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-medium flex items-center gap-1.5 transition shadow" onclick="showToast('Sincronização com origin/main concluída!')">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span>Sync Now</span>
+</button>
+<button class="px-3 py-1.5 rounded bg-vault-800 hover:bg-vault-750 text-slate-200 border border-vault-700 transition" onclick="showToast('Verificando refs remotas no GitHub...')">
+            Check Remote
+          </button>
+<button class="px-3 py-1.5 rounded bg-vault-800 hover:bg-vault-750 text-slate-200 border border-vault-700 transition" onclick="showToast('Abrindo histórico de commits do pass')">
+            Git Log
+          </button>
+</div>
+</div>
+<!-- Remote details box -->
+<div class="bg-vault-950 p-3.5 rounded-xl border border-vault-800 text-[11px] font-mono space-y-1 text-slate-400">
+<div class="flex justify-between">
+<span>Remote URL:</span>
+<span class="text-slate-300">git@github.com:xonha/pass-store.git</span>
+</div>
+<div class="flex justify-between">
+<span>Branch Principal:</span>
+<span class="text-emerald-400">main (tracking origin/main)</span>
+</div>
+<div class="flex justify-between">
+<span>Assinatura Git:</span>
+<span class="text-slate-300">GPG Key 0xAD450F333C62</span>
+</div>
+</div>
+</div>
+<!-- TAB 3: BROWSER EXTENSIONS VIEW -->
+<div class="hidden flex-1 p-4 bg-vault-900 overflow-y-auto space-y-4" id="tab-extensions">
+<div class="bg-vault-950 p-4 rounded-xl border border-vault-800 space-y-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<svg class="w-5 h-5 text-vault-accent" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M11 4a2 2 0 114 0v1a1.5 1.5 0 001.5 1.5h1a2 2 0 110 4h-1a1.5 1.5 0 00-1.5 1.5v1a2 2 0 11-4 0v-1a1.5 1.5 0 00-1.5-1.5h-1a2 2 0 110-4h1A1.5 1.5 0 0011 5V4z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<h3 class="text-xs font-semibold text-slate-100">Extensões de Navegador Autorizadas</h3>
+</div>
+<span class="text-[10px] font-mono text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">
+            Native Messaging Host OK
+          </span>
+</div>
+<p class="text-xs text-slate-300 leading-relaxed">
+          Comunicação direta com navegadores via Unix socket seguro (<code class="text-slate-200">~/.passage.sock</code>). Não expõe chaves privadas.
+        </p>
+<!-- Connected Browsers List -->
+<div class="space-y-2 pt-1 font-mono text-xs">
+<div class="bg-vault-900 p-2.5 rounded-lg border border-vault-800 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+<span class="text-slate-200 font-semibold">Brave Browser</span>
+<span class="text-[10px] text-slate-400">(ID: pnbmjk...82x)</span>
+</div>
+<span class="text-[10px] text-emerald-400">Conectado</span>
+</div>
+<div class="bg-vault-900 p-2.5 rounded-lg border border-vault-800 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+<span class="text-slate-200 font-semibold">Google Chrome</span>
+<span class="text-[10px] text-slate-400">(ID: akd92x...11b)</span>
+</div>
+<span class="text-[10px] text-slate-400">Ocioso</span>
+</div>
+</div>
+<!-- 12-char code auth form -->
+<div class="pt-3 border-t border-vault-800 space-y-2">
+<label class="block text-[11px] font-mono text-slate-400">
+            Digite o código de 12 caracteres exibido no popup do navegador:
+          </label>
+<div class="flex gap-2">
+<input class="flex-1 bg-vault-900 border border-vault-750 focus:border-vault-accent rounded-lg px-3 py-1.5 font-mono text-xs text-white uppercase placeholder-slate-500 outline-none" id="ext-code-input" maxlength="14" placeholder="8F2A-99B1-23C1" type="text"/>
+<button class="px-3 py-1.5 rounded bg-vault-800 hover:bg-vault-750 text-slate-200 border border-vault-700 text-xs font-mono transition" onclick="authorizeExtension()">
+              Autorizar
+            </button>
+</div>
+</div>
+</div>
+</div>
+<!-- BOTTOM TAB & UTILITY BAR -->
+<nav class="h-12 bg-vault-950 border-t border-vault-800 px-3 flex items-center justify-between text-xs select-none">
+<div class="flex items-center gap-1 font-mono text-[11px]">
+<button class="px-2.5 py-1.5 rounded transition flex items-center gap-1.5 bg-vault-800 text-white font-medium" id="nav-vault" onclick="switchTab('vault')">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span>Vault</span>
+</button>
+<button class="px-2.5 py-1.5 rounded transition flex items-center gap-1.5 text-slate-400 hover:text-slate-200 hover:bg-vault-850" id="nav-sync" onclick="switchTab('sync')">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span>Git Sync</span>
+</button>
+<button class="px-2.5 py-1.5 rounded transition flex items-center gap-1.5 text-slate-400 hover:text-slate-200 hover:bg-vault-850" id="nav-extensions" onclick="switchTab('extensions')">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M11 4a2 2 0 114 0v1a1.5 1.5 0 001.5 1.5h1a2 2 0 110 4h-1a1.5 1.5 0 00-1.5 1.5v1a2 2 0 11-4 0v-1a1.5 1.5 0 00-1.5-1.5h-1a2 2 0 110-4h1A1.5 1.5 0 0011 5V4z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span>Extensions</span>
+</button>
+</div>
+<!-- Quick Add New Entry Primary Button -->
+<button class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow transition" onclick="showToast('Adicionar novo segredo no pass')">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span>+ New Entry</span>
+</button>
+</nav>
+</div>
+<!-- Bottom Helper Branding -->
+<div class="w-full max-w-5xl mt-3 text-center text-xs text-slate-400 font-mono">
+    Passage Desktop • Native Linux GNU Pass client built for GNOME / Hyprland / KDE (Tauri 2 + Rust)
+  </div>
+<!-- PURE VANILLA JAVASCRIPT CONTROLLERS -->
+<script>
+    // Entry data dictionary
+    const ENTRIES = {
+      github: {
+        title: "GitHub (@xonha)",
+        path: "~/.password-store/dev/github.gpg",
+        username: "xonha",
+        password: "v9$K#mP82!xL@90qA-linux",
+        totp: "749 201",
+        url: "https://github.com",
+        notes: "SSH key: ~/.ssh/id_ed25519_gh\nGPG Signing Subkey ID: 0x981A72FE\nPersonal access token expires in 90 days."
+      },
+      aws: {
+        title: "AWS Root & IAM (Production)",
+        path: "~/.password-store/work/cloud/aws.gpg",
+        username: "henrique@acme-infra.io",
+        password: "Z#92(kLq-99a_OpVn!x1",
+        totp: "419 883",
+        url: "https://aws.amazon.com/console",
+        notes: "Account ID: 9482-1923-0192\nRegion: sa-east-1 (São Paulo)\nYubiKey 5 NFC hardware MFA required."
+      },
+      proton: {
+        title: "Proton Mail",
+        path: "~/.password-store/personal/email/proton.gpg",
+        username: "contact@domain.tld",
+        password: "k$82Nx#9VLa@2025!Pass",
+        totp: "109 542",
+        url: "https://mail.proton.me",
+        notes: "Mailbox encryption key active.\nRecovery phrase guardada offline no cofre físico."
+      },
+      digitalocean: {
+        title: "DigitalOcean API (Infrastructure)",
+        path: "~/.password-store/servers/digitalocean.gpg",
+        username: "infra-production-token",
+        password: "dop_v1_99a82f0bcdae812",
+        totp: "830 144",
+        url: "https://cloud.digitalocean.com",
+        notes: "Read/Write scopes for Terraform Kubernetes deployment cluster."
+      },
+      google: {
+        title: "Google Workspace",
+        path: "~/.password-store/work/google.gpg",
+        username: "admin@passage.dev",
+        password: "G!Workspace992@Pass#Org",
+        totp: "552 901",
+        url: "https://workspace.google.com",
+        notes: "Google Admin Console / SSO super-admin account."
+      }
+    };
+
+    let currentEntryKey = "github";
+    let isPasswordRevealed = false;
+    let isLocked = false;
+    let activeTab = "vault";
+    let totpSeconds = 22;
+
+    // Toast Manager
+    let toastTimeout;
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      const msgElem = document.getElementById("toast-message");
+      msgElem.innerText = message;
+      toast.classList.remove("hidden");
+      toast.classList.add("toast-anim");
+      toast.style.opacity = "1";
+
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.style.opacity = "0";
+        setTimeout(() => toast.classList.add("hidden"), 300);
+      }, 2200);
+    }
+
+    // Window Width Preset Controller
+    function setWindowWidth(width, btnElem) {
+      const appWin = document.getElementById("app-window");
+      const paneDetail = document.getElementById("pane-detail");
+      const paneList = document.getElementById("pane-list");
+      appWin.style.maxWidth = width + "px";
+
+      // Highlight active button
+      const buttons = btnElem.parentElement.querySelectorAll("button");
+      buttons.forEach(b => {
+        b.className = "px-2.5 py-1 rounded text-slate-400 hover:text-slate-200 transition-colors";
+      });
+      btnElem.className = "px-2.5 py-1 rounded bg-emerald-600/90 text-white font-bold shadow transition-colors";
+
+      // Handle Master-Detail responsiveness
+      if (width >= 640) {
+        paneDetail.classList.remove("hidden");
+        paneList.classList.remove("hidden");
+      } else {
+        // on compact, keep selected entry visible or list
+        paneDetail.classList.remove("hidden");
+      }
+    }
+
+    // Select Entry in List
+    function selectEntry(key) {
+      currentEntryKey = key;
+      const data = ENTRIES[key];
+      if (!data) return;
+
+      // Update detail fields
+      document.getElementById("detail-title").innerText = data.title;
+      document.getElementById("detail-path").innerText = data.path;
+      document.getElementById("detail-username").innerText = data.username;
+      document.getElementById("detail-password-plain").innerText = data.password;
+      document.getElementById("detail-url").innerText = data.url;
+      document.getElementById("detail-url-link").href = data.url;
+      document.getElementById("detail-notes").innerText = data.notes;
+      document.getElementById("totp-code").innerText = data.totp;
+
+      // Update active list styling
+      document.querySelectorAll(".credential-item").forEach(item => {
+        item.classList.remove("bg-vault-800/80", "border-l-2", "border-emerald-400");
+      });
+      const selectedItem = document.getElementById("item-" + key);
+      if (selectedItem) {
+        selectedItem.classList.add("bg-vault-800/80", "border-l-2", "border-emerald-400");
+      }
+
+      // If on mobile/ultra-compact view, show detail
+      const paneDetail = document.getElementById("pane-detail");
+      paneDetail.classList.remove("hidden");
+    }
+
+    function backToListOnCompact() {
+      const paneDetail = document.getElementById("pane-detail");
+      paneDetail.classList.add("hidden");
+    }
+
+    // Copy Helpers
+    function copyText(text, label) {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text);
+      }
+      showToast(`${label} copiado!`);
+    }
+
+    function copyDetailUsername() {
+      const username = ENTRIES[currentEntryKey].username;
+      copyText(username, "Usuário (" + username + ")");
+    }
+
+    function copyDetailPassword() {
+      const pass = ENTRIES[currentEntryKey].password;
+      copyText(pass, "Senha decriptada");
+    }
+
+    function copyTotpCode() {
+      const totp = ENTRIES[currentEntryKey].totp.replace(/\s+/g, '');
+      copyText(totp, "Código TOTP (" + totp + ")");
+    }
+
+    // Reveal/Hide Password Toggle
+    function togglePasswordVisibility() {
+      isPasswordRevealed = !isPasswordRevealed;
+      const masked = document.getElementById("detail-password-masked");
+      const plain = document.getElementById("detail-password-plain");
+      if (isPasswordRevealed) {
+        masked.classList.add("hidden");
+        plain.classList.remove("hidden");
+      } else {
+        masked.classList.remove("hidden");
+        plain.classList.add("hidden");
+      }
+    }
+
+    // Toggle Star/Favorite
+    function toggleStar(btn) {
+      const isStarred = btn.classList.contains("text-amber-400");
+      if (isStarred) {
+        btn.classList.remove("text-amber-400");
+        btn.classList.add("text-slate-500");
+        showToast("Removido dos favoritos");
+      } else {
+        btn.classList.add("text-amber-400");
+        btn.classList.remove("text-slate-500");
+        showToast("Marcado como favorito");
+      }
+    }
+
+    // Search filter
+    function filterCredentials() {
+      const q = document.getElementById("search-input").value.toLowerCase();
+      const items = document.querySelectorAll(".credential-item");
+      items.forEach(el => {
+        const text = el.innerText.toLowerCase();
+        el.style.display = text.includes(q) ? "flex" : "none";
+      });
+    }
+
+    function setCategoryFilter(category, btn) {
+      const btns = btn.parentElement.querySelectorAll(".filter-btn");
+      btns.forEach(b => {
+        b.className = "filter-btn px-2.5 py-0.5 rounded-full border border-vault-800 text-slate-400 hover:text-slate-200";
+      });
+      btn.className = "filter-btn px-2.5 py-0.5 rounded-full border border-slate-600 bg-vault-750 text-white font-medium";
+      showToast(`Filtro aplicado: ${category}`);
+    }
+
+    // Tab Navigation
+    function switchTab(tabId) {
+      activeTab = tabId;
+      document.getElementById("tab-vault").classList.add("hidden");
+      document.getElementById("tab-sync").classList.add("hidden");
+      document.getElementById("tab-extensions").classList.add("hidden");
+
+      const navVault = document.getElementById("nav-vault");
+      const navSync = document.getElementById("nav-sync");
+      const navExt = document.getElementById("nav-extensions");
+
+      [navVault, navSync, navExt].forEach(nav => {
+        nav.className = "px-2.5 py-1.5 rounded transition flex items-center gap-1.5 text-slate-400 hover:text-slate-200 hover:bg-vault-850";
+      });
+
+      if (tabId === "vault") {
+        document.getElementById("tab-vault").classList.remove("hidden");
+        navVault.className = "px-2.5 py-1.5 rounded transition flex items-center gap-1.5 bg-vault-800 text-white font-medium";
+      } else if (tabId === "sync") {
+        document.getElementById("tab-sync").classList.remove("hidden");
+        navSync.className = "px-2.5 py-1.5 rounded transition flex items-center gap-1.5 bg-vault-800 text-white font-medium";
+      } else if (tabId === "extensions") {
+        document.getElementById("tab-extensions").classList.remove("hidden");
+        navExt.className = "px-2.5 py-1.5 rounded transition flex items-center gap-1.5 bg-vault-800 text-white font-medium";
+      }
+    }
+
+    // Vault Lock / Unlock Simulation
+    function toggleLockState() {
+      if (isLocked) {
+        unlockVault();
+      } else {
+        lockVault();
+      }
+    }
+
+    function lockVault() {
+      isLocked = true;
+      document.getElementById("tab-vault").classList.add("hidden");
+      document.getElementById("tab-sync").classList.add("hidden");
+      document.getElementById("tab-extensions").classList.add("hidden");
+      document.getElementById("view-locked").classList.remove("hidden");
+      showToast("Cofre trancado via GPG agent");
+    }
+
+    function unlockVault() {
+      isLocked = false;
+      document.getElementById("view-locked").classList.add("hidden");
+      switchTab(activeTab);
+      showToast("Cofre decriptado com sucesso!");
+    }
+
+    // Extension Authorization
+    function authorizeExtension() {
+      const code = document.getElementById("ext-code-input").value.trim();
+      if (code.length >= 8) {
+        showToast("Nova extensão vinculada com sucesso: " + code);
+        document.getElementById("ext-code-input").value = "";
+      } else {
+        showToast("Por favor insira o código de 12 dígitos.");
+      }
+    }
+
+    // TOTP Timer loop (30s)
+    setInterval(() => {
+      totpSeconds--;
+      if (totpSeconds <= 0) {
+        totpSeconds = 30;
+        // refresh simulate random codes
+        const codeA = Math.floor(100 + Math.random() * 899);
+        const codeB = Math.floor(100 + Math.random() * 899);
+        document.getElementById("totp-code").innerText = `${codeA} ${codeB}`;
+      }
+      document.getElementById("totp-seconds").innerText = totpSeconds;
+      const ring = document.getElementById("totp-ring");
+      const percentage = (totpSeconds / 30) * 100;
+      ring.setAttribute("stroke-dasharray", `${percentage}, 100`);
+    }, 1000);
+  </script>
+</body></html>
