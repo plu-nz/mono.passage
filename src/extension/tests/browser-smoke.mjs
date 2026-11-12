@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import https from 'node:https';
 
-const [browserBin, hostBin, installer] = process.argv.slice(2);
+const [browserBin, hostBin, installer, scenario = 'standard'] = process.argv.slice(2);
 if (!browserBin || !hostBin || !installer) throw new Error('Provide browser, host, and installer paths');
 const extensionDir = resolve('src/extension/.output/chrome-mv3');
 if (!existsSync(join(extensionDir, 'manifest.json'))) throw new Error('Run pnpm build:extension first');
@@ -24,9 +24,23 @@ const cert = join(root, 'cert.pem');
 const key = join(root, 'key.pem');
 const openssl = spawnSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-keyout', key, '-out', cert, '-days', '1', '-subj', '/CN=localhost'], { stdio: 'ignore' });
 if (openssl.status !== 0) throw new Error('OpenSSL certificate generation failed');
-const server = https.createServer({ cert: readFileSync(cert), key: readFileSync(key) }, (_req, res) => {
+const forms = {
+  standard: '<form><input id="user" autocomplete="username"><input id="password" type="password" autocomplete="current-password"></form>',
+  usernameOnly: '<form><input id="user" autocomplete="username"></form>',
+  passwordOnly: '<form><input id="password" type="password" autocomplete="current-password"></form>',
+  autocompleteOff: '<form><input id="user" name="username" autocomplete="off"><input id="password" type="password" autocomplete="off"></form>',
+  ambiguousPassword: '<form><input id="user" autocomplete="username"><input id="password" type="password"><input id="second" type="password"></form>',
+  ambiguousUsername: '<form><input id="user" autocomplete="username"><input id="second" autocomplete="username"><input id="password" type="password"></form>',
+  hiddenPassword: '<form><input id="user" autocomplete="username"><input id="password" type="password" style="display:none"></form>',
+  transparentPassword: '<form><input id="user" autocomplete="username"><input id="password" type="password" style="opacity:0"></form>',
+  newPassword: '<form><input id="user" autocomplete="username"><input id="password" type="password" autocomplete="new-password"></form>',
+  iframe: '<iframe src="/frame"></iframe>',
+  noFields: '<p>No login fields</p>',
+};
+if (!(scenario in forms)) throw new Error(`Unknown scenario: ${scenario}`);
+const server = https.createServer({ cert: readFileSync(cert), key: readFileSync(key) }, (req, res) => {
   res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-  res.end('<!doctype html><title>Passage test</title><input id="user" autocomplete="username"><input id="password" type="password">');
+  res.end(`<!doctype html><title>Passage test</title>${req.url === '/frame' ? forms.standard : forms[scenario]}<script>document.addEventListener('input',()=>document.body.dataset.inputs=(Number(document.body.dataset.inputs||0)+1));document.addEventListener('change',()=>document.body.dataset.changes=(Number(document.body.dataset.changes||0)+1));</script>`);
 });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const site = `https://localhost:${server.address().port}`;
@@ -144,13 +158,16 @@ try {
     throw new Error(`Popup did not list matching login: ${JSON.stringify({ status, tabs })}`);
   }
   await evaluate(popupWs, `document.querySelector('#entries button').click(); true`);
+  const expectedStatus = { standard: 'preenchidas', usernameOnly: 'Usuário preenchido', passwordOnly: 'preenchidas', autocompleteOff: 'preenchidas', ambiguousPassword: 'ambíguos', ambiguousUsername: 'ambíguos', hiddenPassword: 'Nenhum campo', transparentPassword: 'Nenhum campo', newPassword: 'Nenhum campo', iframe: 'Nenhum campo', noFields: 'Nenhum campo' }[scenario];
   for (let i = 0; i < 100; i++) {
-    if ((await evaluate(popupWs, `document.querySelector('#status')?.textContent || ''`)).includes('preenchidas')) break;
+    if ((await evaluate(popupWs, `document.querySelector('#status')?.textContent || ''`)).includes(expectedStatus)) break;
     await delay(100);
   }
   const pageWs = await connect(page.webSocketDebuggerUrl);
-  const values = await evaluate(pageWs, `({user:document.querySelector('#user').value,password:document.querySelector('#password').value})`);
-  if (values.user !== 'tester' || values.password !== 'test-password') {
+  const values = await evaluate(pageWs, `({user:document.querySelector('#user')?.value || '',password:document.querySelector('#password')?.value || '',inputs:Number(document.body.dataset.inputs||0),changes:Number(document.body.dataset.changes||0)})`);
+  const expectedValues = { standard: ['tester', 'test-password'], usernameOnly: ['tester', ''], passwordOnly: ['', 'test-password'], autocompleteOff: ['tester', 'test-password'] }[scenario] || ['', ''];
+  const eventsExpected = ['standard', 'usernameOnly', 'passwordOnly', 'autocompleteOff'].includes(scenario);
+  if (values.user !== expectedValues[0] || values.password !== expectedValues[1] || (eventsExpected && (!values.inputs || !values.changes))) {
     const status = await evaluate(popupWs, `document.querySelector('#status')?.textContent || ''`);
     const tabs = await evaluate(workerWs, `chrome.tabs.query({active:true,currentWindow:true}).then(t=>t.map(x=>({id:x.id,url:x.url})))`);
     throw new Error(`Form was not filled: ${JSON.stringify({ values, status, tabs })}`);
@@ -165,10 +182,10 @@ try {
     if ((await evaluate(popupWs, `document.querySelector('#status')?.textContent || ''`)).includes('mudou')) break;
     await delay(100);
   }
-  const afterNavigation = await evaluate(pageWs, `({user:document.querySelector('#user').value,password:document.querySelector('#password').value})`);
+  const afterNavigation = await evaluate(pageWs, `({user:document.querySelector('#user')?.value || '',password:document.querySelector('#password')?.value || ''})`);
   const rejected = await evaluate(popupWs, `document.querySelector('#status')?.textContent || ''`);
   if (afterNavigation.user || afterNavigation.password || !rejected.includes('mudou')) throw new Error('Navigation was not rejected');
-  console.log(JSON.stringify({ browser: browserBin, extensionId, paired: true, popupListed: true, filled: true, navigationRejected: true }));
+  console.log(JSON.stringify({ browser: browserBin, scenario, extensionId, paired: true, popupListed: true, outcome: expectedStatus, navigationRejected: true }));
   popupWs.close(); browserWs.close(); workerWs.close(); pageWs.close();
 } finally {
   child.kill('SIGTERM');

@@ -65,11 +65,27 @@ async function handle(message: PopupRequest): Promise<NativeReply> {
     const result = await browser.scripting.executeScript({
       target: { tabId: tab.id },
       func: (url: string, username: string, password: string) => {
-        if (location.href !== url || window.top !== window) return false;
-        const fields = [...document.querySelectorAll('input')].filter((item): item is HTMLInputElement => item instanceof HTMLInputElement && !item.disabled && !item.readOnly);
-        const passwordField = fields.find(item => item.type === 'password');
-        if (!passwordField) return false;
-        const usernameField = fields.find(item => item !== passwordField && (item.autocomplete === 'username' || item.type === 'email' || item.name.toLowerCase().includes('user')));
+        if (location.href !== url || window.top !== window) return 'noFields';
+        const fields = [...document.querySelectorAll('input')].filter((item): item is HTMLInputElement => {
+          if (!(item instanceof HTMLInputElement) || item.disabled || item.readOnly) return false;
+          const rect = item.getBoundingClientRect();
+          const style = getComputedStyle(item);
+          return rect.width > 0 && rect.height > 0 && style.visibility === 'visible' && Number(style.opacity) > 0;
+        });
+        const passwordFields = fields.filter(item => item.type === 'password' && item.autocomplete !== 'new-password');
+        const explicitPassword = passwordFields.filter(item => item.autocomplete === 'current-password');
+        if (explicitPassword.length > 1 || (explicitPassword.length === 0 && passwordFields.length > 1)) return 'ambiguous';
+        const passwordField = explicitPassword[0] || passwordFields[0];
+        if (!passwordField && document.querySelector('input[type="password"]')) return 'noFields';
+        const candidates = fields.filter(item => {
+          if (!['text', 'email', 'tel'].includes(item.type) || item.autocomplete === 'new-password') return false;
+          const hint = `${item.name} ${item.id}`.toLowerCase();
+          return item.autocomplete === 'username' || item.autocomplete === 'email' || item.type === 'email' || /user|login|email|account/.test(hint);
+        }).filter(item => !passwordField?.form || item.form === passwordField.form);
+        const explicitUsername = candidates.filter(item => item.autocomplete === 'username');
+        if (explicitUsername.length > 1 || (explicitUsername.length === 0 && candidates.length > 1)) return 'ambiguous';
+        const usernameField = explicitUsername[0] || candidates[0];
+        if (!passwordField && (!usernameField || !username)) return 'noFields';
         const setValue = (field: HTMLInputElement, value: string) => {
           const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
           setter?.call(field, value);
@@ -77,12 +93,12 @@ async function handle(message: PopupRequest): Promise<NativeReply> {
           field.dispatchEvent(new Event('change', { bubbles: true }));
         };
         if (usernameField && username) setValue(usernameField, username);
-        setValue(passwordField, password);
-        return true;
+        if (passwordField) setValue(passwordField, password);
+        return passwordField ? 'filled' : 'usernameOnly';
       },
       args: [tab.url, typeof response.username === 'string' ? response.username : '', response.password],
     });
-    return { type: result[0]?.result ? 'filled' : 'noFields' };
+    return { type: result[0]?.result || 'noFields' };
   }
   throw new Error('Pedido desconhecido.');
 }

@@ -29,7 +29,10 @@ async function loadEntries() {
     if (!entry || typeof entry.id !== 'string' || typeof entry.title !== 'string') continue;
     entries.append(button(`${entry.title}${typeof entry.username === 'string' ? ` · ${entry.username}` : ''}`, async () => {
       const result = await request({ type: 'fill', id: entry.id, tabId: response.tabId, url: response.url });
-      status.textContent = result.type === 'filled' ? 'Credenciais preenchidas.' : 'Campo de senha não encontrado nesta página.';
+      status.textContent = result.type === 'filled' ? 'Credenciais preenchidas.'
+        : result.type === 'usernameOnly' ? 'Usuário preenchido. Avance para a etapa da senha e clique novamente no Passage.'
+        : result.type === 'ambiguous' ? 'Há campos de login ambíguos. Nenhuma credencial foi preenchida.'
+        : 'Nenhum campo de login seguro foi encontrado nesta página.';
     }));
   }
 }
