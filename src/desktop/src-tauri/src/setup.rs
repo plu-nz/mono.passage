@@ -161,7 +161,18 @@ fn clone_vault_to(path: &Path, url: &str) -> Result<PathBuf, String> {
     if path.exists() {
         return Err("Escolha um diretório que ainda não existe para clonar o cofre".into());
     }
-    let output = Command::new("git")
+    let github_login =
+        url.starts_with("https://github.com/") && crate::github::status(None).login.is_some();
+    let mut command = Command::new("git");
+    if github_login {
+        command.args([
+            "-c",
+            "credential.https://github.com.helper=",
+            "-c",
+            "credential.https://github.com.helper=!gh auth git-credential",
+        ]);
+    }
+    let output = command
         .args([
             "clone",
             "--no-tags",
@@ -184,6 +195,9 @@ fn clone_vault_to(path: &Path, url: &str) -> Result<PathBuf, String> {
         .map_err(|_| "Cofre clonado, mas caminho indisponível")?;
     if !is_initialized(&canonical) {
         return Err("O repositório foi clonado, mas não contém .gpg-id na raiz. Revise o diretório criado; ele não foi selecionado como cofre.".into());
+    }
+    if github_login {
+        crate::git::GitVault::open(&canonical)?.configure_github_helper()?;
     }
     Ok(canonical)
 }

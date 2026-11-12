@@ -151,6 +151,16 @@ fn git_publish_new_vault() -> Result<GitStatus, String> {
 }
 
 #[tauri::command]
+fn git_commit_changes() -> Result<GitStatus, String> {
+    GitVault::open(Vault::open_env()?.root())?.commit_changes()
+}
+
+#[tauri::command]
+fn git_merge_preserving_both() -> Result<GitStatus, String> {
+    GitVault::open(Vault::open_env()?.root())?.merge_preserving_both()
+}
+
+#[tauri::command]
 fn github_status() -> github::GithubStatus {
     github::status(Vault::open_env().ok().as_ref().map(Vault::root))
 }
@@ -205,6 +215,8 @@ pub fn run() {
             git_initialize,
             git_set_remote,
             git_publish_new_vault,
+            git_commit_changes,
+            git_merge_preserving_both,
             github_status,
             github_login,
             github_configure_vault,

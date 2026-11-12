@@ -182,6 +182,18 @@ function App() {
     finally { setEntryBusy(false); }
   }
 
+  async function deleteEntry() {
+    if (!selected || !secret || entryBusy || !window.confirm(`Excluir ${selected} do cofre? Esta ação também poderá ser registrada no Git.`)) return;
+    setEntryBusy(true);
+    setError('');
+    try {
+      await invoke('remove_entry', { id: selected, expectedHash: secret.ciphertext_hash });
+      await refresh();
+      await refreshGit();
+    } catch (cause) { setError(String(cause)); }
+    finally { setEntryBusy(false); }
+  }
+
   const filtered = entries.filter(entry => entry.id.toLocaleLowerCase().includes(query.toLocaleLowerCase()));
 
   async function sync(operation: 'git_pull' | 'git_push') {
@@ -190,7 +202,7 @@ function App() {
     catch (cause) { setGitError(String(cause)); await refreshGit(); }
   }
 
-  async function setupGit(operation: 'git_initialize' | 'git_set_remote' | 'git_publish_new_vault') {
+  async function setupGit(operation: 'git_initialize' | 'git_set_remote' | 'git_publish_new_vault' | 'git_commit_changes' | 'git_merge_preserving_both') {
     setGitError('');
     try {
       setGit(await invoke<GitStatus>(operation, operation === 'git_set_remote' ? { url: gitRemote.trim() } : {}));
@@ -327,7 +339,7 @@ function App() {
           <p className="hint">A primeira linha é a senha. Os campos continuam legíveis pelo GNU pass.</p>
           <div className="form-actions"><button disabled={entryBusy || !entryId.trim() || !entryPassword} onClick={() => void saveEntry()}>{entryBusy ? 'Salvando…' : 'Salvar'}</button><button disabled={entryBusy} onClick={() => { setEditing(false); setCreating(false); setEntryPassword(''); setEntryDetails(''); }}>Cancelar</button></div>
         </div>
-      </> : selected ? <><h2>{selected}</h2>{secret ? <><label>Senha</label><div className="password"><code>{visible ? secret.password : '••••••••••••'}</code><button onClick={() => setVisible(!visible)}>{visible ? 'Ocultar' : 'Mostrar'}</button></div>{secret.details && <><label>Outros campos</label><pre>{displayDetails(secret.details)}</pre></>}<button onClick={startEdit}>Editar</button><button onClick={() => void showTotp()}>Gerar código TOTP</button>{totp && <p role="status">Código TOTP: <code>{totp.code}</code> · válido por até {Math.max(0, Math.ceil(totp.validUntil - Date.now() / 1000))} s</p>}<p className="hint">O conteúdo é removido da tela após 30 segundos. O gpg-agent pode continuar com a chave em cache.</p></> : <p>Abra a entrada para ver seu conteúdo.</p>}</> : <p>Selecione uma entrada.</p>}</section></div>
+      </> : selected ? <><h2>{selected}</h2>{secret ? <><label>Senha</label><div className="password"><code>{visible ? secret.password : '••••••••••••'}</code><button onClick={() => setVisible(!visible)}>{visible ? 'Ocultar' : 'Mostrar'}</button></div>{secret.details && <><label>Outros campos</label><pre>{displayDetails(secret.details)}</pre></>}<button onClick={startEdit}>Editar</button><button disabled={entryBusy} onClick={() => void deleteEntry()}>Excluir</button><button onClick={() => void showTotp()}>Gerar código TOTP</button>{totp && <p role="status">Código TOTP: <code>{totp.code}</code> · válido por até {Math.max(0, Math.ceil(totp.validUntil - Date.now() / 1000))} s</p>}<p className="hint">O conteúdo é removido da tela após 30 segundos. O gpg-agent pode continuar com a chave em cache.</p></> : <p>Abra a entrada para ver seu conteúdo.</p>}</> : <p>Selecione uma entrada.</p>}</section></div>
     </>}
     {error && <p className="error" role="alert">{error}</p>}
     <section className="panel" aria-label="Sincronização Git">
@@ -340,7 +352,8 @@ function App() {
       {git ? <p>Branch {git.branch}{git.upstream ? ` · upstream ${git.upstream}` : ' · sem upstream'} · {git.dirty ? 'alterações locais' : 'sem alterações locais'} · ↑{git.ahead} ↓{git.behind}</p> : <p>Este cofre ainda não está pronto para sincronização Git.</p>}
       {!git && state.kind === 'available' && <button onClick={() => void setupGit('git_initialize')}>Iniciar Git neste cofre</button>}
       {git && !git.upstream && <><div className="panel-actions"><input aria-label="URL do remoto Git origin" value={gitRemote} onChange={event => setGitRemote(event.target.value)} placeholder="URL HTTPS, SSH ou caminho do remoto" autoComplete="off" /><button disabled={!gitRemote.trim()} onClick={() => void setupGit('git_set_remote')}>Adicionar remoto origin</button></div><button onClick={() => void setupGit('git_publish_new_vault')}>Publicar cofre novo</button><p className="hint">Esta ação cria o primeiro commit apenas com arquivos .gpg e .gpg-id e configura o upstream, se o remoto estiver vazio. Para um remoto com histórico, conecte pelo Git. Alterações futuras continuam disponíveis por <code>pass git</code>.</p></>}
-      <div className="panel-actions"><button onClick={() => void refreshGit()}>Verificar</button><button disabled={!git} onClick={() => void sync('git_pull')}>Baixar</button><button disabled={!git} onClick={() => void sync('git_push')}>Enviar</button></div>
+      <div className="panel-actions"><button onClick={() => void refreshGit()}>Verificar</button><button disabled={!git?.dirty || !git.upstream} onClick={() => void setupGit('git_commit_changes')}>Registrar alterações</button><button disabled={!git?.upstream} onClick={() => void sync('git_pull')}>Baixar</button><button disabled={!git?.upstream} onClick={() => void sync('git_push')}>Enviar</button></div>
+      {git && git.ahead > 0 && git.behind > 0 && <><button onClick={() => void setupGit('git_merge_preserving_both')}>Preservar ambas as versões</button><p className="hint">Mescla os commits e, se a mesma entrada .gpg mudou nos dois dispositivos, mantém a versão local e salva a remota como outra entrada cifrada. Conflitos na chave .gpg-id exigem resolução manual. O envio ao remoto continua separado.</p></>}
       {gitError && <p className="panel-error" role="alert">{gitError}</p>}
       <p className="hint">Configure o remoto pelo Git ou por <code>pass git</code>. Conflitos e alterações locais impedem a sincronização automática.</p>
     </section>
