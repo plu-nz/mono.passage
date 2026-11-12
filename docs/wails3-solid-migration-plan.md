@@ -1,7 +1,7 @@
 # Plano de migração completa: Wails 3 + Solid
 
 **Branch de planejamento:** `plan/wails3-solid-migration`  
-**Estado:** implementação concluída nesta branch; validação local concluída, CI remoto pendente de execução após o push.
+**Estado:** implementação concluída nesta branch; validação local e CI Ubuntu concluídos.
 **Objetivo:** substituir o desktop Tauri 2/React e o host Native Messaging Rust por Wails 3/Solid e Go, mantendo o GNU `pass`/GPG/Git como fonte de verdade, o funcionamento no terminal e a extensão atual em Brave/Chrome.
 
 ## Resultado da migração
@@ -10,7 +10,7 @@
 - Núcleo Go em `internal/{vault,setup,gitvault,github,otp,pairing}` compartilhado pelo desktop e pelo host Go. Os fontes Rust, Tauri e React foram removidos.
 - Protocolo Native Messaging v1, ID da extensão e nomes dos executáveis preservados. O teste de integração do host e os testes reais no Brave e Chrome passaram com perfis descartáveis.
 - Instalação de release testada duas vezes com um servidor local e HOME descartável. Checksums, manifesto e estado de bloqueio foram preservados.
-- A publicação de uma nova release permanece dependente da revisão da branch e do CI remoto. O instalador público continua apontando para a release da branch `main` até lá.
+- O CI da branch passou no Ubuntu 22.04 ([execução 43332456516](https://github.com/plu-nz/passage/actions/runs/43332456516)). O desktop Wails e o host Go também foram instalados no usuário local; os hashes coincidem com os binários gerados e o comando `passage` abriu a janela. O instalador público continua apontando para a release da branch `main` até a migração ser integrada e publicada.
 
 Medição local em 12/11/2026, com cache aquecido: build Go do desktop 2,343 s; verificação TypeScript e build Vite 2,773 s. O binário Wails ficou com 17.719.872 bytes; o binário Tauri instalado antes da migração tem 13.589.880 bytes. São medições pontuais neste computador, não uma comparação de builds limpos nem de memória em uso.
 
