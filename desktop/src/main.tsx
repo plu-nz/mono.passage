@@ -374,10 +374,23 @@ function App() {
   }
 
   // Section navigation plus the vault search; at the top the order is mirrored
-  // so the navigation always sits at the window edge.
+  // so the navigation always sits at the window edge. The search field stays
+  // hidden until the Search button opens it. The memo keeps vault refreshes
+  // from rebuilding the bar (and dropping focus) while someone is typing.
+  const unavailable = createMemo(() => state().kind === 'unavailable');
+  const [searchOpen, setSearchOpen] = createSignal(false);
+  const searching = () => searchOpen() && activeTab() === 'vault' && !unavailable();
+  let searchInput: HTMLInputElement | undefined;
+  const closeSearch = () => { setSearchOpen(false); setQuery(''); };
+  const toggleSearch = () => {
+    if (searching()) { closeSearch(); return; }
+    setActiveTab('vault');
+    setSearchOpen(true);
+    queueMicrotask(() => searchInput?.focus());
+  };
   const appBar = () => {
-    const toolbar = activeTab() === 'vault' && state().kind !== 'unavailable' && <div class="toolbar"><input aria-label="Search entries" placeholder="Search vault…" value={query()} onInput={event => setQuery(event.currentTarget.value)} /></div>;
-    const nav = <nav class="app-nav" aria-label="Sections">{tabs.map(tab => <button class={activeTab() === tab.id ? 'active' : ''} aria-current={activeTab() === tab.id ? 'page' : undefined} onClick={() => setActiveTab(tab.id)}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">{tab.icon()}</svg><span>{tab.label}</span></button>)}<button class="nav-new" aria-label="New entry" disabled={state().kind === 'unavailable'} onClick={() => { setActiveTab('vault'); startCreate(); }}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg><span>New</span></button></nav>;
+    const toolbar = searching() && <div class="toolbar"><input ref={searchInput} aria-label="Search entries" placeholder="Search vault…" value={query()} onInput={event => setQuery(event.currentTarget.value)} onKeyDown={event => { if (event.key === 'Escape') closeSearch(); }} /></div>;
+    const nav = <nav class="app-nav" aria-label="Sections"><button class={searching() ? 'nav-search active' : 'nav-search'} aria-label="Search entries" aria-pressed={searching()} disabled={unavailable()} onClick={toggleSearch}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4.5 4.5" /></svg><span>Search</span></button>{tabs.map(tab => <button class={activeTab() === tab.id ? 'active' : ''} aria-current={activeTab() === tab.id ? 'page' : undefined} onClick={() => setActiveTab(tab.id)}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">{tab.icon()}</svg><span>{tab.label}</span></button>)}<button class="nav-new" aria-label="New entry" disabled={unavailable()} onClick={() => { setActiveTab('vault'); startCreate(); }}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg><span>New</span></button></nav>;
     return <div class={`app-bar ${navPosition()}`}>{navPosition() === 'top' ? <>{nav}{toolbar}</> : <>{toolbar}{nav}</>}</div>;
   };
   return <main class="shell">
