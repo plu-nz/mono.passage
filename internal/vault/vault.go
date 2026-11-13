@@ -15,7 +15,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/plu-nz/passage/internal/setup"
+	"github.com/plu-nz/mono.passage/internal/setup"
 )
 
 type Entry struct {

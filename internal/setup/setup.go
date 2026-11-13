@@ -11,8 +11,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/plu-nz/passage/internal/github"
-	"github.com/plu-nz/passage/internal/gitvault"
+	"github.com/plu-nz/mono.passage/internal/github"
+	"github.com/plu-nz/mono.passage/internal/gitvault"
 )
 
 type GPGKey struct {

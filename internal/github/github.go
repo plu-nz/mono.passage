@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/plu-nz/passage/internal/gitvault"
+	"github.com/plu-nz/mono.passage/internal/gitvault"
 )
 
 type StatusInfo struct {

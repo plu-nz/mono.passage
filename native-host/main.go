@@ -12,8 +12,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/plu-nz/passage/internal/pairing"
-	"github.com/plu-nz/passage/internal/vault"
+	"github.com/plu-nz/mono.passage/internal/pairing"
+	"github.com/plu-nz/mono.passage/internal/vault"
 )
 
 const maxMessage = 64 * 1024

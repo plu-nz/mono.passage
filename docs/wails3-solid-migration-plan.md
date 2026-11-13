@@ -10,7 +10,7 @@
 - Go core in `internal/{vault,setup,gitvault,github,otp,pairing}` shared by desktop and Go host. Rust, Tauri and React sources have been removed.
 - Native Messaging Protocol v1, extension ID and executable names preserved. The host integration test and real tests on Brave and Chrome passed with disposable profiles.
 - Release installation tested twice with a local server and disposable HOME. Checksums, manifest and lock state were preserved.
-- Branch CI passed on Ubuntu 22.04 ([run 43332456516](https://github.com/plu-nz/passage/actions/runs/43332456516)). The Wails desktop and Go host were also installed on the local user; the hashes match the generated binaries and the command `passage` opened the window. The public installer continues to point to the `main` branch release until the migration is integrated and published.
+- Branch CI passed on Ubuntu 22.04 ([run 43332456516](https://github.com/plu-nz/mono.passage/actions/runs/43332456516)). The Wails desktop and Go host were also installed on the local user; the hashes match the generated binaries and the command `passage` opened the window. The public installer continues to point to the `main` branch release until the migration is integrated and published.
 
 Local measurement on 11/12/2026, with warm cache: desktop Go build 2.343 s; TypeScript check and Vite build 2,773 s. The Wails binary was 17,719,872 bytes; the Tauri binary installed before migration is 13,589,880 bytes. These are point-in-time measurements on this computer, not a comparison of clean builds or memory in use.
 
