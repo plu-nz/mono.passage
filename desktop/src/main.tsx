@@ -1,4 +1,4 @@
-import { createSignal, createEffect, createMemo, onCleanup, onMount } from 'solid-js';
+import { createSignal, createEffect, createMemo, onCleanup, onMount, type JSX } from 'solid-js';
 import { render } from 'solid-js/web';
 import { invoke } from './service';
 import { version as appVersion } from '../package.json';
@@ -11,6 +11,16 @@ type Secret = { password: string; details: string; other_details: string; userna
 type GitStatus = { branch: string; upstream: string | null; dirty: boolean; ahead: number; behind: number };
 type GithubStatus = { cli_installed: boolean; login: string | null; vault_git_configured: boolean };
 type Pairing = { origin: string; installationId: string };
+
+type Tab = 'vault' | 'sync' | 'extensions' | 'settings';
+
+// Bottom navigation. Only the active tab shows its icon.
+const tabs: { id: Tab; label: string; icon: () => JSX.Element }[] = [
+  { id: 'vault', label: 'Vault', icon: () => <><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></> },
+  { id: 'sync', label: 'Git Sync', icon: () => <><path d="M20 11a8 8 0 0 0-14.9-3.9L4 8" /><path d="M4 4v4h4" /><path d="M4 13a8 8 0 0 0 14.9 3.9L20 16" /><path d="M20 20v-4h-4" /></> },
+  { id: 'extensions', label: 'Extensions', icon: () => <><path d="M9 2v6M15 2v6" /><path d="M6 8h12v3a6 6 0 0 1-12 0Z" /><path d="M12 17v5" /></> },
+  { id: 'settings', label: 'Settings', icon: () => <><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12" /><circle cx="16" cy="6" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="18" r="2" /></> },
+];
 
 // Mirrors setup.RefreshChoices on the Go side.
 const refreshChoices: [number, string][] = [[0, 'Off'], [5, 'Every 5 seconds'], [15, 'Every 15 seconds'], [30, 'Every 30 seconds'], [60, 'Every minute'], [300, 'Every 5 minutes']];
@@ -27,7 +37,7 @@ function App() {
   const [state, setState] = createSignal<VaultState>({ kind: 'unavailable', reason: 'Checking local environment…' });
   const [entries, setEntries] = createSignal<Entry[]>([]);
   const [query, setQuery] = createSignal('');
-  const [activeTab, setActiveTab] = createSignal<'vault' | 'sync' | 'extensions' | 'settings'>('vault');
+  const [activeTab, setActiveTab] = createSignal<Tab>('vault');
   const [selected, setSelected] = createSignal<string | null>(null);
   const [secret, setSecret] = createSignal<Secret | null>(null);
   const [error, setError] = createSignal('');
@@ -354,7 +364,6 @@ function App() {
 
   return <main class="shell">
     <div class="app-body">
-    <nav class="app-tabs" aria-label="Sections"><button class={activeTab() === 'vault' ? 'active' : ''} onClick={() => setActiveTab('vault')}>Vault</button><button class={activeTab() === 'sync' ? 'active' : ''} onClick={() => setActiveTab('sync')}>Git Sync</button><button class={activeTab() === 'extensions' ? 'active' : ''} onClick={() => setActiveTab('extensions')}>Extensions</button><button class={activeTab() === 'settings' ? 'active' : ''} onClick={() => setActiveTab('settings')}>Settings</button></nav>
     {activeTab() === 'settings' && <section class="panel vault-panel" aria-label="Entry list">
       <h2>Entry list</h2>
       <label for="refresh-seconds">Refresh automatically</label>
@@ -426,6 +435,7 @@ function App() {
       {pairingError() && <p class="panel-error" role="alert">{pairingError()}</p>}
     </section>}
     </div>
+    <nav class="app-nav" aria-label="Sections">{tabs.map(tab => <button class={activeTab() === tab.id ? 'active' : ''} aria-current={activeTab() === tab.id ? 'page' : undefined} onClick={() => setActiveTab(tab.id)}>{activeTab() === tab.id && <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">{tab.icon()}</svg>}{tab.label}</button>)}</nav>
     <footer class="app-footer"><span class="status-line"><span class={state().kind === 'available' ? 'status-dot ready' : 'status-dot'} />{state().kind === 'available' ? 'Vault available' : 'Vault unavailable'}</span><code>{vaultInfo()?.path || 'checking…'}</code><span class="app-version">{appVersion}</span></footer>
   </main>;
 }
