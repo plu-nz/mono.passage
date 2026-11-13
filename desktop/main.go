@@ -11,6 +11,7 @@ import (
 var assets embed.FS
 
 func main() {
+	var window *application.WebviewWindow
 	app := application.New(application.Options{
 		Name: "Passage",
 		Assets: application.AssetOptions{
@@ -19,10 +20,21 @@ func main() {
 		Services: []application.Service{
 			application.NewService(&DesktopService{}),
 		},
+		// A second launch exits and brings the existing window to the front.
+		SingleInstance: &application.SingleInstanceOptions{
+			UniqueID: "nz.plu.passage",
+			OnSecondInstanceLaunch: func(application.SecondInstanceData) {
+				if window != nil {
+					window.UnMinimise()
+					window.Show()
+					window.Focus()
+				}
+			},
+		},
 	})
 	themeApp = app
 	go watchColorScheme(scheduleThemeRefresh)
-	app.Window.NewWithOptions(application.WebviewWindowOptions{
+	window = app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:     "Passage",
 		Width:     1060,
 		Height:    720,
