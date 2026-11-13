@@ -11,6 +11,9 @@ type Secret = { password: string; details: string; other_details: string; userna
 type GitStatus = { branch: string; upstream: string | null; dirty: boolean; ahead: number; behind: number };
 type GithubStatus = { cli_installed: boolean; login: string | null; vault_git_configured: boolean };
 type Pairing = { origin: string; installationId: string };
+
+// Mirrors setup.RefreshChoices on the Go side.
+const refreshChoices: [number, string][] = [[0, 'Off'], [5, 'Every 5 seconds'], [15, 'Every 15 seconds'], [30, 'Every 30 seconds'], [60, 'Every minute'], [300, 'Every 5 minutes']];
 type GpgKey = { id: string; label: string };
 type VaultInfo = { path: string; source: string; initialized: boolean; gpgKeys: GpgKey[]; recipientIds: string[]; passInstalled: boolean; gpgInstalled: boolean };
 type CreatedVault = { info: VaultInfo; fingerprint: string };
@@ -57,6 +60,8 @@ function App() {
   const [newKeyName, setNewKeyName] = createSignal('');
   const [newKeyEmail, setNewKeyEmail] = createSignal('');
   const [createdFingerprint, setCreatedFingerprint] = createSignal('');
+  const [refreshSeconds, setRefreshSeconds] = createSignal(30);
+  const [refreshError, setRefreshError] = createSignal('');
   const requestNumber = { current: 0 };
 
   const refresh = async () => {
@@ -78,6 +83,45 @@ function App() {
   };
 
   onMount(() => { void refresh(); });
+
+  // Reload the entry list in the background without touching the open entry
+  // or a form in progress, so changes made by `pass` or Git show up.
+  const reloadEntries = async () => {
+    try {
+      const next = await invoke<VaultState>('vault_state');
+      setState(next);
+      const list = next.kind === 'available' ? await invoke<Entry[]>('list_entries') : [];
+      setEntries(list);
+      const current = selected();
+      if (current && !editing() && !list.some(entry => entry.id === current)) {
+        requestNumber.current += 1;
+        setSelected(null);
+        setSecret(null);
+        setTotp(null);
+        setVisible(false);
+      }
+    } catch {
+      // Keep the last list; the next tick or an explicit action reports errors.
+    }
+  };
+  onMount(async () => {
+    try { setRefreshSeconds(await invoke<number>('refresh_seconds')); } catch (cause) { setRefreshError(String(cause)); }
+  });
+  createEffect(() => {
+    const seconds = refreshSeconds();
+    if (seconds <= 0) return;
+    const timer = setInterval(() => { void reloadEntries(); }, seconds * 1000);
+    onCleanup(() => clearInterval(timer));
+  });
+  const changeRefreshSeconds = async (seconds: number) => {
+    setRefreshError('');
+    try {
+      await invoke('set_refresh_seconds', { seconds });
+      setRefreshSeconds(seconds);
+    } catch (cause) {
+      setRefreshError(String(cause));
+    }
+  };
   const refreshVaultInfo = async () => {
     try {
       const info = await invoke<VaultInfo>('vault_info');
@@ -311,6 +355,15 @@ function App() {
   return <main class="shell">
     <div class="app-body">
     <nav class="app-tabs" aria-label="Sections"><button class={activeTab() === 'vault' ? 'active' : ''} onClick={() => setActiveTab('vault')}>Vault</button><button class={activeTab() === 'sync' ? 'active' : ''} onClick={() => setActiveTab('sync')}>Git Sync</button><button class={activeTab() === 'extensions' ? 'active' : ''} onClick={() => setActiveTab('extensions')}>Extensions</button><button class={activeTab() === 'settings' ? 'active' : ''} onClick={() => setActiveTab('settings')}>Settings</button></nav>
+    {activeTab() === 'settings' && <section class="panel vault-panel" aria-label="Entry list">
+      <h2>Entry list</h2>
+      <label for="refresh-seconds">Refresh automatically</label>
+      <div class="panel-actions"><select id="refresh-seconds" value={String(refreshSeconds())} onChange={event => void changeRefreshSeconds(Number(event.currentTarget.value))}>
+        {refreshChoices.map(([seconds, label]) => <option value={String(seconds)}>{label}</option>)}
+      </select></div>
+      <p class="hint">Reloads the list so entries added or removed with <code>pass</code> or Git appear without reopening Passage.</p>
+      {refreshError() && <p class="panel-error" role="alert">{refreshError()}</p>}
+    </section>}
     {activeTab() === 'settings' && <section class="panel vault-panel" aria-label="Vault setup">
       <h2>Vault</h2>
       <p class="hint">Active directory: <code>{vaultInfo()?.path || 'checking…'}</code>{vaultInfo()?.source === 'environment' ? ' · set by PASSWORD_STORE_DIR' : ''}</p>
@@ -330,7 +383,7 @@ function App() {
       {vaultError() && <p class="panel-error" role="alert">{vaultError()}</p>}
     </section>}
     {activeTab() === 'vault' && (state().kind === 'unavailable' ? <section class="notice">{(state() as {kind: "unavailable"; reason: string}).reason}</section> : <>
-      <div class="toolbar"><input aria-label="Search entries" placeholder="Search vault…" value={query()} onInput={event => setQuery(event.currentTarget.value)} /><button onClick={startCreate}>New entry</button><button onClick={() => void refresh()}>Refresh</button></div>
+      <div class="toolbar"><input aria-label="Search entries" placeholder="Search vault…" value={query()} onInput={event => setQuery(event.currentTarget.value)} /><button onClick={startCreate}>New entry</button></div>
       <div class="workspace"><nav aria-label="Vault entries">{filtered().length ? filtered().map(entry => <button class={selected() === entry.id ? 'entry selected' : 'entry'} onClick={() => void openEntry(entry.id)}><span class="entry-icon" aria-hidden="true">{entry.title.slice(0, 2).toUpperCase()}</span><span class="entry-text"><strong>{entry.title}</strong><small>{entry.id}</small></span><span class="entry-chevron" aria-hidden="true">›</span></button>) : <p>No entries found.</p>}</nav>
       <section class="detail" aria-label="Entry details">{editing() ? <>
         <h2>{creating() ? 'New entry' : `Edit ${selected()}`}</h2>

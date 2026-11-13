@@ -178,6 +178,13 @@ func openGit() (*gitvault.GitVault, error) {
 	}
 	return gitvault.Open(v.Root())
 }
+
+// RefreshSeconds is the entry list reload interval; 0 means off.
+func (*DesktopService) RefreshSeconds() (int, error) { return setup.RefreshSeconds() }
+func (*DesktopService) SetRefreshSeconds(seconds int) error {
+	return setup.SetRefreshSeconds(seconds)
+}
+
 func (*DesktopService) GithubStatus() github.StatusInfo {
 	v, _ := vault.OpenEnv()
 	if v == nil {

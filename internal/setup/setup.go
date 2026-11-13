@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/plu-nz/mono.passage/internal/github"
@@ -33,8 +34,17 @@ type CreatedKeyVault struct {
 	Fingerprint string    `json:"fingerprint"`
 }
 type settings struct {
-	VaultPath string `json:"vaultPath"`
+	VaultPath      string `json:"vaultPath,omitempty"`
+	RefreshSeconds *int   `json:"refreshSeconds,omitempty"`
 }
+
+// DefaultRefreshSeconds is how often the desktop reloads the entry list when
+// the user has not chosen an interval.
+const DefaultRefreshSeconds = 30
+
+// RefreshChoices are the entry list reload intervals the desktop offers, in
+// seconds; 0 turns automatic reloading off.
+var RefreshChoices = []int{0, 5, 15, 30, 60, 300}
 
 var fingerprintPattern = regexp.MustCompile(`^[a-fA-F0-9]{40}([a-fA-F0-9]{24})?$`)
 
@@ -60,16 +70,15 @@ func ActiveVaultPath() (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	data, err := os.ReadFile(config)
-	if err == nil {
-		var s settings
-		if json.Unmarshal(data, &s) != nil || !filepath.IsAbs(s.VaultPath) {
+	s, err := readSettings(config)
+	if err != nil {
+		return "", "", err
+	}
+	if s.VaultPath != "" {
+		if !filepath.IsAbs(s.VaultPath) {
 			return "", "", errors.New("Invalid vault configuration. Fix settings.json")
 		}
 		return s.VaultPath, "selection", nil
-	}
-	if !errors.Is(err, os.ErrNotExist) {
-		return "", "", errors.New("Unable to read Passage settings")
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -109,16 +118,40 @@ func allowed() error {
 	}
 	return nil
 }
-func persist(path string) error {
+
+// readSettings returns empty settings when the file does not exist yet.
+func readSettings(config string) (settings, error) {
+	var s settings
+	data, err := os.ReadFile(config)
+	if errors.Is(err, os.ErrNotExist) {
+		return s, nil
+	}
+	if err != nil {
+		return s, errors.New("Unable to read Passage settings")
+	}
+	if json.Unmarshal(data, &s) != nil {
+		return s, errors.New("Invalid Passage settings. Fix settings.json")
+	}
+	return s, nil
+}
+
+// updateSettings applies change to the stored settings and writes them back
+// atomically, keeping the fields change does not touch.
+func updateSettings(change func(*settings)) error {
 	config, err := settingsPath()
 	if err != nil {
 		return err
 	}
+	s, err := readSettings(config)
+	if err != nil {
+		return err
+	}
+	change(&s)
 	parent := filepath.Dir(config)
 	if err = os.MkdirAll(parent, 0700); err != nil {
 		return errors.New("Unable to create configuration folder")
 	}
-	data, _ := json.Marshal(settings{VaultPath: path})
+	data, _ := json.Marshal(s)
 	f, err := os.CreateTemp(parent, ".settings-*.tmp")
 	if err != nil {
 		return errors.New("Unable to save configuration")
@@ -140,6 +173,33 @@ func persist(path string) error {
 		return err
 	}
 	return os.Rename(f.Name(), config)
+}
+func persist(path string) error {
+	return updateSettings(func(s *settings) { s.VaultPath = path })
+}
+
+// RefreshSeconds returns the chosen entry list reload interval.
+func RefreshSeconds() (int, error) {
+	config, err := settingsPath()
+	if err != nil {
+		return 0, err
+	}
+	s, err := readSettings(config)
+	if err != nil {
+		return 0, err
+	}
+	if s.RefreshSeconds == nil || !slices.Contains(RefreshChoices, *s.RefreshSeconds) {
+		return DefaultRefreshSeconds, nil
+	}
+	return *s.RefreshSeconds, nil
+}
+
+// SetRefreshSeconds stores one of RefreshChoices.
+func SetRefreshSeconds(seconds int) error {
+	if !slices.Contains(RefreshChoices, seconds) {
+		return errors.New("Unsupported refresh interval")
+	}
+	return updateSettings(func(s *settings) { s.RefreshSeconds = &seconds })
 }
 func SelectVault(path string) (VaultInfo, error) {
 	if err := allowed(); err != nil {
