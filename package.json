@@ -3,8 +3,8 @@
   "private": true,
   "packageManager": "pnpm@12.18.0",
   "scripts": {
-    "dev:desktop": "pnpm --filter @passage/desktop build && go run -tags gtk3 ./src/desktop",
-    "build:desktop": "pnpm --filter @passage/desktop build && go build -tags gtk3 -o src/desktop/build/passage ./src/desktop",
+    "dev:desktop": "pnpm --filter @passage/desktop build && go run -tags gtk3 ./desktop",
+    "build:desktop": "pnpm --filter @passage/desktop build && go build -tags gtk3 -o desktop/build/passage ./desktop",
     "dev:extension": "pnpm --filter @passage/extension dev",
     "build:extension": "pnpm --filter @passage/extension build",
     "check": "pnpm -r check"
