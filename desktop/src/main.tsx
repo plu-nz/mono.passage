@@ -374,11 +374,34 @@ function App() {
     finally { setVaultBusy(false); }
   }
 
-  // Section navigation plus the vault search; at the top the order is mirrored
-  // so the navigation always sits at the window edge.
+  // Navigation bar: search toggle on the left, Vault in the exact center, and
+  // New entry on the right. The search field opens next to it, mirrored at the
+  // top so the navigation always sits at the window edge.
+  const [searchOpen, setSearchOpen] = createSignal(false);
+  const toggleSearch = () => {
+    if (searchOpen() && activeTab() === 'vault') { setSearchOpen(false); setQuery(''); return; }
+    setActiveTab('vault');
+    setSearchOpen(true);
+  };
+  const tabButton = (id: Tab) => {
+    const tab = tabs.find(item => item.id === id)!;
+    return <button class={activeTab() === tab.id ? 'active' : ''} aria-current={activeTab() === tab.id ? 'page' : undefined} onClick={() => setActiveTab(tab.id)}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">{tab.icon()}</svg><span>{tab.label}</span></button>;
+  };
   const appBar = () => {
-    const toolbar = activeTab() === 'vault' && state().kind !== 'unavailable' && <div class="toolbar"><input aria-label="Search entries" placeholder="Search vault…" value={query()} onInput={event => setQuery(event.currentTarget.value)} /></div>;
-    const nav = <nav class="app-nav" aria-label="Sections">{tabs.map(tab => <button class={activeTab() === tab.id ? 'active' : ''} aria-current={activeTab() === tab.id ? 'page' : undefined} onClick={() => setActiveTab(tab.id)}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">{tab.icon()}</svg><span>{tab.label}</span></button>)}<button class="nav-new" disabled={state().kind === 'unavailable'} onClick={() => { setActiveTab('vault'); startCreate(); }}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg><span>New entry</span></button></nav>;
+    const unavailable = state().kind === 'unavailable';
+    const toolbar = searchOpen() && activeTab() === 'vault' && !unavailable && <div class="toolbar"><input ref={element => queueMicrotask(() => element.focus())} aria-label="Search entries" placeholder="Search vault…" value={query()} onInput={event => setQuery(event.currentTarget.value)} onKeyDown={event => { if (event.key === 'Escape') { setSearchOpen(false); setQuery(''); } }} /></div>;
+    const nav = <nav class="app-nav" aria-label="Sections">
+      <div class="nav-side">
+        <button class={searchOpen() && activeTab() === 'vault' ? 'nav-search active' : 'nav-search'} aria-pressed={searchOpen() && activeTab() === 'vault'} disabled={unavailable} onClick={toggleSearch}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4.5 4.5" /></svg><span>Search</span></button>
+        {tabButton('sync')}
+      </div>
+      <div class="nav-center">{tabButton('vault')}</div>
+      <div class="nav-side">
+        {tabButton('extensions')}
+        {tabButton('settings')}
+        <button class="nav-new" disabled={unavailable} onClick={() => { setActiveTab('vault'); startCreate(); }}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg><span>New entry</span></button>
+      </div>
+    </nav>;
     return <div class={`app-bar ${navPosition()}`}>{navPosition() === 'top' ? <>{nav}{toolbar}</> : <>{toolbar}{nav}</>}</div>;
   };
   return <main class="shell">

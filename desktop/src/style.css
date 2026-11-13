@@ -99,7 +99,10 @@ body { min-height: 100vh; background: var(--page); }
 .app-bar { position: sticky; z-index: 10; background: var(--bar); }
 .app-bar.top { top: 0; }
 .app-bar.bottom { bottom: 0; }
-.app-nav { display: flex; padding: 4px 16px; overflow: visible; border: 0; }
+.app-nav { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px; padding: 4px 16px; overflow: visible; border: 0; }
+.nav-side, .nav-center { display: flex; align-items: center; min-width: 0; }
+.nav-center button { min-width: 96px; }
+.app-nav button.nav-search:disabled { opacity: .5; cursor: default; }
 .app-nav button, .app-nav button:hover, .app-nav button:focus-visible { background: transparent; }
 .app-nav button { display: flex; flex: 1 1 0; flex-direction: column; align-items: center; gap: 4px; min-width: 0; padding: 8px 4px; border: 0; border-radius: 12px; background: transparent; color: var(--muted); font-size: 12px; }
 .app-nav button span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
