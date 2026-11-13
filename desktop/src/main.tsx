@@ -375,6 +375,7 @@ function App() {
     </section>}
     {activeTab() === 'settings' && <section class="panel vault-panel" aria-label="Vault setup">
       <h2>Vault</h2>
+      <p class="status-line"><span class={state().kind === 'available' ? 'status-dot ready' : 'status-dot'} />{state().kind === 'available' ? 'Vault available' : 'Vault unavailable'}</p>
       <p class="hint">Active directory: <code>{vaultInfo()?.path || 'checking…'}</code>{vaultInfo()?.source === 'environment' ? ' · set by PASSWORD_STORE_DIR' : ''}</p>
       <label for="vault-path">Vault directory</label>
       <div class="panel-actions"><input id="vault-path" value={vaultPath()} onInput={event => setVaultPath(event.currentTarget.value)} placeholder="/home/user/.password-store" autocomplete="off" disabled={vaultBusy() || vaultInfo()?.source === 'environment'} /><button disabled={vaultBusy() || !vaultPath().trim() || vaultInfo()?.source === 'environment'} onClick={() => void configureVault('select_vault')}>Open existing</button></div>
@@ -390,6 +391,10 @@ function App() {
       {vaultInfo() && <p class="hint">{!vaultInfo().passInstalled ? 'GNU pass not found. ' : ''}{!vaultInfo().gpgInstalled ? 'GPG not found. ' : ''}{vaultInfo().initialized ? `Initialized for: ${vaultInfo().recipientIds.join(', ') || 'unknown key'}.` : 'Vault not initialized yet.'} {vaultInfo().gpgKeys.length === 0 && vaultInfo().gpgInstalled ? 'No private GPG key found. Create or import one before creating a vault.' : ''}</p>}
       <button onClick={() => void refreshVaultInfo()} disabled={vaultBusy()}>Check keys and vault</button>
       {vaultError() && <p class="panel-error" role="alert">{vaultError()}</p>}
+    </section>}
+    {activeTab() === 'settings' && <section class="panel vault-panel" aria-label="About">
+      <h2>About</h2>
+      <p class="hint">Passage {appVersion}</p>
     </section>}
     {activeTab() === 'vault' && (state().kind === 'unavailable' ? <section class="notice">{(state() as {kind: "unavailable"; reason: string}).reason}</section> : <>
       <div class="toolbar"><input aria-label="Search entries" placeholder="Search vault…" value={query()} onInput={event => setQuery(event.currentTarget.value)} /><button onClick={startCreate}>New entry</button></div>
@@ -437,7 +442,6 @@ function App() {
     </div>
     <div class="app-bottom">
       <nav class="app-nav" aria-label="Sections">{tabs.map(tab => <button class={activeTab() === tab.id ? 'active' : ''} aria-current={activeTab() === tab.id ? 'page' : undefined} onClick={() => setActiveTab(tab.id)}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">{tab.icon()}</svg><span>{tab.label}</span></button>)}</nav>
-      <footer class="app-footer"><span class="status-line"><span class={state().kind === 'available' ? 'status-dot ready' : 'status-dot'} />{state().kind === 'available' ? 'Vault available' : 'Vault unavailable'}</span><code>{vaultInfo()?.path || 'checking…'}</code><span class="app-version">{appVersion}</span></footer>
     </div>
   </main>;
 }
