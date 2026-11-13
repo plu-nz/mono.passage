@@ -1,24 +1,24 @@
 # Passage
 
-Passage é uma proposta de interface multiplataforma para cofres compatíveis com o [GNU `pass`](https://www.passwordstore.org/). O cofre pertence ao usuário: seus arquivos cifrados são sincronizados por um repositório Git privado que pode ser hospedado em um serviço Git ou em infraestrutura própria.
+Passage is a cross-platform interface in development for vaults compatible with [GNU `pass`](https://www.passwordstore.org/). The vault belongs to you: your encrypted files are synchronized through a private Git repository that can be hosted on a Git service or on your own infrastructure.
 
-Site do projeto: [passage.plu.nz](https://passage.plu.nz/).
+Project site: [passage.plu.nz](https://passage.plu.nz/).
 
-Este documento registra os requisitos discutidos até agora. Ele descreve o produto desejado, não afirma que as funcionalidades já foram implementadas.
+This document records the requirements discussed so far. It describes the desired product, and distinguishes implemented features from planned ones.
 
-## Estado do código
+## Code status
 
-O app desktop permite escolher um cofre GNU pass existente, criar outro com uma chave GPG nova ou já disponível, listar, buscar, abrir, criar, editar e excluir entradas, gerar TOTP e bloquear o acesso das extensões. O aplicativo também contém conexão à conta GitHub pelo GitHub CLI, inicialização do Git no cofre, configuração do remoto, registro de alterações cifradas, sincronização Git e uma ação para preservar as duas versões de entradas `.gpg` conflitantes. Aprovação e revogação de extensões estão na interface, e o host Native Messaging oferece busca por URL e preenchimento após ação do usuário. A matriz de formulários controlados passou em Brave Origin e Chrome estável; o formulário real de login do GitHub também foi testado nos dois navegadores com credenciais fictícias, sem envio do formulário.
+The desktop app allows you to choose an existing GNU pass vault, create another one with a new or already available GPG key, list, search, open, create, edit and delete entries, generate TOTP and block access from extensions. The application also contains connection to the GitHub account via the GitHub CLI, launching Git in the vault, configuring the remote, encrypted change logging, Git synchronization, and an action to preserve the two versions of conflicting `.gpg` entries. Approval and revocation of extensions are in the interface, and the Native Messaging host offers search by URL and autofill after a user action. Controlled Forms Matrix passed on Brave Origin and Chrome Stable; The real GitHub login form was also tested on both browsers with dummy credentials, without submitting the form.
 
-| Diretório | Responsabilidade |
+| Directory | Responsibility |
 | --- | --- |
-| `core` | Tipos e contrato compartilhado do cofre e das mensagens locais. |
-| `desktop` | Interface Solid/Vite e aplicativo Wails 3/Go para Linux. |
-| `extension` | Extensão Manifest V3 para Brave e Chrome, construída com WXT. |
-| `native-host` | Conector local Native Messaging para as extensões. |
-| `web` | Landing page estática e gerador do Worker que a publica. |
+| `core` | Shared TypeScript types for the vault and Native Messaging protocol. |
+| `desktop` | Solid/Vite interface and Wails 3/Go application for Linux. |
+| `extension` | Manifest V3 extension for Brave and Chrome, built with WXT. |
+| `native-host` | Local Native Messaging connector for extensions. |
+| `web` | Static landing page and generator of the Worker that publishes it. |
 
-Para desenvolver no Linux, instale Node.js, pnpm, Go 1.26+, GNU `pass`, GPG, GTK3 e WebKit2GTK 4.1. O desktop usa Wails 3.0.0 com o backend GTK3 nesta fase; veja as [dependências Linux do Wails](https://v3.wails.io/getting-started/installation/). Na raiz do repositório:
+To develop on Linux, install Node.js, pnpm, Go 1.26+, GNU `pass`, GPG, GTK3 and WebKit2GTK 4.1. The desktop uses Wails 3.0.0 with the GTK3 backend at this stage; see [Wails](https://v3.wails.io/getting-started/installation/) Linux dependencies. In the repository root:
 
 ```bash
 pnpm install
@@ -27,175 +27,175 @@ pnpm --filter @passage/desktop build
 go run -tags gtk3 ./desktop
 ```
 
-Para gerar a extensão, execute `pnpm build:extension` e carregue `extension/.output/chrome-mv3` como extensão descompactada em `brave://extensions` ou `chrome://extensions`. Siga [as instruções do conector local](native-host/README.md) para compilá-lo e registrar os IDs das extensões; o código mostrado pelo popup pode ser aprovado na interface desktop ou pelo CLI. Para usar o desktop, instale GNU `pass` e GPG. A chave GPG e o `gpg-agent` continuam sob controle do sistema.
+To generate the extension, run `pnpm build:extension` and load `extension/.output/chrome-mv3` as the unpacked extension into `brave://extensions` or `chrome://extensions`. Follow [local connector instructions](native-host/README.md) to compile it and register the extension IDs; the code shown by the popup can be approved in the desktop interface or through the CLI. To use the desktop, install GNU `pass` and GPG. The GPG key and `gpg-agent` remain under system control.
 
-O teste de navegador usa um cofre, servidor HTTPS e perfis descartáveis, com o manifesto original da extensão. Após compilar extensão e host, execute `node extension/tests/browser-smoke.mjs CAMINHO_DO_NAVEGADOR CAMINHO_DO_HOST CAMINHO_DO_INSTALADOR_DO_HOST CENÁRIO`. Os cenários são `standard`, `usernameOnly`, `passwordOnly`, `autocompleteOff`, `ambiguousPassword`, `ambiguousUsername`, `hiddenPassword`, `transparentPassword`, `newPassword`, `iframe`, `noFields`, `githubLive` e `herokuLive`. Cada cenário verifica pareamento, lista, resultado do preenchimento e recusa após navegação. Os cenários `*Live` preenchem apenas campos de teste em páginas externas; não enviam formulários. `githubLive` passou no Brave Origin e Chrome estável; `herokuLive` passou no Chrome estável, mas o Brave não carregou essa página neste ambiente. O Chrome estável recente não aceita `--load-extension`; execute o teste com `PASSAGE_BROWSER_HEADED=1` para carregar a extensão no perfil descartável pelo protocolo de depuração. A matriz passou no Chrome estável e no Brave Origin; o teste exige OpenSSL.
+Browser testing uses a vault, HTTPS server, and disposable profiles, with the original extension manifest. After compiling extension and host, run `node extension/tests/browser-smoke.mjs BROWSER_PATH HOST_PATH HOST_INSTALLER_PATH SCENARIO`. The scenarios are `standard`, `usernameOnly`, `passwordOnly`, `autocompleteOff`, `ambiguousPassword`, `ambiguousUsername`, `hiddenPassword`, `transparentPassword`, `newPassword`, `iframe`, `noFields`, `githubLive` and `herokuLive`. Each scenario checks pairing, entry listing, autofill result and refusal after navigation. `*Live` scenarios only populate test fields on external pages; they do not send forms. `githubLive` passed Brave Origin and Chrome stable; `herokuLive` passed in Chrome stable, but Brave did not load this page in this environment. Recent stable Chrome does not support `--load-extension`; Run the test with `PASSAGE_BROWSER_HEADED=1` to load the extension into the disposable profile via the debug protocol. The matrix passed on Chrome stable and Brave Origin; the test requires OpenSSL.
 
-### Abrir ou criar um cofre no desktop
+### Open or create a desktop vault
 
-No painel **Cofre**, informe o caminho absoluto do diretório e escolha **Abrir existente** para um cofre já inicializado com `.gpg-id`. Para criar, escolha uma chave GPG privada na lista e clique em **Criar cofre**, ou abra **Criar chave GPG e cofre** para gerar uma chave nova pelo GPG e inicializar o cofre em sequência. A frase secreta é solicitada pelo `pinentry` do sistema; o Passage não a recebe. O Passage usa `pass init` para criar a estrutura compatível com GNU pass. Para abrir um cofre de outro dispositivo, importe a chave privada correspondente antes de tentar ler as entradas.
+In the **Vault** panel, enter the absolute directory path and choose **Open existing** for a vault already initialized with `.gpg-id`. To create, choose a private GPG key from the list and click **Create Vault**, or open **Create GPG Key and Vault** to generate a new key via GPG and initialize the vault in sequence. The passphrase is requested by the system's `pinentry`; the Passage does not receive it. Passage uses `pass init` to create the GNU pass-compatible framework. To open a vault from another device, import the corresponding private key before trying to read the entries.
 
-Depois de criar uma chave nova, guarde uma cópia segura da chave privada e a frase secreta. O Git sincroniza apenas os arquivos cifrados do cofre; perder a chave privada impede recuperar as senhas. O Passage mostra a impressão digital da chave criada e não exporta automaticamente material secreto. A criação da chave é uma operação separada da inicialização do cofre: se a segunda etapa falhar, a chave gerada permanece no GPG e pode ser usada para tentar criar o cofre novamente.
+After you create a new key, keep a secure copy of the private key and passphrase. Git only syncs encrypted files in the vault; Losing your private key prevents you from recovering your passwords. Passage shows the fingerprint of the created key and does not automatically export secret material. Key creation is a separate operation from vault initialization: if the second step fails, the generated key remains in GPG and can be used to try to create the vault again.
 
-Para fazer backup, substitua `FINGERPRINT` pela impressão digital mostrada no aplicativo e escolha um destino seguro fora do repositório Git:
+To back up, replace `FINGERPRINT` with the fingerprint shown in the app and choose a secure destination outside of the Git repository:
 
 ```sh
 umask 077
-gpg --armor --export-secret-keys FINGERPRINT > /caminho/seguro/passage-secret-key.asc
+gpg --armor --export-secret-keys FINGERPRINT > /safe/path/passage-secret-key.asc
 ```
 
-Para restaurar em outro dispositivo, copie o arquivo de backup por um meio seguro e execute `gpg --import /caminho/seguro/passage-secret-key.asc`. Depois confirme a chave com `gpg --list-secret-keys --fingerprint` e teste a leitura de uma entrada com `PASSWORD_STORE_DIR=/caminho/do/cofre pass show ENTRADA`. A exportação, importação e leitura foram verificadas com uma chave e um cofre descartáveis. Guarde o backup separadamente do cofre Git.
+To restore to another device, copy the backup file to a secure location and run `gpg --import /safe/path/passage-secret-key.asc`. Then confirm the key with `gpg --list-secret-keys --fingerprint` and test the reading of an entry with `PASSWORD_STORE_DIR=/path/to/vault pass show ENTRY`. Export, import and reading were verified with a disposable key and vault. Store the backup separately from the Git vault.
 
-O diretório escolhido fica salvo na configuração local do Passage e é usado pelo desktop e pelo conector das extensões. `PASSWORD_STORE_DIR`, quando definido no ambiente do processo, tem prioridade e impede trocar o diretório pela interface. No terminal, para usar um cofre fora de `~/.password-store`, defina a mesma variável, por exemplo `PASSWORD_STORE_DIR=/caminho/do/cofre pass ls`.
+The chosen directory is saved in the local Passage configuration and is used by the desktop and the extensions connector. `PASSWORD_STORE_DIR`, when defined in the process environment, has priority and prevents changing the directory via the interface. In the terminal, to use a vault outside of `~/.password-store`, define the same variable, for example `PASSWORD_STORE_DIR=/path/to/vault pass ls`.
 
-### Criar e editar entradas
+### Create and edit entries
 
-Com o cofre aberto, clique em **Nova entrada** e informe o caminho da entrada, a senha, o usuário e a URL. O Passage grava pelo GNU `pass`: a senha fica na primeira linha, seguida por `login:` e `url:`. O campo **Outras linhas do pass** aceita metadados adicionais, como `otpauth:` ou anotações. Para editar uma entrada, abra-a e clique em **Editar**. Para removê-la, clique em **Excluir** e confirme. Essas operações verificam se o arquivo cifrado mudou desde a leitura; nesse caso, atualize a entrada antes de tentar novamente. A senha aberta é removida da interface após 30 segundos; o formulário de criação fecha após 30 segundos sem alteração da senha. A operação não faz `git push` automaticamente.
+With the vault open, click on **New Entry** and enter the entry path, password, username and URL. Passage writes via GNU `pass`: the password is on the first line, followed by `login:` and `url:`. The **Other Pass Lines** field accepts additional metadata, such as `otpauth:` or annotations. To edit an entry, open it and click **Edit**. To remove it, click **Delete** and confirm. These operations check whether the encrypted file has changed since reading; in this case, update the entry before trying again. The opened password is removed from the interface after 30 seconds; the creation form closes after 30 seconds without changing the password. The operation does not automatically make `git push`.
 
-### Conectar uma conta GitHub
+### Connect a GitHub account
 
-Instale o [GitHub CLI (`gh`)](https://cli.github.com/). No painel **Sincronização Git**, clique em **Entrar com GitHub**. O Passage abre `gh auth login` no terminal padrão; conclua o login no navegador e volte ao Passage para clicar em **Verificar conta**. Se o terminal padrão não puder ser aberto, execute `gh auth login --web` manualmente. O token é administrado pelo `gh`, que pode usar o armazenamento seguro do sistema ou, se ele não estiver disponível, um arquivo local; verifique `gh auth status` para conhecer o local usado.
+Install [GitHub CLI (`gh`)](https://cli.github.com/). In the **Git Sync** panel, click **Sign in with GitHub**. Passage opens `gh auth login` in the default terminal; Complete your browser login and return to Passage to click **Verify Account**. If the default terminal cannot be opened, run `gh auth login --web` manually. The token is managed by `gh`, which can use secure system storage or, if that is not available, a local file; check `gh auth status` for the location used.
 
-Se o cofre já for a raiz de um repositório Git, **Usar neste cofre** configura apenas o `.git/config` desse cofre para pedir ao `gh` as credenciais de remotos HTTPS em `github.com`. O Passage não recebe nem salva o token. Essa etapa não cria um repositório remoto nem altera o remoto existente; configure a URL e o branch de acompanhamento pelo Git ou `pass git`. Remotos SSH e servidores Git privados continuam usando sua autenticação normal.
+If the vault is already the root of a Git repository, **Use in this vault** only configures that vault's `.git/config` to ask `gh` for the HTTPS remote credentials on `github.com`. Passage does not receive or save the token. This step does not create a remote repository or change the existing remote; configure the URL and tracking branch via Git or `pass git`. SSH remotes and private Git servers continue to use their normal authentication.
 
-No mesmo painel, **Iniciar Git neste cofre** cria um repositório local na branch `main` se o diretório ainda não tiver `.git`. **Adicionar remoto origin** registra a URL informada sem substituir um remoto existente. Crie antes um repositório Git privado vazio. **Publicar cofre novo** verifica que o remoto não tem histórico, cria o primeiro commit somente com `.gpg-id` e arquivos `.gpg` (se ainda não houver commit) e configura o upstream. A ação recusa arquivos extras, links simbólicos e arquivos já preparados no Git; nunca força o envio. Se o remoto já tiver histórico, resolva essa ligação pelo Git antes de sincronizar pelo Passage. A chave privada GPG continua fora do remoto. Alterações futuras podem ser registradas com `pass git` no terminal.
+On the same dashboard, **Start Git in this vault** creates a local repository in the `main` branch if the directory doesn't already have `.git`. **Add remote origin** registers the given URL without replacing an existing remote. Create an empty private Git repository first. **Publish new vault** checks that the remote has no history, creates the first commit with only `.gpg-id` and `.gpg` files (if there is no commit yet) and configures the upstream. The action rejects extra files, symbolic links, and files already staged in Git; never force shipping. If the remote already has history, resolve this connection through Git before syncing through Passage. The GPG private key remains outside the remote. Future changes can be registered with `pass git` on the terminal.
 
-Para recuperar um cofre já publicado em outra instalação, informe um diretório que ainda não existe e a URL do repositório no painel **Cofre**, então clique em **Clonar cofre existente**. O remoto precisa ter a branch `main` e `.gpg-id` na raiz. O Passage seleciona o cofre após o clone; para abrir as entradas, importe separadamente a chave GPG privada correspondente. O clone usa a autenticação Git já disponível no sistema e não modifica um diretório existente.
+To retrieve a vault already published on another installation, enter a directory that does not yet exist and the repository URL in the **Vault** panel, then click **Clone existing vault**. The remote must have the branch `main` and `.gpg-id` in the root. Passage selects the vault after the clone; To open the entries, import the corresponding private GPG key separately. The clone uses the Git authentication already available on the system and does not modify an existing directory.
 
-Após criar, editar ou excluir entradas, **Registrar alterações** cria um commit somente com arquivos `.gpg` e `.gpg-id`; arquivos fora desse formato, links simbólicos ou `.gpg` sem pacotes OpenPGP cifrados fazem a operação parar. **Baixar** e **Enviar** permanecem ações separadas. Se os históricos divergirem, **Preservar ambas as versões** mescla os commits e mantém a versão local de cada `.gpg` conflitante no nome original, salvando a versão remota como `nome.remote-HASH.gpg`. Revise essas entradas depois da mesclagem e envie quando estiver satisfeito. Conflitos em `.gpg-id`, remoções concorrentes e renomeações exigem resolução manual pelo Git. O Passage cria refs de backup em `refs/passage/backup/` antes da tentativa de mesclagem.
+After creating, editing or deleting entries, **Record Changes** creates a commit with only files `.gpg` and `.gpg-id`; files outside this format, symbolic links or `.gpg` without encrypted OpenPGP packets cause the operation to stop. **Download** and **Upload** remain separate actions. If the histories diverge, **Preserve Both Versions** merges the commits and keeps the local version of each conflicting `.gpg` under its original name, saving the remote version as `nome.remote-HASH.gpg`. Review these entries after the merge and submit when you are satisfied. Conflicts in `.gpg-id`, concurrent removals, and renames require manual resolution via Git. Passage creates backup refs on `refs/passage/backup/` before the merge attempt.
 
-### TOTP e bloqueio das extensões
+### TOTP and extension blocking
 
-Para gerar um código, armazene um URI `otpauth://totp/...` em uma linha da entrada, como faz o `pass-otp`, abra a entrada e clique em **Gerar código TOTP**. O Passage também lê uma linha `otpauth: URI`. O código fica em memória e some ao expirar ou após fechar a entrada; ele não é gravado no cofre.
+To generate a code, store a URI `otpauth://totp/...` in a line of the entry, as `pass-otp` does, open the entry, and click **Generate TOTP Code**. Passage also reads a `otpauth: URI` line. The code stays in memory and disappears when it expires or after closing the entry; it is not recorded in the vault.
 
-No painel **Extensões autorizadas**, **Bloquear extensões** impede novas leituras pelo host Native Messaging, inclusive se a chave GPG estiver em cache. **Liberar extensões** restaura esse acesso. O estado persiste até outra ação; bloquear não fecha o cache do `gpg-agent` e não impede `pass show` no terminal. Um pedido já em andamento pode terminar antes de o bloqueio ser aplicado.
+In the **Authorized Extensions** panel, **Block Extensions** prevents further reading by the Native Messaging host, even if the GPG key is cached. **Release Extensions** restores this access. The state persists until further action; blocking does not close the `gpg-agent` cache and does not prevent `pass show` in the terminal. An order already in progress may end before the block is applied.
 
-## Instalação no Linux
+## Installation on Linux
 
-Em Linux x86_64, com `curl`, `tar` e `sha256sum`:
+On Linux x86_64, with `curl`, `tar` and `sha256sum`:
 
 ```sh
 curl -LsSf https://passage.plu.nz/install.sh | sh
 ```
 
-O script baixa o binário pronto do [release mais recente](https://github.com/plu-nz/passage/releases/latest), verifica o SHA-256 e instala `~/.local/bin/passage` com um atalho no menu. A partir de `v0.2.1`, o pacote instala a extensão descompactada em `~/.local/share/passage/extension-chromium` (ou em `XDG_DATA_HOME/passage/extension-chromium`) e registra automaticamente o host para Brave e Chrome. Carregue essa pasta uma vez em `brave://extensions` e `chrome://extensions`, com o modo de desenvolvedor ativado, e aprove cada navegador no painel **Extensões autorizadas**. O ID da extensão descompactada é fixo: `edmjpcolampgjbnmldchmnkinmhakjgm`. Não é preciso clonar o repositório nem instalar Node.js, pnpm ou Go para usar o release. GNU `pass`, GPG, Python 3, GTK3 e WebKit2GTK 4.1 são dependências de execução. `~/.local/bin` deve estar no `PATH` da sessão.
+The script downloads the ready-made binary from [latest release](https://github.com/plu-nz/passage/releases/latest), checks SHA-256 and installs `~/.local/bin/passage` with a menu shortcut. Starting from `v0.2.1`, the package installs the unpacked extension to `~/.local/share/passage/extension-chromium` (or to `XDG_DATA_HOME/passage/extension-chromium`) and automatically registers the host for Brave and Chrome. Upload this folder once to `brave://extensions` and `chrome://extensions`, with developer mode enabled, and approve each browser in the **Authorized Extensions** panel. The ID of the unzipped extension is fixed: `edmjpcolampgjbnmldchmnkinmhakjgm`. You don't need to clone the repository or install Node.js, pnpm or Go to use the release. GNU `pass`, GPG, Python 3, GTK3 and WebKit2GTK 4.1 are runtime dependencies. `~/.local/bin` must be in the session's `PATH`.
 
-O mesmo comando atualiza uma instalação existente para a release mais recente. Feche e abra o Passage após atualizar e clique em **Recarregar** na extensão em `brave://extensions` e `chrome://extensions` para aplicar a versão nova. A versão instalada muda apenas quando uma nova release é publicada.
+The same command upgrades an existing installation to the latest release. Close and open Passage after updating and click **Reload** on the extension in `brave://extensions` and `chrome://extensions` to apply the new version. The installed version changes only when a new release is published.
 
-A chave pública da identidade da extensão está em `extension/identity.json`. A chave privada correspondente foi gerada fora do repositório, em `~/.local/share/passage/signing/extension.pem`, com permissão de acesso somente ao usuário. Faça backup **cifrado** dela fora do cofre Git; não a inclua no repositório nem no pacote. Ela será necessária se uma distribuição CRX assinada com o mesmo ID for adotada. A extensão descompactada funciona apenas com a chave pública do manifesto. Uma futura publicação em loja precisa confirmar como preservar o mesmo ID antes da migração.
+The extension identity public key is at `extension/identity.json`. The corresponding private key was generated outside the repository, in `~/.local/share/passage/signing/extension.pem`, with access permission only to the user. Make an **encrypted** backup of it outside the Git vault; do not include it in the repository or package. It is required if a CRX distribution signed with the same ID is adopted. The unpacked extension only works with the public key from the manifest. A future store publication needs to confirm how to preserve the same ID before migration.
 
-Para publicar uma nova versão Linux a partir de `main`, execute com acesso de escrita ao repositório:
+To publish a new Linux version from `main`, run with write access to the repository:
 
 ```sh
 gh workflow run release-linux.yml --ref main -f version=0.2.2
 gh run watch
 ```
 
-O [workflow manual](.github/workflows/release-linux.yml) valida que a tag ainda não existe, compila desktop, conector e extensão em Ubuntu 22.04, executa as verificações e publica os arquivos e seus SHA-256 como release mais recente. A versão é informada sem o prefixo `v` e precisa ser incrementada a cada publicação. A extensão é publicada como arquivo para carregar manualmente; publicação em lojas e IDs permanentes ainda estão pendentes.
+The [workflow manual](.github/workflows/release-linux.yml) validates that the tag does not yet exist, compiles desktop, connector and extension in Ubuntu 22.04, runs the checks and publishes the files and their SHA-256 as the latest release. The version is reported without the prefix `v` and needs to be increased with each publication. The extension is published as a file to upload manually; Store posting and permanent IDs are still pending.
 
-Para compilar e instalar a partir do código local, use `./scripts/install-linux-user.sh`.
+To compile and install from local source, use `./scripts/install-linux-user.sh`.
 
-Veja [as decisões e pendências da implementação](docs/decisions.md) para revisar o caminho adotado.
-O [plano de execução](docs/execution-plan.md) detalha as entregas, dependências e critérios de aceite do desktop Linux e das extensões.
+See [implementation decisions and backlogs](docs/decisions.md) to review the path taken.
+The [execution plan](docs/execution-plan.md) details the Linux desktop and extensions deliverables, dependencies, and acceptance criteria.
 
-## Princípios
+## Principles
 
-- O formato do cofre continua compatível com GNU `pass`: uma árvore de arquivos `.gpg` cifrados com OpenPGP.
-- O terminal é uma interface de primeira classe. O usuário pode continuar usando `pass` e `pass git` sem abrir o Passage.
-- O Git privado transporta os arquivos cifrados. Chaves PGP privadas, senhas de desbloqueio e credenciais de acesso ao Git não entram nesse repositório.
-- O mesmo cofre deve ser utilizável no desktop, no Android, no terminal e na web, sem depender de um servidor que conheça as senhas em texto claro.
-- O projeto deve aproveitar componentes existentes do ecossistema `pass` quando atendam aos requisitos; a interface e as integrações específicas do Passage serão construídas onde houver lacunas.
+- The vault format remains compatible with GNU `pass`: a tree of `.gpg` files encrypted with OpenPGP.
+- The terminal is a first-class interface. User can continue using `pass` and `pass git` without opening Passage.
+- Private Git repositories transport the encrypted files. Private PGP keys, unlock passwords, and Git access credentials do not go into this repository.
+- The same vault should be usable on desktop, Android, terminal, and the web, without relying on a server that knows the passwords in plaintext.
+- The project must leverage existing components of the `pass` ecosystem when they meet the requirements; Passage-specific interface and integrations will be built where there are gaps.
 
-## Plataformas e formas de acesso
+## Platforms and forms of access
 
-| Forma de acesso | Requisito |
+| Access method | Requirement |
 | --- | --- |
-| **Desktop** | Aplicativo para consultar e gerenciar o cofre. Linux é a primeira plataforma. |
-| **Android** | Aplicativo para consultar e gerenciar o mesmo cofre, com integração ao preenchimento de credenciais do sistema. |
-| **Terminal puro** | Uso direto do GNU `pass` e de seus comandos Git, independente dos aplicativos Passage. |
-| **Web pura** | Página acessível em um navegador, inclusive em outro computador, capaz de abrir o cofre sem aplicativo ou conector desktop instalado. |
+| **Desktop** | Application to consult and manage the vault. Linux is the first platform. |
+| **Android** | Application to consult and manage the same vault, with integration for filling in system credentials. |
+| **Pure terminal** | Direct use of GNU `pass` and its Git commands, independent of Passage applications. |
+| **Pure web** | Page accessible in a browser, including on another computer, capable of opening the vault without an application or desktop connector installed. |
 
-O suporte a iOS é desejável no futuro, se tecnicamente viável, mas está fora do escopo inicial.
+iOS support is desirable in the future if technically feasible, but is out of initial scope.
 
-## Escopo do MVP
+## MVP scope
 
-O MVP entrega **aplicativo desktop para Linux e extensões para Brave e Chrome**. Ele resolve o problema original: preencher credenciais nos dois navegadores a partir de um único cofre `pass` local, sem fazer login separadamente em cada extensão.
+MVP delivers **desktop application for Linux and extensions for Brave and Chrome**. It solves the original problem: filling credentials in both browsers from a single local `pass` vault, without logging into each extension separately.
 
-- O aplicativo desktop abre o cofre existente, permite buscar e consultar logins e controla o acesso das extensões.
-- As extensões compartilham uma implementação para navegadores Chromium, são pareadas individualmente com o desktop e permitem revogar cada pareamento.
-- A extensão identifica o site aberto, apresenta as entradas correspondentes e preenche usuário e senha após uma ação do usuário.
-- O cofre continua utilizável pelo GNU `pass` no terminal. Alterações feitas pelo Passage devem manter a compatibilidade dos arquivos `.gpg`.
-- O desktop oferece sincronização com o Git privado e apresenta conflitos ao usuário sem sobrescrever uma entrada silenciosamente.
-- O comportamento de bloqueio precisa ser coerente com o acesso direto pelo `pass` e com o cache do `gpg-agent`.
+- The desktop application opens the existing vault, allows you to search and query logins and controls access to extensions.
+- The extensions share an implementation for Chromium browsers, are individually paired with the desktop, and allow you to revoke each pairing.
+- The extension identifies the open website, presents the corresponding entries and fills in the username and password after a user action.
+- The vault remains usable by GNU `pass` in the terminal. Changes made by Passage must maintain compatibility of `.gpg` files.
+- Desktop offers synchronization with private Git and presents conflicts to the user without silently overwriting an entry.
+- The blocking behavior must be consistent with direct access by the `pass` and the `gpg-agent` cache.
 
-**Integrações existentes durante o MVP:** o GNU `pass` cobre o terminal; o fork [Android Password Store](https://github.com/agrahn/Android-Password-Store) cobre o Android. O Passage não precisa implementar um CLI ou aplicativo Android próprios para validar o MVP.
+**Existing integrations during MVP:** GNU `pass` covers the terminal; the [Android Password Store](https://github.com/agrahn/Android-Password-Store) fork covers Android. Passage does not need to implement its own CLI or Android app to validate the MVP.
 
-**Evolução posterior:** cliente web independente, aplicativo Android próprio se o existente deixar lacunas, iOS se viável, passkeys e um modelo de desbloqueio biométrico que proteja a chave também no primeiro acesso após iniciar o sistema. TOTP pode ser avaliado no MVP se o formato existente funcionar sem ampliar o escopo das integrações.
+**Further evolution:** independent web client, own Android application if the existing one leaves gaps, iOS if viable, passkeys and a biometric unlocking model that protects the key also on the first access after starting the system. TOTP can be evaluated at MVP if the existing format works without expanding the scope of integrations.
 
-### Desktop e navegadores
+### Desktop and browsers
 
-- Oferecer busca, consulta e edição dos itens do cofre no aplicativo desktop.
-- Preencher logins no Brave e no Chrome por meio de extensões que acessem o cofre local.
-- Permitir que os dois navegadores usem o mesmo estado de desbloqueio local, sem exigir um login independente do cofre em cada extensão.
-- Parear cada instalação da extensão com o aplicativo ou serviço local e permitir revogar esse acesso.
-- Avaliar o desbloqueio pela digital, inclusive no primeiro acesso após iniciar o sistema. O desenho precisa proteger a chave que abre o cofre; a mera confirmação de uma digital não substitui essa proteção.
+- Offer search, consultation and editing of vault items in the desktop application.
+- Populate Brave and Chrome logins through extensions that access your local vault.
+- Allow both browsers to use the same local unlock state without requiring an independent vault login in each extension.
+- Pair each extension installation with the local application or service and allow you to revoke that access.
+- Evaluate fingerprint unlocking, including on the first access after starting the system. The design needs to protect the key that opens the vault; the mere confirmation of a fingerprint does not replace this protection.
 
 ### Android
 
-- Ler e editar os mesmos arquivos `.gpg` usados pelo `pass` no Linux.
-- Integrar senhas ao preenchimento oferecido pelo Android e, para passkeys, ao provedor de credenciais nas versões compatíveis.
-- Proteger a chave local usando os recursos de autenticação e armazenamento seguro do dispositivo.
-- Sincronizar com o mesmo Git privado, incluindo um caminho claro para configurar a chave PGP e o acesso ao repositório no celular.
+- Read and edit the same `.gpg` files used by `pass` on Linux.
+- Integrate passwords with the filling provided by Android and, for passkeys, with the credential provider in supported versions.
+- Protect the local key using the device's secure storage and authentication features.
+- Sync with the same private Git, including a clear path to configure PGP key and repository access on mobile.
 
 ### Terminal
 
-- Preservar operações como `pass show`, `pass insert`, `pass edit`, `pass git pull` e `pass git push`.
-- Garantir que alterações feitas no terminal apareçam nos demais clientes após a sincronização.
-- Documentar a relação entre o bloqueio do aplicativo, o cache do `gpg-agent` e o acesso pelo terminal. A interface não deve afirmar que bloqueou todo o cofre se GPG ainda puder abri-lo.
+- Preserve operations such as `pass show`, `pass insert`, `pass edit`, `pass git pull`, and `pass git push`.
+- Ensure that changes made on the terminal appear on other clients after synchronization.
+- Document the relationship between application blocking, `gpg-agent` cache, and terminal access. The interface should not claim to have locked the entire vault if GPG can still open it.
 
-### Web sem conector desktop
+### Web without a desktop connector
 
-- Permitir autenticação para obter os arquivos `.gpg` cifrados de um repositório Git privado.
-- Descriptografar o cofre no navegador com uma implementação OpenPGP compatível; o serviço web não deve receber a chave aberta, a senha da chave ou os itens em texto claro.
-- Permitir acesso em um dispositivo novo. O processo de obtenção de uma cópia **cifrada** da chave privada e de sua recuperação precisa ser definido antes da implementação.
-- Separar autenticação no serviço/Git da descriptografia do cofre.
-- Começar com consulta e cópia de credenciais; definir edição e envio ao Git com controle de conflitos como uma etapa posterior.
-- Tratar o código entregue ao navegador como parte da superfície de segurança: distribuição controlada, ausência de scripts de terceiros, proteção contra XSS, política de conteúdo restritiva e sessão curta para material sensível.
+- Allow authentication to get encrypted `.gpg` files from a private Git repository.
+- Decrypt the vault in the browser with a compatible OpenPGP implementation; the web service should not receive the open key, key password, or items in plaintext.
+- Allow access on a new device. The process of obtaining an **encrypted** copy of the private key and recovering it needs to be defined before implementation.
+- Separate service/Git authentication from vault decryption.
+- Start with consultation and copying of credentials; define editing and pushing to Git with conflict control as a later step.
+- Treat code delivered to the browser as part of the security surface: controlled distribution, no third-party scripts, XSS protection, restrictive content policy, and short session for sensitive material.
 
-## Credenciais
+## Credentials
 
-- Logins com usuário e senha.
-- Segredos TOTP e geração de códigos de autenticação de dois fatores.
-- Passkeys: avaliar a convenção de arquivos do fork [Android Password Store](https://github.com/agrahn/Android-Password-Store/blob/develop/PasskeyStorage.md) e definir como criar, usar e sincronizar essas credenciais no desktop e no Android, mantendo os arquivos utilizáveis pelo `pass`.
+- Logins with username and password.
+- TOTP secrets and two-factor authentication code generation.
+- Passkeys: evaluate the file convention of the [Android Password Store](https://github.com/agrahn/Android-Password-Store/blob/develop/PasskeyStorage.md) fork and define how to create, use and synchronize these credentials on desktop and Android, keeping the files usable by `pass`.
 
-## Sincronização e recuperação
+## Sync and recovery
 
-- Usar um repositório Git **privado para o cofre**, separado do repositório de código `plu-nz/passage`.
-- Aceitar hospedagem em GitHub ou em um servidor Git privado, inclusive no NAS do usuário.
-- Detectar alterações simultâneas. Conflitos na mesma entrada não podem ser resolvidos silenciosamente, pois os arquivos `.gpg` não admitem mesclagem textual útil.
-- Prever backup e recuperação da chave PGP. Perder o celular, o leitor biométrico ou um dispositivo não pode ser a única causa de perda permanente do cofre.
-- Informar que nomes de arquivos, pastas e histórico de commits são visíveis a quem tiver acesso ao repositório Git, embora o conteúdo dos arquivos esteja cifrado.
+- Use a **private Git repository for the vault**, separate from the `plu-nz/passage` code repository.
+- Accept hosting on GitHub or a private Git server, including on the user's NAS.
+- Detect simultaneous changes. Conflicts in the same entry cannot be resolved silently, as `.gpg` files do not support useful textual merging.
+- Provide PGP key backup and recovery. Losing your cell phone, biometric reader or device cannot be the only cause of permanent loss of your vault.
+- Inform that file names, folders and commit history are visible to anyone who has access to the Git repository, although the contents of the files are encrypted.
 
-## Caminho de validação
+## Validation path
 
-1. Montar um cofre de teste com `pass` e Git privado, sem credenciais reais.
-2. Experimentar Browserpass no Brave e Chrome para identificar o que a extensão própria precisa acrescentar; confirmar que o mesmo cofre abre no Android Password Store.
-3. Prototipar o aplicativo Linux e o pareamento com uma extensão Chromium.
-4. Validar leitura e escrita interoperáveis com o `pass`, preenchimento nos dois navegadores e sincronização Git com conflitos.
-5. Planejar web, Android próprio, passkeys e biometria avançada a partir do MVP validado.
+1. Set up a test vault with `pass` and private Git, without real credentials.
+2. Try Browserpass on Brave and Chrome to identify what the extension itself needs to add; confirm that the same vault opens in the Android Password Store.
+3. Prototype the Linux application and pair it with a Chromium extension.
+4. Validate interoperable reading and writing with `pass`, filling in both browsers and Git synchronization with conflicts.
+5. Plan web, own Android, passkeys and advanced biometrics from the validated MVP.
 
-## Decisões técnicas em aberto
+## Open technical decisions
 
-- Tecnologia da interface: Solid/Vite com Wails 3 e núcleo Go compartilhado com o host; extensões continuam em TypeScript/WXT.
-- Uso direto do Browserpass ou criação de uma extensão e conector próprios.
-- Modelo de desbloqueio biométrico no Linux, armazenamento da chave local e interação com `gpg-agent`.
-- Como oferecer uma cópia cifrada da chave PGP para acesso web emergencial e como autorizar o serviço web a ler o Git privado.
-- Formato interoperável para metadados de site, TOTP e passkeys.
-- Política de sincronização, edição concorrente e recuperação de conflitos em cada plataforma.
+- Interface technology: Solid/Vite with Wails 3 and Go core shared with the host; extensions remain in TypeScript/WXT.
+- Direct use of Browserpass or creating your own extension and connector.
+- Biometric unlock model on Linux, local key storage and interaction with `gpg-agent`.
+- How to provide an encrypted copy of the PGP key for emergency web access and how to authorize the web service to read private Git.
+- Interoperable format for site metadata, TOTP and passkeys.
+- Synchronization policy, concurrent editing and conflict recovery on each platform.
 
-## Referências
+## References
 
 - [GNU pass](https://www.passwordstore.org/)
 - [Browserpass](https://github.com/browserpass/browserpass-extension)
-- [Android Password Store, fork com passkeys](https://github.com/agrahn/Android-Password-Store)
+- [Android Password Store, fork with passkeys](https://github.com/agrahn/Android-Password-Store)
 - [OpenPGP.js](https://docs.openpgpjs.org/)

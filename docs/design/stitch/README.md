@@ -1,8 +1,8 @@
-# Referência Stitch do desktop
+# Desktop Stitch Reference
 
-Projeto: `Passage Desktop UI Prototype` (`7048135784954235004`)
-Tela: `Passage — Compact Desktop Password Manager` (`bbd9877c04454791a28f64942c4c17d6`)
+Project: `Passage Desktop UI Prototype` (`7048135784954235004`)
+Screen: `Passage — Compact Desktop Password Manager` (`bbd9877c04454791a28f64942c4c17d6`)
 
-`desktop-reference.html` e `desktop-reference.png` são os artefatos originais exportados do Stitch. O HTML é um protótipo com dados e ações simuladas; não integra o cofre real e não é usado na compilação do app.
+`desktop-reference.html` and `desktop-reference.png` were exported from Stitch. The HTML reference uses simulated data and actions; it is not connected to the real vault and is not part of the app build. Its visible labels have been translated to English while retaining the prototype layout.
 
-A interface do Passage usa a composição compacta como referência, preservando a paleta verde, a tipografia e os comandos reais do aplicativo. Elementos simulados pelo protótipo, como favoritos e histórico, dependem de implementação própria antes de aparecerem no produto.
+Passage's interface uses compact composition as a reference, preserving the app's actual green palette, typography, and commands. Elements simulated by the prototype, such as favorites and history, depend on their own implementation before appearing in the product.

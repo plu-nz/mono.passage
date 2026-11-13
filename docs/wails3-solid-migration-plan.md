@@ -1,116 +1,116 @@
-# Plano de migração completa: Wails 3 + Solid
+# Full Migration Plan: Wails 3 + Solid
 
-**Branch de planejamento:** `plan/wails3-solid-migration`  
-**Estado:** implementação concluída nesta branch; validação local e CI Ubuntu concluídos.
-**Objetivo:** substituir o desktop Tauri 2/React e o host Native Messaging Rust por Wails 3/Solid e Go, mantendo o GNU `pass`/GPG/Git como fonte de verdade, o funcionamento no terminal e a extensão atual em Brave/Chrome.
+**Planning branch:** `plan/wails3-solid-migration`
+**Status:** implementation completed on this branch; local validation and Ubuntu CI completed.
+**Objective:** replace the Tauri 2/React desktop and the Native Messaging Rust host with Wails 3/Solid and Go, maintaining GNU `pass`/GPG/Git as the source of truth, the operation in the terminal and the current extension in Brave/Chrome.
 
-## Resultado da migração
+## Migration result
 
-- Desktop em Solid/Vite e Wails 3.0.0, compilado com `-tags gtk3` e WebKit2GTK 4.1 para manter suporte ao Linux desta instalação e ao runner Ubuntu 22.04. `@wailsio/runtime` está fixado em 3.1.0; a ponte foi exercitada no aplicativo real.
-- Núcleo Go em `internal/{vault,setup,gitvault,github,otp,pairing}` compartilhado pelo desktop e pelo host Go. Os fontes Rust, Tauri e React foram removidos.
-- Protocolo Native Messaging v1, ID da extensão e nomes dos executáveis preservados. O teste de integração do host e os testes reais no Brave e Chrome passaram com perfis descartáveis.
-- Instalação de release testada duas vezes com um servidor local e HOME descartável. Checksums, manifesto e estado de bloqueio foram preservados.
-- O CI da branch passou no Ubuntu 22.04 ([execução 43332456516](https://github.com/plu-nz/passage/actions/runs/43332456516)). O desktop Wails e o host Go também foram instalados no usuário local; os hashes coincidem com os binários gerados e o comando `passage` abriu a janela. O instalador público continua apontando para a release da branch `main` até a migração ser integrada e publicada.
+- Desktop in Solid/Vite and Wails 3.0.0, compiled with `-tags gtk3` and WebKit2GTK 4.1 to maintain support for this installation's Linux and the Ubuntu 22.04 runner. `@wailsio/runtime` is fixed at 3.1.0; the bridge was exercised in the real application.
+- Go core in `internal/{vault,setup,gitvault,github,otp,pairing}` shared by desktop and Go host. Rust, Tauri and React sources have been removed.
+- Native Messaging Protocol v1, extension ID and executable names preserved. The host integration test and real tests on Brave and Chrome passed with disposable profiles.
+- Release installation tested twice with a local server and disposable HOME. Checksums, manifest and lock state were preserved.
+- Branch CI passed on Ubuntu 22.04 ([run 43332456516](https://github.com/plu-nz/passage/actions/runs/43332456516)). The Wails desktop and Go host were also installed on the local user; the hashes match the generated binaries and the command `passage` opened the window. The public installer continues to point to the `main` branch release until the migration is integrated and published.
 
-Medição local em 12/11/2026, com cache aquecido: build Go do desktop 2,343 s; verificação TypeScript e build Vite 2,773 s. O binário Wails ficou com 17.719.872 bytes; o binário Tauri instalado antes da migração tem 13.589.880 bytes. São medições pontuais neste computador, não uma comparação de builds limpos nem de memória em uso.
+Local measurement on 11/12/2026, with warm cache: desktop Go build 2.343 s; TypeScript check and Vite build 2,773 s. The Wails binary was 17,719,872 bytes; the Tauri binary installed before migration is 13,589,880 bytes. These are point-in-time measurements on this computer, not a comparison of clean builds or memory in use.
 
-## 1. Escopo e decisões de arquitetura
+## 1. Scope and architectural decisions
 
 - `src/desktop`: Solid + TypeScript + Vite no frontend; Wails 3 + Go no processo desktop.
-- `src/native-host`: executável Go separado, com o mesmo nome instalado (`passage-native-host`) e o mesmo protocolo Native Messaging v1. Desktop e host importam um núcleo Go compartilhado, sem depender de uma janela aberta.
-- `src/extension`: manter WXT/TypeScript e o ID publicado. Alterar apenas se um ajuste de protocolo for indispensável; qualquer mudança incompatível exige migração versionada e testes dos navegadores.
-- `packages/core`: manter os contratos TypeScript úteis à extensão e à UI; gerar ou verificar tipos do bridge Go→TypeScript para evitar definições divergentes.
-- GNU `pass`, GPG, `pinentry`, `gpg-agent`, Git e `gh` continuam responsáveis por seus respectivos dados/autenticação. Não reimplementar OpenPGP nem importar chaves privadas para o processo Passage.
-- Preservar `PASSWORD_STORE_DIR`, `~/.password-store`, `XDG_CONFIG_HOME/passage/settings.json`, estado de pareamento, URLs de remotos, arquivos `.gpg` e `.gpg-id`. A migração não deve exigir reconectar navegador nem recriar cofre.
-- Manter dois executáveis no pacote inicialmente. Isso preserva a instalação e impede que uma invocação do browser inicialize o runtime gráfico. Consolidar em um binário só poderá ser uma otimização posterior, medida e testada.
-- Pin de uma versão estável exata de Wails 3 no `go.mod`, CLI e runtime npm; não usar `@latest` no CI. Verificar a versão e as dependências Linux no início da implementação.
+- `src/native-host`: separate Go executable, with the same installed name (`passage-native-host`) and the same Native Messaging v1 protocol. Desktop and host import a shared Go core, without relying on an open window.
+- `src/extension`: Keep WXT/TypeScript and published ID. Change only if a protocol adjustment is essential; any incompatible changes require versioned migration and browser testing.
+- `packages/core`: keep TypeScript contracts useful for the extension and UI; generate or check types from the Go→TypeScript bridge to avoid divergent definitions.
+- GNU `pass`, GPG, `pinentry`, `gpg-agent`, Git and `gh` remain responsible for their respective data/authentication. Do not reimplement OpenPGP or import private keys into the Passage process.
+- Preserve `PASSWORD_STORE_DIR`, `~/.password-store`, `XDG_CONFIG_HOME/passage/settings.json`, pairing state, remote URLs, `.gpg` and `.gpg-id` files. Migration should not require reconnecting browser or recreating vault.
+- Keep two executables in the package initially. This preserves the installation and prevents a browser invocation from initializing the graphics runtime. Consolidating into a binary can only be a later, measured and tested optimization.
+- Pin an exact stable version of Wails 3 to `go.mod`, CLI and npm runtime; Do not use `@latest` in the CI. Check the Linux version and dependencies at the beginning of the implementation.
 
-## 2. Inventário atual e contratos a congelar
+## 2. Current inventory and contracts to preserve
 
-| Área | Fonte atual | Contrato a preservar |
+| Area | Current source | Contract to be preserved |
 | --- | --- | --- |
-| Cofre | `src/desktop/src-tauri/src/vault.rs`, `setup.rs` | Escolha/criação/clone do cofre; validação de ID, caminho e symlinks; leitura/escrita por `pass`; hash do ciphertext para concorrência; parsing de usuário, URL e campos extras. |
-| Git/GitHub | `git.rs`, `github.rs` | Commit apenas de `.gpg`/`.gpg-id`, recusa de texto claro, fast-forward, publicação inicial, backups e mesclagem que preserva as duas versões cifradas; autenticação delegada ao `gh`. |
-| TOTP | `otp.rs` | Parsing de `otpauth://`, algoritmos/períodos/dígitos, vetores RFC 6238, segredo apenas em memória. |
-| Pareamento | `pairing.rs`, `src/native-host/src/main.rs` | Código de aprovação, token por instalação e cofre, revogação, bloqueio, origem HTTPS, dupla verificação de autorização. |
-| Extensão | `src/extension` | Mensagens v1, ID fixo, pareamento existente, escolha explícita antes de preencher, checagem da aba e da URL. |
-| UI | `src/desktop/src/main.tsx`, `style.css` | Fluxos e estados atuais, limpeza de segredo em 30 s, identidade visual verde e layout compacto. |
-| Distribuição | `scripts/*.sh`, `.github/workflows/release-linux.yml` | `~/.local/bin/passage`, host, extensão, manifestos Brave/Chrome, checksum, instalador sem clone e atualização sem apagar pareamentos. |
+| Vault | `src/desktop/src-tauri/src/vault.rs`, `setup.rs` | Choose/create/clone the vault; validation of ID, path and symlinks; read/write by `pass`; ciphertext hash for concurrency; parsing user, URL and extra fields. |
+| Git/GitHub | `git.rs`, `github.rs` | Commit only `.gpg`/`.gpg-id`, clear text opt-out, fast-forward, initial publish, backups and merge that preserves both encrypted versions; authentication delegated to `gh`. |
+| TOTP | `otp.rs` | Parsing of `otpauth://`, algorithms/periods/digits, RFC 6238 vectors, secret in memory only. |
+| Pairing | `pairing.rs`, `src/native-host/src/main.rs` | Approval code, token per installation and vault, revocation, blocking, HTTPS origin, double authorization check. |
+| Extension | `src/extension` | v1 messages, fixed ID, existing pairing, explicit choice before filling out, tab and URL check. |
+| UI | `src/desktop/src/main.tsx`, `style.css` | Current flows and states, secret clearing in 30 s, green visual identity and compact layout. |
+| Distribution | `scripts/*.sh`, `.github/workflows/release-linux.yml` | `~/.local/bin/passage`, host, extension, Brave/Chrome manifests, checksum, installer without clone and update without deleting pairings. |
 
-Antes de portar código, registrar fixtures **sem segredos reais** para formatos de entrada, estado JSON, mensagens do host e saída/erros esperados dos comandos. Conferir todos os comandos expostos em `src/desktop/src-tauri/src/lib.rs` e as mensagens em `src/native-host/src/main.rs`; a tabela acima é um resumo, não a lista exaustiva.
+Before porting code, register fixtures **without real secrets** for entry formats, JSON state, host messages, and expected command output/errors. Check all commands exposed in `src/desktop/src-tauri/src/lib.rs` and messages in `src/native-host/src/main.rs`; The table above is a summary, not the exhaustive list.
 
-## 3. Etapas de execução
+## 3. Execution steps
 
-### Etapa 0 — Baseline e viabilidade Linux
+### Step 0 — Baseline and Linux feasibility
 
-1. Congelar o comportamento atual com cofre, chave, remoto Git e perfis de navegador descartáveis. Executar testes atuais e registrar falhas preexistentes.
-2. Medir build limpo, rebuild do backend, build só do frontend, tempo de inicialização, tamanho do pacote e uso de memória do Tauri no mesmo hardware. Separar cache quente/frio e registrar versão de toolchain; a compilação de 6 min 30 s feita com cache novo é apenas um dado inicial.
-3. Fazer um spike Wails 3 + Solid mínimo no Linux alvo, com chamada Go→UI, janela, `pinentry` e processo externo. Verificar `wails3 doctor`, GTK4/WebKitGTK 6.0, Wayland/X11 e empacotamento. Nesta máquina, `webkitgtk-6.0` não estava disponível em `pkg-config` em 12/11/2026; resolver isso ou definir explicitamente o piso de distro antes de aprovar o port.
-4. Documentar matriz Linux suportada. O caminho GTK3 legado não deve sustentar a distribuição nova se a versão Wails escolhida já não o suportar. Rodar `passage` sem acesso à internet e confirmar que o frontend embutido abre.
+1. Freeze current behavior with throwaway vault, key, Git remote, and browser profiles. Run current tests and record pre-existing failures.
+2. Measure clean build, backend rebuild, frontend-only build, boot time, package size and Tauri memory usage on the same hardware. Separate hot/cold cache and register toolchain version; the 6 min 30 s compilation made with new cache is just initial data.
+3. Make a minimal Wails 3 + Solid spike on the target Linux, with Go→UI call, window, `pinentry` and external process. Check `wails3 doctor`, GTK4/WebKitGTK 6.0, Wayland/X11 and packaging. On this machine, `webkitgtk-6.0` was not available in `pkg-config` on 11/12/2026; resolve this or explicitly set the distro floor before approving the port.
+4. Document supported Linux matrix. The legacy GTK3 path should not support the new distribution if the chosen Wails version does not already support it. Run `passage` without internet access and confirm that the built-in frontend opens.
 
-**Gate:** protótipo Wails executa no Linux alvo e a lista de distros suportadas está explícita. Caso falhe, manter a branch como estudo e não substituir o app instalado.
+**Gate:** Wails prototype runs on target Linux and the list of supported distros is explicit. If it fails, keep the branch as a study and do not replace the installed app.
 
-### Etapa 1 — Núcleo Go sem UI
+### Step 1 — Core Go without UI
 
-1. Criar um módulo Go interno (`internal/vault`, `internal/git`, `internal/otp`, `internal/pairing`, `internal/config` ou equivalente), com interfaces pequenas para subprocessos e filesystem. Evitar acoplamento ao Wails.
-2. Portar descoberta e seleção de cofre, proteção contra symlinks e travessia de caminho, listagem, leitura, criação, edição e remoção. Usar `pass` e GPG como hoje. Preservar a ordem e o conteúdo das linhas não editadas.
-3. Portar Git e GitHub CLI com as mesmas recusas, refs de backup e limites de arquivos. Nunca executar comandos por shell com texto interpolado; usar argumentos de processo.
-4. Portar TOTP e pareamento/estado de bloqueio. Ler os dados persistidos pela versão Rust sem reformatar ou invalidar tokens existentes. Se houver mudança de esquema, fazer migração idempotente com backup e teste de rollback.
-5. Testar paridade contra os fixtures e cofres descartáveis: erros de GPG, edição concorrente, symlink, arquivos extras no Git, remoto divergente, conflito `.gpg-id` e alteração de bloqueio durante a leitura.
+1. Create an internal Go module (`internal/vault`, `internal/git`, `internal/otp`, `internal/pairing`, `internal/config` or equivalent), with small interfaces for subprocesses and filesystem. Avoid coupling to Wails.
+2. Port vault discovery and selection, protection against symlinks and path traversal, listing, reading, creation, editing and removal. Use `pass` and GPG like today. Preserve the order and content of unedited lines.
+3. Port Git and GitHub CLI with the same opt-outs, backup refs, and file limits. Never execute shell commands with interpolated text; use process arguments.
+4. Port TOTP and pairing/blocking state. Read data persisted by the Rust version without reformatting or invalidating existing tokens. If there is a schema change, perform idempotent migration with backup and rollback testing.
+5. Test parity against disposable fixtures and vaults: GPG errors, concurrent edit, symlink, extra files in Git, divergent remote, `.gpg-id` conflict, and lock change while reading.
 
-**Gate:** o núcleo Go passa os testes de comportamento e segurança antes de ser exposto ao frontend ou à extensão.
+**Gate:** Go core passes behavior and security tests before being exposed to the frontend or extension.
 
-### Etapa 2 — Host Native Messaging Go
+### Step 2 — Go Native Messaging host
 
-1. Portar o framing Chromium (4 bytes little-endian + JSON), limites de mensagem, `requestId`, erros genéricos, timeouts e limpeza de processo. Reservar `stdout` exclusivamente para o protocolo; logs em `stderr` sem segredos.
-2. Preservar o protocolo v1 e os comandos CLI existentes de administração (`list`, `list-json`, `lock-status`, `lock`, `unlock`, aprovação/revogação conforme inventário completo).
-3. Reusar o núcleo Go para resolver cofre e entrada. Revalidar token, origem e bloqueio imediatamente antes de responder; preservar o vínculo do token ao cofre.
-4. Testar diretamente o binário com `src/native-host/tests/integration.py`, adaptando apenas o caminho do executável. Depois testar Brave e Chrome reais em perfis descartáveis, incluindo navegação da mesma aba, revogação, bloqueio e instalação já pareada.
+1. Port Chromium framing (4 little-endian bytes + JSON), message limits, `requestId`, generic errors, timeouts and process cleanup. Reserve `stdout` exclusively for the protocol; logs in `stderr` without secrets.
+2. Preserve the v1 protocol and existing administration CLI commands (`list`, `list-json`, `lock-status`, `lock`, `unlock`, approval/revocation as per complete inventory).
+3. Reuse the Go core to solve vault and entry. Revalidate token, origin and lock immediately before responding; preserve the token's link to the vault.
+4. Directly test the binary with `src/native-host/tests/integration.py`, adapting only the executable path. Then test real Brave and Chrome on disposable profiles, including same-tab browsing, revocation, blocking, and paired installation.
 
-**Gate:** extensão existente funciona sem atualização obrigatória, sem novo pareamento e sem enfraquecer os controles documentados em `docs/security-review.md`.
+**Gate:** Existing extension works without mandatory update, without re-pairing, and without weakening the controls documented in `docs/security-review.md`.
 
-### Etapa 3 — Desktop Wails 3 + Solid
+### Step 3 — Wails 3 + Solid desktop
 
-1. Criar o shell Wails em `src/desktop`, registrar serviços Go com métodos explícitos e gerar bindings tipados. Não expor acesso arbitrário a filesystem, comando externo ou segredo pelo bridge.
-2. Portar a UI React para componentes Solid por fluxo: cofre/configuração, lista e detalhe, criação/edição/exclusão, TOTP, Git/GitHub e extensões. Preservar o CSS/identidade visual atual, estados de carregamento e erros.
-3. Implementar adaptador de serviços no frontend para reduzir acoplamento dos componentes aos bindings Wails; manter contratos TypeScript compartilháveis com a extensão quando fizer sentido.
-4. Preservar a limpeza de segredos exibidos após 30 s, limpar estado ao trocar de cofre/entrada e ao bloquear extensão. Não afirmar que limpeza de estado apaga garantidamente memória do processo ou cache do `gpg-agent`.
-5. Testar teclado, foco, rolagem em janela compacta, estados sem cofre/chave/Git e diálogos do `pinentry`. Garantir que o app não bloqueie a UI durante `pass`, Git ou `gh`.
+1. Create the Wails shell in `src/desktop`, register Go services with explicit methods and generate typed bindings. Do not expose arbitrary access to filesystem, external command or secret via the bridge.
+2. Port React UI to Solid components by flow: vault/configuration, list and detail, create/edit/delete, TOTP, Git/GitHub and extensions. Preserve current CSS/branding, loading states and errors.
+3. Implement service adapter in the frontend to reduce component coupling to Wails bindings; Maintain shareable TypeScript contracts with the extension when it makes sense.
+4. Preserve the cleanliness of secrets displayed after 30 s, clear state when changing vaults/entrance and when blocking extension. Do not claim that state clearing guarantees erases process memory or cache of the `gpg-agent`.
+5. Test keyboard, focus, compact window scrolling, no vault/key/Git states, and `pinentry` dialogs. Ensure your app doesn't lock the UI during `pass`, Git, or `gh`.
 
-**Gate:** todos os fluxos do desktop atual funcionam em Solid/Wails com os mesmos dados locais e sem regressões de segurança.
+**Gate:** all current desktop flows work in Solid/Wails with the same local data and no security regressions.
 
-### Etapa 4 — Instalação, CI e transição
+### Step 4 — Installation, CI, and Transition
 
-1. Atualizar `scripts/install-linux-user.sh`, `package-linux.sh`, workflow de release, caminhos de binário, ícone, `.desktop` e documentação. Manter os nomes instalados e o formato do arquivo de release enquanto possível.
-2. Testar atualização sobre uma instalação Tauri/Rust com cofre e pareamentos descartáveis: instalar Wails/Go, iniciar app, ler/escrever, usar Brave/Chrome, atualizar novamente. Não apagar `~/.config/passage` nem o cofre.
-3. Testar instalação sem repositório clonado por `curl -LsSf https://passage.plu.nz/install.sh | sh` contra release de teste. Conferir SHA-256, host registrado e extensão existente.
-4. Medir novamente build limpo/rebuild, tamanho, startup e memória nas mesmas condições da etapa 0. Documentar o resultado real, inclusive caso Go não traga ganho relevante no Linux por causa de CGO/WebKit.
-5. Remover Tauri/React/Rust e dependências só depois de todos os gates. Atualizar `README.md`, `docs/decisions.md`, plano de execução e revisão de segurança. Publicar release somente após CI e teste local de atualização passarem.
+1. Update `scripts/install-linux-user.sh`, `package-linux.sh`, release workflow, binary paths, icon, `.desktop` and documentation. Maintain the installed names and release file format as long as possible.
+2. Test update on a Tauri/Rust installation with vault and disposable pairings: install Wails/Go, launch app, read/write, use Brave/Chrome, update again. Do not delete `~/.config/passage` or the vault.
+3. Test installation without repository cloned by `curl -LsSf https://passage.plu.nz/install.sh | sh` against test release. Check SHA-256, registered host and existing extension.
+4. Measure clean build/rebuild again, size, startup and memory under the same conditions as step 0. Document the actual result, including if Go does not bring relevant gains on Linux because of CGO/WebKit.
+5. Remove Tauri/React/Rust and dependencies only after all gates. Update `README.md`, `docs/decisions.md`, execution plan and security review. Publish release only after CI and local update testing pass.
 
-**Gate final:** o pacote novo substitui o antigo sem perda de cofre, autenticação GPG, tokens de pareamento ou compatibilidade do `pass` no terminal.
+**Final Gate:** the new package replaces the old one without loss of vault, GPG authentication, pairing tokens or `pass` compatibility on the terminal.
 
-## 4. Segurança e compatibilidade: critérios de bloqueio
+## 4. Security and compatibility: blocking criteria
 
-- Nenhum segredo, token de GitHub ou frase secreta GPG em logs, mensagens de erro, telemetria ou fixtures.
-- Nenhuma mudança na identidade da extensão ou no manifesto Native Messaging que force pareamento novo sem um plano explícito.
-- Nenhum `pass show` disparado apenas por listar entradas; descriptografar somente após seleção/ação do usuário.
-- Nenhum acesso da página web visitada ao bridge Wails ou ao host além do protocolo da extensão e das verificações existentes.
-- Preservar as garantias de caminho seguro, validação de entrada, hash de concorrência e limites Git. Falha de paridade bloqueia a retirada do binário Rust.
-- Revisar a política de conteúdo e carregamento do WebView Wails; carregar apenas assets embutidos e endpoints de desenvolvimento em modo dev. Fazer revisão específica da superfície Go exposta ao JavaScript.
+- No secrets, GitHub tokens, or GPG passphrases in logs, error messages, telemetry, or fixtures.
+- No changes to the extension identity or Native Messaging manifest that force new pairing without an explicit plan.
+- No `pass show` triggered just by listing entries; decrypt only after user selection/action.
+- No access from the visited web page to the Wails bridge or host beyond the extension protocol and existing checks.
+- Preserve secure path guarantees, input validation, hash concurrency, and Git limits. Parity failure blocks removal of Rust binary.
+- Review the WebView Wails content and loading policy; load only embedded assets and development endpoints in dev mode. Perform specific review of the Go surface exposed to JavaScript.
 
-## 5. Sequência de entregas e estimativa para planejamento
+## 5. Sequence of deliveries and estimation for planning
 
-| Entrega | Dependência | Tamanho relativo | Evidência de conclusão |
+| Delivery | Dependency | Relative size | Evidence of completion |
 | --- | --- | --- | --- |
-| Baseline e spike Linux | nenhuma | pequeno | matriz de dependências e benchmarks reproduzíveis |
-| Núcleo Go do cofre/Git/TOTP | baseline | grande | testes de paridade e cofre descartável |
-| Host Go | núcleo | médio | protocolo v1 e Brave/Chrome validados |
-| Solid + Wails | núcleo | grande | fluxos desktop equivalentes |
-| CI, instalador e release de teste | host + desktop | médio | upgrade Tauri→Wails e instalação sem clone |
-| Limpeza e release estável | todos os gates | pequeno | documentação e pacote final verificados |
+| Baseline and spike Linux | none | small | dependency matrix and reproducible benchmarks |
+| Vault Go Core/Git/TOTP | baseline | big | parity testing and disposable vault |
+| Host Go | core | medium | protocol v1 and Brave/Chrome validated |
+| Solid + Wails | core | big | equivalent desktop streams |
+| CI, installer and test release | host + desktop | medium | Tauri→Wails upgrade and clone-free installation |
+| Cleanup and stable release | all gates | small | documentation and final package verified |
 
-As estimativas são relativas; tempo de calendário depende sobretudo do port da lógica Rust (~3,5 mil linhas entre desktop e host), disponibilidade de WebKitGTK 6.0 nos alvos Linux e testes de paridade. A troca React→Solid é uma parte menor da migração total.
+Estimates are relative; Calendar time depends mainly on the Rust logic port (~3.5 thousand lines between desktop and host), availability of WebKitGTK 6.0 on Linux targets and parity tests. The React→Solid switch is a smaller part of the total migration.
 
-## 6. Fora deste plano
+## 6. Out of scope
 
-Cliente Android/iOS próprio, web pura, biometria, novos recursos do cofre e publicação da extensão em loja. A arquitetura Go não deve impedir esses trabalhos, mas Wails mobile ainda não é base estável assumida para eles. Terminal puro continua disponível via GNU `pass`; não é necessário substituir sua CLI.
+Own Android/iOS client, pure web, biometrics, new vault features and publication of the extension in store. The Go architecture should not impede these works, but Wails mobile is not yet an assumed stable basis for them. Pure terminal remains available via GNU `pass`; No need to replace your CLI.

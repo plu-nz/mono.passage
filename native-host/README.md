@@ -1,53 +1,53 @@
-# Conector local (protótipo)
+# Local connector (prototype)
 
-O host Native Messaging atende Brave e Chrome usando o cofre GNU `pass` do usuário. Ele é iniciado pelo navegador sob demanda, sem exigir que a janela desktop esteja aberta. O desktop e o CLI compartilham o estado de pareamento no pacote Go `internal/pairing`.
+The Native Messaging host serves Brave and Chrome using the user's GNU `pass` vault. It is launched by the browser on demand, without requiring the desktop window to be open. The desktop and CLI share pairing state in the Go package `internal/pairing`.
 
-O instalador de release instala `passage-native-host` junto ao desktop. Quando o release contém a extensão, o instalador registra automaticamente o ID fixo `edmjpcolampgjbnmldchmnkinmhakjgm` nos navegadores; ainda é necessário carregar a pasta da extensão em cada navegador e aprovar cada pareamento. Para registrar outra compilação manualmente, informe os IDs exibidos pelos navegadores:
+The release installer installs `passage-native-host` alongside the desktop. When the release contains the extension, the installer automatically registers the fixed ID `edmjpcolampgjbnmldchmnkinmhakjgm` in browsers; You still need to load the extension folder in each browser and approve each pairing. To register another build manually, enter the IDs displayed by browsers:
 
 ```sh
-passage-install-native-host "$HOME/.local/bin/passage-native-host" ID_BRAVE ID_CHROME
+passage-install-native-host "$HOME/.local/bin/passage-native-host" BRAVE_ID CHROME_ID
 ```
 
-Também é possível definir `PASSAGE_BRAVE_EXTENSION_ID` e `PASSAGE_CHROME_EXTENSION_ID` antes de executar o instalador, para substituir o ID padrão em um ou ambos os navegadores. Releases antigos, sem host no arquivo, continuam instaláveis; não fornecem conexão com navegadores.
+You can also set `PASSAGE_BRAVE_EXTENSION_ID` and `PASSAGE_CHROME_EXTENSION_ID` before running the installer, to override the default ID in one or both browsers. Old releases, without a host in the archive, remain installable; do not provide connection to browsers.
 
-## Desenvolver e registrar
+## Build and register
 
 ```sh
 go build -o native-host/build/passage-native-host ./native-host
 sh scripts/install-native-host.sh \
   "$PWD/native-host/build/passage-native-host" \
-  ID_MOSTRADO_EM_BRAVE_EXTENSIONS \
-  ID_MOSTRADO_EM_CHROME_EXTENSIONS
+  ID_SHOWN_IN_BRAVE_EXTENSIONS \
+  ID_SHOWN_IN_CHROME_EXTENSIONS
 ```
 
-Os IDs de extensão aparecem no gerenciador de cada navegador após carregar a extensão descompactada. O script registra manifestos para Brave e Chrome estáveis; também registra perfis Brave Beta, Nightly e Brave Origin já existentes. É preciso Python 3.
+Extension IDs appear in each browser's manager after loading the unpacked extension. The script registers manifests for stable Brave and Chrome; also registers existing Brave Beta, Nightly and Brave Origin profiles. Python 3 is required.
 
-Para testar o protocolo sem tocar no cofre nem nos perfis reais:
+To test the protocol without touching the vault or real profiles:
 
 ```sh
 go test ./internal/pairing ./native-host
 python3 native-host/tests/integration.py "$PWD/native-host/build/passage-native-host"
 ```
 
-## Parear e revogar
+## Pair and revoke
 
-O popup solicita pareamento e mostra um código de 12 caracteres que expira em 5 minutos. Confirme na interface desktop ou pelo terminal:
+The popup requests pairing and shows a 12-character code that expires in 5 minutes. Confirm on the desktop interface or via the terminal:
 
 ```sh
-passage-native-host approve CODIGO
+passage-native-host approve CODE
 passage-native-host list
-passage-native-host revoke chrome-extension://ID_DA_EXTENSAO/ ID_DA_INSTALACAO
+passage-native-host revoke chrome-extension://EXTENSION_ID/ INSTALLATION_ID
 ```
 
-`list` mostra a origem e o ID da instalação; `revoke` bloqueia pedidos seguintes. O token emitido após a aprovação é mostrado uma vez ao navegador e armazenado apenas como hash no host. O estado local fica em `~/.config/passage/native-host.json` (ou `XDG_CONFIG_HOME/passage`) com permissões de usuário.
+`list` shows the source and installation ID; `revoke` blocks follow-up requests. The token issued upon approval is shown once to the browser and stored only as a hash on the host. The local state is at `~/.config/passage/native-host.json` (or `XDG_CONFIG_HOME/passage`) with user permissions.
 
-Cada pareamento é válido apenas para o cofre selecionado quando foi aprovado. Ao escolher outro cofre no desktop, a extensão precisa de novo pareamento para acessá-lo. A lista na interface desktop mostra somente os pareamentos do cofre atual; `list` no CLI mostra todos para permitir revogação. Se você voltar a selecionar um cofre anterior, o pareamento antigo desse cofre continua válido até ser revogado.
+Each pairing is only valid for the vault selected when approved. When choosing another vault on the desktop, the extension needs to be paired again to access it. The list on the desktop interface only shows pairings from the current vault; `list` in CLI shows all to allow revocation. If you reselect a previous vault, the old pairing for that vault remains valid until revoked.
 
-O desktop pode bloquear o acesso das extensões com `passage-native-host lock` e liberar com `passage-native-host unlock`. O estado persiste após fechar o aplicativo ou reiniciar o computador; `passage-native-host lock-status` o consulta. O bloqueio corta pedidos novos mesmo quando o `gpg-agent` ainda tem a chave em cache. Ele não bloqueia o uso direto de `pass` no terminal nem apaga uma senha que já esteja visível numa página do navegador.
+The desktop can block extensions from accessing them with `passage-native-host lock` and allow them again with `passage-native-host unlock`. The state persists after closing the application or restarting the computer; `passage-native-host lock-status` queries it. Blocking cuts off new requests even when the `gpg-agent` still has the key in cache. It does not block the direct use of `pass` on the terminal or delete a password that is already visible on a browser page.
 
-## Limites atuais
+## Current limitations
 
-- A extensão precisa usar a origem da aba obtida pela API do navegador e validar a aba novamente antes de preencher. O host exige origem HTTPS e correspondência exata com um campo `url` da entrada.
-- O host decripta os metadados das entradas para encontrar correspondências; `pass`/GPG podem solicitar a senha da chave neste momento. Um cofre grande pode tornar a busca lenta.
-- A origem da extensão é informada pelo navegador como argumento do processo. Os manifestos limitam os IDs aceitos pelo navegador; outro processo local do mesmo usuário pode invocar o executável diretamente e, por isso, token e aprovação continuam necessários.
-- O protocolo e o instalador ainda não foram submetidos à matriz final de testes Brave/Chrome. Use um cofre descartável nesta fase.
+- The extension needs to use the tab origin obtained from the browser API and validate the tab again before populating. The host requires HTTPS origin and exact match to a `url` field of the entry.
+- The host decrypts the entries' metadata to find matches; `pass`/GPG may request the key password at this time. A large vault can slow down the search.
+- The origin of the extension is reported by the browser as an argument to the process. Manifests limit the IDs accepted by the browser; another local process from the same user can invoke the executable directly and, therefore, token and approval are still required.
+- The protocol and installer have not yet been subjected to the final Brave/Chrome testing matrix. Use a disposable vault at this stage.

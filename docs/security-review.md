@@ -1,32 +1,32 @@
-# Revisão de segurança do protótipo
+# Prototype Security Review
 
-## Migração Wails 3/Solid/Go
+## Wails 3/Solid/Go Migration
 
-Na branch de migração, o núcleo Go continua a chamar GNU `pass`, GPG, Git e `gh` como processos com argumentos separados. O host mantém o protocolo v1 e lê o estado JSON criado pelo host Rust, preservando tokens vinculados ao cofre. Testes Go cobrem leitura/escrita com cofre GPG descartável, hash de edição concorrente, symlinks, TOTP RFC 6238, estado legado do pareamento e fluxo Git de publicação, divergência e preservação de duas versões cifradas. O teste Python do host e o preenchimento real no Brave e Chrome passaram novamente com o host Go e perfis descartáveis. O frontend é embutido no binário Wails; nenhum site remoto é carregado no WebView.
+In the migration branch, the Go core continues to call GNU `pass`, GPG, Git, and `gh` as processes with separate arguments. The host maintains the v1 protocol and reads the JSON state created by the Rust host, preserving tokens tied to the vault. Go tests cover read/write with disposable GPG vault, concurrent edit hash, symlinks, TOTP RFC 6238, legacy pairing state and Git publish flow, divergence, and preservation of two encrypted versions. The host's Python test and actual completion in Brave and Chrome passed again with the Go host and disposable profiles. The frontend is built into the Wails binary; no remote sites are loaded in the WebView.
 
-O desktop expõe métodos Go específicos ao JavaScript, mapeados em `desktop/src/service.ts`. A UI limpa os segredos exibidos após 30 segundos, como antes. O backend Linux usa GTK3/WebKit2GTK 4.1 porque WebKitGTK 6.0 não está instalado nesta máquina; migrar para o backend GTK4 requer novo ciclo de testes. A versão `v3.0.0` do Wails está fixada no `go.mod`.
+The desktop exposes JavaScript-specific Go methods, mapped to `desktop/src/service.ts`. The UI clears the displayed secrets after 30 seconds, as before. The Linux backend uses GTK3/WebKit2GTK 4.1 because WebKitGTK 6.0 is not installed on this machine; Migrating to the GTK4 backend requires a new testing cycle. Wails version `v3.0.0` is fixed to `go.mod`.
 
 
-Revisão feita com código e cofre descartável. Em perfis temporários do Brave Origin e Chrome estável, o popup real pareou, listou a entrada e preencheu usuário e senha numa página HTTPS local e no login real do GitHub, sem submeter o formulário. O teste repetiu o clique após navegar a aba e confirmou que o preenchimento foi recusado. Nenhum perfil pessoal ou credencial real foi usado.
+Review carried out with code and disposable vault. On temporary profiles on Brave Origin and stable Chrome, the actual popup paired, listed input, and filled username and password on a local HTTPS page and on the actual GitHub login, without submitting the form. The test repeated the click after browsing the tab and confirmed that the filling was rejected. No personal profiles or real credentials were used.
 
-## Controles verificados
+## Verified controls
 
-- O host exige pareamento por instalação, vincula o token ao cofre e à origem da extensão e aceita apenas URLs HTTPS que correspondam ao campo `url` da entrada.
-- Revogação e bloqueio persistente impedem novos pedidos; o host verifica novamente a autorização após ler o segredo. Os testes de integração cobrem duas instalações isoladas, domínio semelhante, revogação e bloqueio durante a leitura.
-- A extensão obtém a origem da aba pela API do navegador, vincula a lista à aba e à URL, confere ambas novamente antes de preencher e só injeta depois do clique do usuário. Senhas não são salvas em `browser.storage.local`; ali fica somente o token de pareamento.
-- O Git recusa árvore suja e divergência antes de sincronizar. Uma ação explícita preserva ambas as versões cifradas em conflitos de `.gpg`, com refs de backup para os commits originais. Conflitos em `.gpg-id` são recusados e abortados sem alterar o HEAD. Novos commits são limitados a `.gpg-id` e `.gpg`; arquivos `.gpg` precisam conter pacotes OpenPGP cifrados.
-- A interface não recebe o token do GitHub; a autenticação é delegada ao `gh`. A chave GPG e sua frase secreta permanecem sob controle do GPG e `pinentry`.
+- The host requires pairing per installation, binds the token to the vault and extension origin, and only accepts HTTPS URLs that match the `url` field of the entry.
+- Revocation and persistent blocking prevent new orders; the host rechecks authorization after reading the secret. Integration tests cover two isolated installations, similar domain, revocation, and blocking while reading.
+- The extension obtains the origin of the tab via the browser's API, links the list to the tab and the URL, checks both again before filling in and only injects it after the user clicks. Passwords are not saved on `browser.storage.local`; There is only the pairing token.
+- Git refuses dirty tree and divergence before synchronizing. An explicit action preserves both conflict-encrypted versions of `.gpg`, with backup refs to the original commits. Conflicts in `.gpg-id` are rejected and aborted without changing the HEAD. New commits are limited to `.gpg-id` and `.gpg`; `.gpg` files must contain encrypted OpenPGP packets.
+- The interface does not receive the GitHub token; authentication is delegated to `gh`. The GPG key and its passphrase remain under the control of GPG and `pinentry`.
 
-## Limites conhecidos
+## Known limitations
 
-- O preenchimento foi validado em 11 cenários controlados nos perfis temporários do Brave Origin e Chrome estável com o manifesto distribuído: login comum, usuário e senha em etapas separadas, `autocomplete=off`, senhas ou usuários ambíguos, campo escondido ou transparente, campo de nova senha, iframe e página sem login. Os casos ambíguos e sem campo apropriado deixaram os campos vazios. O login real do GitHub passou nos dois navegadores; um segundo formulário externo passou no Chrome estável, mas não carregou no Brave neste ambiente. O Chrome estável foi automatizado em janela normal com `Extensions.loadUnpacked`; ainda falta um teste de instalação pelo seletor de pasta em perfil já usado.
-- O bloqueio do host não limpa o cache de `gpg-agent` nem o acesso pelo terminal. Um pedido que já passou pela última verificação pode responder antes de o bloqueio ser aplicado.
-- Atualizar ou remover uma entrada verifica o hash do arquivo cifrado, mas há uma janela entre a verificação e o subprocesso `pass`.
-- A verificação OpenPGP confirma a presença de pacotes cifrados, mas não autentica o conteúdo nem prova que uma chave privada local consiga abri-lo. Remotos e commits criados por outras ferramentas continuam exigindo confiança no operador.
-- O host é um processo do próprio usuário. Outro processo desse usuário pode invocá-lo; o token e a aprovação limitam acesso, mas não protegem contra um processo local que já controle o usuário ou seu chaveiro.
-- O pacote tem SHA-256 no mesmo release, ainda sem assinatura independente. O manifesto usa uma chave pública fixa para manter o ID da extensão descompactada em Brave e Chrome; a chave privada não entra no repositório nem no pacote. O instalador registra esse ID no host. Publicação em loja e eventual migração de ID ainda precisam de decisão.
-- Nomes de entradas e histórico de commits do Git ficam visíveis para quem acessa o repositório privado. Nunca inclua backup da chave privada nem arquivos em texto claro nesse repositório.
+- The autofill was validated in 11 controlled scenarios in the temporary profiles of Brave Origin and stable Chrome with the distributed manifest: common login, user and password in separate steps, `autocomplete=off`, ambiguous passwords or users, hidden or transparent field, new password field, iframe and page without login. Ambiguous cases without an appropriate field left the fields empty. The actual GitHub login passed in both browsers; A second external form passed in Chrome stable, but did not load in Brave in this environment. Stable Chrome was automated in normal window with `Extensions.loadUnpacked`; There still needs to be an installation test using the folder selector in an already used profile.
+- Locking the host does not clear the `gpg-agent` cache or terminal access. A request that has already passed the last check may respond before the block is applied.
+- Updating or removing an entry checks the hash of the encrypted file, but there is a window between the check and the `pass` subprocess.
+- OpenPGP verification confirms the presence of encrypted packets, but does not authenticate the content or prove that a local private key can open it. Remotes and commits created by other tools continue to require trust in the operator.
+- The host is the user's own process. Another process from that user may invoke it; The token and approval limit access, but do not protect against a local process that already controls the user or their keychain.
+- The package has SHA-256 in the same release, still without an independent signature. The manifest uses a fixed public key to hold the unpacked extension ID in Brave and Chrome; the private key does not go into the repository or the package. The installer registers this ID with the host. Store publishing and eventual ID migration still need to be decided.
+- Git entry names and commit history are visible to anyone accessing the private repository. Never include private key backups or clear text files in this repository.
 
-## Critério para publicar
+## Criteria for publishing
 
-A matriz Brave/Chrome, a instalação e atualização sem checkout local, o clone com remoto privado e os testes de conflito foram executados com dados descartáveis. O workflow do release `v0.2.1` passou; o instalador público instalou desktop, host, extensão `0.2.1` e manifestos para os dois navegadores em um HOME descartável e no usuário local.
+The Brave/Chrome matrix, installation and update without local checkout, clone with private remote, and conflict tests were performed with disposable data. Release `v0.2.1` workflow passed; The public installer installed desktop, host, `0.2.1` extension, and manifests for both browsers on a disposable HOME and local user.

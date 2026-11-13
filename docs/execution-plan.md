@@ -1,113 +1,113 @@
-# Plano de execução: desktop Linux e extensões (histórico)
+# Execution plan: Linux desktop and extensions (history)
 
-O desktop e o host foram migrados para Wails 3, Solid e Go. Para o estado atual e os testes de migração, veja [o plano de migração](wails3-solid-migration-plan.md). As tarefas Tauri/Rust abaixo registram a sequência do MVP anterior.
+The desktop and host have been migrated to Wails 3, Solid, and Go. For the current state and migration testing, see [migration plan](wails3-solid-migration-plan.md). The Tauri/Rust tasks below record the sequence of the previous MVP.
 
-Este plano transforma os requisitos do [README](../README.md) em entregas verificáveis. Cobre o aplicativo Linux, as extensões Brave/Chrome, a interoperabilidade com GNU `pass` no terminal, Git, segurança e distribuição. Android, cliente web e iOS ficam fora deste plano. Estimativas são esforço aproximado de uma pessoa familiarizada com Rust, TypeScript e extensões Chromium, não prazos prometidos.
+This plan turns [README](../README.md) requirements into verifiable deliverables. Covers the Linux application, Brave/Chrome extensions, interoperability with GNU `pass` in the terminal, Git, security and distribution. Android, web client and iOS are excluded from this plan. Estimates are the approximate effort of a person familiar with Rust, TypeScript, and Chromium extensions, not promised deadlines.
 
-## Resultado esperado
+## Expected outcome
 
-Uma instalação local do Passage usa um cofre GNU `pass` existente. O usuário desbloqueia sua chave GPG pelo mecanismo do sistema uma vez; Brave e Chrome podem pedir preenchimento ao mesmo serviço local, sem uma senha independente por extensão. Cada instalação da extensão precisa ser autorizada e pode ser revogada. O usuário também pode ler e editar entradas no desktop, usar `pass` no terminal e sincronizar arquivos cifrados com um Git privado, com conflitos explícitos.
+A local installation of Passage uses an existing GNU `pass` vault. The user unlocks his GPG key by the system mechanism once; Brave and Chrome can request filling from the same local service, without an independent password per extension. Each extension installation must be authorized and can be revoked. The user can also read and edit entries on the desktop, use `pass` in the terminal, and synchronize encrypted files with a private Git, with explicit conflicts.
 
-## Regras de implementação
+## Implementation rules
 
-- Preservar o formato `.gpg`, a estrutura de diretórios, `.gpg-id` e o comportamento de `pass`; não implementar criptografia OpenPGP própria no MVP.
-- Tratar o processo local Rust como autoridade para acesso ao cofre. A interface Tauri e as extensões são clientes; compartilhar regras de domínio, formato de entrada e protocolo em código testável.
-- Não considerar a chave GPG bloqueada só porque a interface escondeu a senha: o cache do `gpg-agent` é independente.
-- Não guardar credenciais abertas em logs, arquivos temporários, Git, armazenamento da extensão ou telemetria.
-- Testar integração real com Brave e Chrome e um cofre descartável antes de marcar uma etapa como concluída.
+- Preserve the format `.gpg`, the directory structure, `.gpg-id`, and the behavior of `pass`; Do not implement your own OpenPGP encryption in MVP.
+- Treat the local Rust process as the authority to access the vault. The Tauri interface and extensions are clients; share domain rules, entry format, and protocol in testable code.
+- Do not consider the GPG key blocked just because the interface hid the password: the `gpg-agent` cache is independent.
+- Do not store open credentials in logs, temporary files, Git, extension storage, or telemetry.
+- Test real integration with Brave and Chrome and a disposable vault before marking a step as complete.
 
-## Marco 0 — Ambiente e referência funcional (1–2 dias)
+## Milestone 0 — Environment and Functional Reference (1–2 days)
 
-1. Criar um cofre descartável com chave GPG de teste, entradas em subpastas, múltiplos destinatários via `.gpg-id`, URLs, usuário, TOTP e Git remoto privado de teste. Não usar credenciais reais.
-2. Exercitar `pass show`, `insert`, `edit`, `rm`, `git pull` e `git push`; registrar a convenção inicial de campos e o comportamento esperado do `gpg-agent`.
-3. Rodar `pnpm check`, build do desktop e da extensão, testes Rust e instalação pelo release atual. Registrar dependências de execução e falhas reproduzíveis.
-4. Validar o app desktop contra o cofre de teste: `PASSWORD_STORE_DIR`, ausência de `pass`, senha incorreta no GPG, atualização após alteração externa e arquivos simbólicos.
+1. Create a disposable vault with test GPG key, subfolder entries, multiple recipients via `.gpg-id`, URLs, user, TOTP, and test private remote Git. Do not use real credentials.
+2. Exercise `pass show`, `insert`, `edit`, `rm`, `git pull` and `git push`; record the initial field convention and expected behavior of `gpg-agent`.
+3. Run `pnpm check`, build the desktop and extension, Rust tests and installation using the current release. Log execution dependencies and reproducible failures.
+4. Validate desktop app against test vault: `PASSWORD_STORE_DIR`, missing `pass`, incorrect password in GPG, update after external change and symbolic files.
 
-**Aceite:** roteiro de testes reproduzível e cofre descartável; leitura no desktop e pelo terminal confirmada; limitações atuais documentadas. Esta etapa estabelece a referência para as seguintes.
+**Accepted:** reproducible test script and disposable vault; reading on the desktop and via the terminal confirmed; documented current limitations. This step establishes the reference for the following ones.
 
-## Marco 1 — Núcleo do cofre e modelo de entrada (3–5 dias)
+## Milestone 1 — Vault Core and Entry Format (3–5 days)
 
-1. Extrair do comando Tauri a lógica Rust de localizar, listar, ler, criar, atualizar e remover entradas. Validar IDs, caminho canônico, symlinks, nomes vazios, erros de subprocesso e resultado UTF-8.
-2. Definir uma convenção de texto interoperável: primeira linha como senha; campos `login`, `url` e `otpauth` nas linhas seguintes. Preservar linhas desconhecidas e a ordem existente ao editar. Documentar como um item antigo sem metadados aparece.
-3. Especificar normalização e correspondência de origem: esquema, host, subdomínio e porta; evitar correspondência por sufixo inseguro (por exemplo `example.com.evil.test`). O domínio da aba será obtido pela extensão, jamais aceito de conteúdo da página.
-4. Implementar operações via `pass` e testar round-trip com `pass show`, incluindo edição pelo terminal seguida de atualização no desktop. Tratar entradas alteradas externamente antes da gravação.
-5. Definir erros estáveis para cofre ausente, chave indisponível, item inválido, conflito de edição e Git, sem colocar segredo nas mensagens.
+1. Extract from the Tauri command the Rust logic of finding, listing, reading, creating, updating, and removing entries. Validate IDs, canonical path, symlinks, empty names, subprocess errors and UTF-8 result.
+2. Define an interoperable text convention: first line as password; fields `login`, `url` and `otpauth` in the following lines. Preserve unknown lines and existing order when editing. Document how an old item without metadata appears.
+3. Specify source normalization and matching: schema, host, subdomain, and port; avoid matching by insecure suffix (e.g. `example.com.evil.test`). The tab domain will be obtained by the extension, never accepted from the page content.
+4. Implement operations via `pass` and round-trip testing with `pass show`, including editing via the terminal followed by updating on the desktop. Handle changed inputs externally before writing.
+5. Define stable errors for missing vault, unavailable key, invalid item, edit conflict and Git, without secreting messages.
 
-**Aceite:** criar, editar e remover pelo núcleo mantém arquivos legíveis por GNU `pass`; campos desconhecidos sobrevivem à edição; entradas maliciosas não escapam do cofre. Testes automatizados usam somente cofre descartável.
+**Accept:** creating, editing and removing by core keeps files readable by GNU `pass`; unknown fields survive editing; Malicious entries do not escape the vault. Automated tests only use disposable vaults.
 
-## Marco 2 — Serviço local e protocolo da extensão (4–7 dias)
+## Milestone 2 — Local service and extension protocol (4–7 days)
 
-1. Implementar executável host de Native Messaging em Rust, com mensagens JSON enquadradas pelo protocolo Chromium, limites de tamanho, versão do protocolo, timeouts e encerramento limpo. Reutilizar o núcleo do Marco 1 sem depender de uma janela Tauri aberta.
-2. Decidir e fixar o modelo de autorização: cada instalação da extensão se identifica e solicita pareamento no desktop; autorização explícita do usuário; credencial local por instalação protegida no perfil do usuário; listagem e revogação. Um ID de extensão permitido no manifesto do host é necessário, mas não basta como autorização da instância.
-3. Definir pedidos mínimos `status`, `pair`, `listForOrigin` e `readForOrigin`. Vincular cada pedido sensível à origem da aba e ao escopo autorizado; validar versão, identidade, estado do pareamento e tamanho do pedido no host.
-4. Evitar enumeração indiscriminada de entradas pelo navegador. O host retorna apenas candidatas para a origem solicitada e só libera senha após ação explícita na extensão. Não enviar segredos em resposta a `ping` ou enquanto o popup apenas abre.
-5. Registrar a decisão sobre processo: host Native Messaging iniciado sob demanda para cada navegador, com autorizações persistidas e GPG compartilhado pelo sistema. Se uma janela Tauri for necessária para aprovar pareamento, expor apenas esse fluxo local.
-6. Fazer testes de protocolo com entrada truncada, JSON inválido, versão incompatível, origem inválida, identidade não pareada e revogação durante uma sessão.
+1. Implement Native Messaging host executable in Rust, with JSON messages framed by the Chromium protocol, size limits, protocol version, timeouts and clean termination. Reuse the Milestone 1 core without relying on an open Tauri window.
+2. Decide and set the authorization model: each installation of the extension identifies itself and requests pairing on the desktop; explicit user authorization; local credential per protected installation in the user profile; listing and revocation. An extension ID allowed in the host manifest is necessary, but not sufficient for instance authorization.
+3. Set minimum orders `status`, `pair`, `listForOrigin` and `readForOrigin`. Link each sensitive request to the tab origin and authorized scope; validate version, identity, pairing status, and order size on the host.
+4. Avoid indiscriminate enumeration of entries by the browser. The host only returns candidates for the requested source and only releases the password after explicit action in the extension. Do not send secrets in response to `ping` or while the popup is just opening.
+5. Record process decision: Native Messaging host initiated on demand for each browser, with persisted authorizations and system-shared GPG. If a Tauri window is required to approve pairing, expose only that local stream.
+6. Perform protocol testing with truncated input, invalid JSON, incompatible version, invalid origin, unpaired identity, and revocation during a session.
 
-**Aceite:** Brave e Chrome conseguem chamar o host instalado; uma instalação não pareada não lê entradas; revogação impede pedidos posteriores; fechar o app Tauri não torna a integração inoperante. Nunca há senha na saída de erro ou logs.
+**Accept:** Brave and Chrome can call the installed host; an unpaired installation does not read inputs; revocation prevents subsequent requests; Closing the Tauri app does not render the integration inoperative. There is never a password in the error output or logs.
 
-## Marco 3 — Extensões Brave e Chrome e preenchimento (4–7 dias)
+## Milestone 3 — Brave and Chrome Extensions and Autofill (4–7 days)
 
-1. Distribuir a mesma base WXT/Manifest V3 para os dois navegadores. Fixar IDs de extensão conforme o canal de distribuição e registrar cada ID nos manifestos do host, sem permissões de origem amplas por padrão.
-2. No popup, obter URL e identidade da aba ativa pela API da extensão, solicitar candidatas ao host, exibir título/usuário e permitir escolher uma entrada. Pedir permissão de site apenas quando necessária.
-3. Implementar script de preenchimento de usuário/senha após clique. Verificar aba, frame e origem imediatamente antes da injeção; recusar páginas privilegiadas e mudança de navegação. Não preencher automaticamente nem enviar segredo ao DOM sem ação do usuário.
-4. Suportar formulários usuais, login em duas etapas e campos com eventos de input/change. Tratar ausência ou ambiguidade de campos sem preencher um destino arbitrário; informar o usuário quando for preciso copiar manualmente.
-5. Limpar referências ao segredo no popup/background após a operação, dentro dos limites do runtime JavaScript. Não persistir senhas em `storage`, histórico ou console.
-6. Testar pareamento, seleção e preenchimento em Brave e Chrome com perfis limpos e páginas de teste controladas. Incluir tentativa de site semelhante, iframe de outra origem e navegação entre seleção e preenchimento.
+1. Distribute the same WXT/Manifest V3 base for both browsers. Pin extension IDs per distribution channel and register each ID in host manifests, without broad origin permissions by default.
+2. In the popup, obtain the URL and identity of the active tab via the extension's API, request candidates from the host, display title/user and allow choosing an entry. Only ask for site permission when necessary.
+3. Implement user/password filling script after click. Check tab, frame and origin immediately before injection; refuse privileged pages and change navigation. Do not autocomplete or send secret to DOM without user action.
+4. Support usual forms, two-step login and fields with input/change events. Treat absence or ambiguity of fields without filling an arbitrary destination; inform the user when it is necessary to copy manually.
+5. Clean up references to the secret in the popup/background after the operation, within the limits of the JavaScript runtime. Do not persist passwords in `storage`, history or console.
+6. Test pairing, selection, and filling in Brave and Chrome with clean profiles and controlled test pages. Include trying a similar site, iframe from another source, and navigation between selection and completion.
 
-**Aceite:** uma entrada do mesmo cofre preenche corretamente nos dois navegadores após uma única autenticação GPG aplicável; cada extensão é pareada/revogada de modo independente; um site sem correspondência não recebe segredo.
+**Accept:** an entry from the same vault populates correctly in both browsers after a single applicable GPG authentication; each extension is paired/revoked independently; an unmatched site receives no secret.
 
-## Marco 4 — Desktop completo, Git e terminal (5–8 dias)
+## Milestone 4 — Complete desktop, Git, and terminal (5–8 days)
 
-1. Adicionar ao desktop criação, edição e exclusão com confirmação adequada, preservação de campos desconhecidos e atualização após mudanças externas. Exibir usuário, URLs e metadados sem revelar a senha por padrão.
-2. Implementar status Git, pull e push para remoto configurado pelo usuário, sem assumir GitHub. Exibir branch, remoto, alterações locais e erros de credencial de forma útil, sem ecoar tokens.
-3. Para sincronizar, detectar trabalho local não salvo e divergência remota. Em conflito na mesma entrada `.gpg`, interromper a operação e oferecer escolha explícita entre versões ou cópia de segurança; nunca substituir silenciosamente. Não tentar mesclar ciphertext como texto.
-4. Garantir que `pass git` e alterações feitas diretamente no repositório continuem funcionando. Atualizar a UI quando o cofre mudar no disco ou oferecer atualização clara e confiável.
-5. Documentar backup/recuperação de chave GPG e acesso ao remoto; destacar que nomes de entradas e histórico Git ficam visíveis a quem acessa o repositório.
+1. Add to desktop creation, editing and deletion with proper confirmation, preservation of unknown fields and update after external changes. View user, URLs and metadata without revealing password by default.
+2. Implement Git status, pull and push for user-configured remote, without taking over GitHub. Display branch, remote, local changes, and credential errors usefully without echoing tokens.
+3. To synchronize, detect unsaved local work and remote divergence. In conflict on the same `.gpg` entry, stop the operation and offer an explicit choice between versions or backup; never replace silently. Do not attempt to merge ciphertext as text.
+4. Ensure that `pass git` and changes made directly to the repository continue to work. Update the UI when the vault changes on disk or provide clear and reliable update.
+5. Document GPG key backup/recovery and remote access; highlight that entry names and Git history are visible to anyone accessing the repository.
 
-**Aceite:** criar e editar no Passage reflete no `pass` e vice-versa; sincronização com GitHub e servidor Git genérico funciona com autenticação já configurada no sistema; conflito reproduzido não perde nenhuma das duas versões.
+**Accept:** creating and editing in Passage reflects in `pass` and vice versa; synchronization with GitHub and generic Git server works with authentication already configured on the system; reproduced conflict does not lose either version.
 
-## Marco 5 — Bloqueio, TOTP e biometria (3–6 dias para bloqueio/TOTP; biometria depende de protótipo)
+## Milestone 5 — Lockdown, TOTP, and biometrics (3–6 days for lockout/TOTP; biometrics dependent on prototype)
 
-1. Definir o que o botão “bloquear” controla: limpar segredos da UI e suspender pedidos sensíveis das extensões imediatamente. Exibir separadamente o estado do `gpg-agent`, pois este pode continuar liberando `pass show` no terminal.
-2. Escolher política de sessão e reautorização para extensão, incluindo expiração, bloqueio de tela e revogação. Verificar as limitações reais do cache de GPG antes de prometer um desbloqueio único em todas as circunstâncias.
-3. Suportar TOTP por convenção compatível com `pass-otp` quando presente; gerar códigos apenas em memória e testar interoperabilidade. Não alterar os arquivos apenas para mostrar o código.
-4. Prototipar biometria Linux com a chave GPG de teste. A digital deve liberar material criptográfico protegido ou um mecanismo do sistema que o libere; uma confirmação biométrica sobre uma chave já aberta não satisfaz desbloqueio após reiniciar. Avaliar integração com PAM/FIDO2 ou armazenamento seguro disponível por distribuição e fallback de senha/chave de recuperação.
-5. Só assumir biometria como requisito entregue após demonstrar o primeiro acesso depois de boot, recuperação sem leitor e comportamento coerente com `gpg-agent` e `pass` no terminal. Se o protótipo não alcançar isso, documentar a limitação e manter fora do release estável.
+1. Define what the “block” button controls: clear UI secrets and suspend sensitive requests from extensions immediately. Display the status of `gpg-agent` separately, as it may continue to release `pass show` on the terminal.
+2. Choose session and reauthorization policy for extension, including expiration, screen lock, and revocation. Check the actual limitations of the GPG cache before promising a one-time unlock under all circumstances.
+3. Support TOTP per convention compatible with `pass-otp` when present; Generate in-memory-only codes and test interoperability. Don't change the files just to show the code.
+4. Prototype Linux biometrics with test GPG key. The fingerprint must release protected cryptographic material or a system mechanism that releases it; a biometric confirmation on an already opened key does not satisfy unlocking after restart. Evaluate integration with PAM/FIDO2 or secure storage available via distribution and password/recovery key fallback.
+5. Only assume biometrics as a requirement delivered after demonstrating the first access after boot, recovery without reader and behavior consistent with `gpg-agent` and `pass` on the terminal. If the prototype does not achieve this, document the limitation and keep it out of the stable release.
 
-**Aceite:** bloqueio do Passage corta acesso das extensões mesmo com GPG em cache; UI descreve corretamente o que o bloqueio cobre; TOTP coincide com `pass-otp`; biometria tem prova de ponta a ponta ou permanece explicitamente experimental.
+**Accept:** Passage blocking cuts access to extensions even with GPG cached; UI correctly describes what the lock covers; TOTP matches `pass-otp`; Biometrics is end-to-end proof or remains explicitly experimental.
 
-## Marco 6 — Distribuição, segurança e release (3–5 dias)
+## Milestone 6 — Distribution, security, and release (3–5 days)
 
-1. Empacotar app Tauri, host Native Messaging, manifestos para Brave/Chrome e extensões como conjunto versionado. O instalador remoto deve instalar/atualizar cada peça e oferecer remoção limpa, sem exigir clone do repositório.
-2. Automatizar build, tipos, testes Rust/TypeScript, artefatos e checksums no CI. Fixar versões de dependências e considerar assinatura dos artefatos antes de recomendar `curl | sh` como caminho principal de instalação.
-3. Revisar permissões da extensão, superfícies de injeção, protocolo, armazenamento local de pareamentos, subprocessos, proteção contra paths arbitrários e exposição acidental de segredos. Fazer revisão manual com um cofre descartável.
-4. Executar matriz final: Brave e Chrome em perfis novos e já usados; cofre local com e sem Git; ausência de `pass`; GPG com e sem cache; lock/revogação; instalador sem repo clonado; atualização de uma versão anterior.
-5. Atualizar README, página de instalação e decisões com funcionalidades efetivamente disponíveis e limitações conhecidas. Publicar release apenas após a matriz passar.
+1. Package Tauri app, Native Messaging host, manifests for Brave/Chrome and extensions as versioned set. The remote installer must install/update each part and offer clean removal, without requiring a clone of the repository.
+2. Automate build, types, Rust/TypeScript tests, artifacts and checksums in CI. Fix dependency versions and consider signing artifacts before recommending `curl | sh` as the main installation path.
+3. Review extension permissions, injection surfaces, protocol, local storage of pairings, subprocesses, protection against arbitrary paths and accidental exposure of secrets. Perform manual review with a disposable vault.
+4. Run final matrix: Brave and Chrome on new and already used profiles; local vault with and without Git; absence of `pass`; GPG with and without cache; lock/revocation; installer without cloned repo; upgrade from a previous version.
+5. Update README, installation page and decisions with actually available features and known limitations. Publish release only after matrix passes.
 
-**Aceite:** instalar em Linux x86_64 por `passage.plu.nz/install.sh` deixa desktop e conexão com os dois navegadores utilizáveis; artefatos são reproduzíveis a partir do commit; README não promete funções pendentes.
+**Accept:** installing on Linux x86_64 by `passage.plu.nz/install.sh` leaves the desktop and connection with both browsers usable; artifacts are reproducible from commit; README does not promise outstanding functions.
 
-## Ordem, dependências e entregas
+## Order, dependencies and deliveries
 
-| Sequência | Depende de | Entrega revisável | Esforço |
+| Sequence | Depends on | Reviewable delivery | Effort |
 | --- | --- | --- | --- |
-| 0. Referência funcional | Código atual | Cofre de teste e roteiro | 1–2 dias |
-| 1. Núcleo e formato | 0 | CRUD compatível com `pass` | 3–5 dias |
-| 2. Host e pareamento | 1 | Protocolo local autorizado | 4–7 dias |
-| 3. Extensões | 2 | Preenchimento Brave/Chrome | 4–7 dias |
-| 4. Desktop e Git | 1; integrações revisadas com 2–3 | Edição e sincronização sem perda silenciosa | 5–8 dias |
-| 5. Bloqueio e TOTP | 2–4 | Política de sessão e códigos; protótipo biométrico separado | 3–6 dias + pesquisa |
-| 6. Release | 0–5 | Instalador completo, CI e documentação | 3–5 dias |
+| 0. Functional reference | Current code | Test vault and test script | 1–2 days |
+| 1. Core and format | 0 | CRUD compatible with `pass` | 3–5 days |
+| 2. Host and pairing | 1 | Authorized local protocol | 4–7 days |
+| 3. Extensions | 2 | Brave/Chrome autofill | 4–7 days |
+| 4. Desktop and Git | 1; revised integrations with 2–3 | Editing and sync without silent data loss | 5–8 days |
+| 5. Blocking and TOTP | 2–4 | Session policy and codes; separate biometric prototype | 3–6 days + research |
+| 6. Release | 0–5 | Full installer, CI and documentation | 3–5 days |
 
-O caminho crítico para validar a ideia é **0 → 1 → 2 → 3**. Após esse fluxo funcionar nos dois navegadores, avançar para Git, bloqueio e distribuição estável. Estimativa total do trabalho definido: **23–40 dias úteis**, mais a investigação biométrica, que não tem estimativa confiável antes do protótipo.
+The critical path to validate the idea is **0 → 1 → 2 → 3**. After this flow works in both browsers, move on to Git, locking and stable distribution. Total estimated work set: **23–40 business days**, plus biometric investigation, which has no reliable estimate prior to prototype.
 
-## Decisões a registrar ao longo da execução
+## Decisions to be recorded throughout execution
 
-- Convenção final dos campos `login`, `url` e `otpauth`; comportamento com entradas antigas e múltiplas URLs.
-- IDs estáveis e canal de distribuição das extensões; formato e local de instalação do host em cada navegador.
-- Identidade de instalação, armazenamento de autorização e interação de pareamento com a janela desktop.
-- Política de lock em relação a `gpg-agent`, sessão do host e desbloqueio inicial.
-- Estratégia de Git para diretório sujo, conflito e recuperação; escolha de biblioteca ou CLI Git.
-- Compatibilidade de TOTP com `pass-otp` e viabilidade de biometria após boot.
+- Final convention of fields `login`, `url` and `otpauth`; behavior with old entries and multiple URLs.
+- Stable IDs and distribution channel for extensions; host installation format and location in each browser.
+- Installation identity, authorization storage, and pairing interaction with the desktop window.
+- Lock policy regarding `gpg-agent`, host session and initial unlock.
+- Git strategy for dirty directory, conflict and recovery; choice of Git library or CLI.
+- TOTP compatibility with `pass-otp` and biometrics feasibility after boot.
 
-Cada marco deve atualizar [decisions.md](decisions.md), README e critérios de aceite com o resultado observado, incluindo desvios de segurança ou escopo.
+Each milestone must update [decisions.md](decisions.md), README, and acceptance criteria with the observed outcome, including security or scope deviations.
