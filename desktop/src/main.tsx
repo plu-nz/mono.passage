@@ -12,13 +12,12 @@ type GitStatus = { branch: string; upstream: string | null; dirty: boolean; ahea
 type GithubStatus = { cli_installed: boolean; login: string | null; vault_git_configured: boolean };
 type Pairing = { origin: string; installationId: string };
 
-type Tab = 'vault' | 'sync' | 'extensions' | 'settings';
+type Tab = 'vault' | 'sync' | 'settings';
 
 // Bottom navigation: icon above label, the active tab in the accent color.
 const tabs: { id: Tab; label: string; icon: () => JSX.Element }[] = [
   { id: 'vault', label: 'Vault', icon: () => <><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></> },
   { id: 'sync', label: 'Git Sync', icon: () => <><path d="M20 11a8 8 0 0 0-14.9-3.9L4 8" /><path d="M4 4v4h4" /><path d="M4 13a8 8 0 0 0 14.9 3.9L20 16" /><path d="M20 20v-4h-4" /></> },
-  { id: 'extensions', label: 'Extensions', icon: () => <><path d="M9 2v6M15 2v6" /><path d="M6 8h12v3a6 6 0 0 1-12 0Z" /><path d="M12 17v5" /></> },
   { id: 'settings', label: 'Settings', icon: () => <><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12" /><circle cx="16" cy="6" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="18" r="2" /></> },
 ];
 
@@ -417,6 +416,17 @@ function App() {
       <button onClick={() => void refreshVaultInfo()} disabled={vaultBusy()}>Check keys and vault</button>
       {vaultError() && <p class="panel-error" role="alert">{vaultError()}</p>}
     </section>}
+    {activeTab() === 'settings' && <section class="panel vault-panel" aria-label="Browser extensions">
+      <h2>Browser extensions</h2>
+      <p>{browserLocked() === null ? 'Access status unavailable.' : browserLocked() ? 'Extension access locked.' : 'Extension access unlocked.'} Locking does not clear the GPG cache or prevent using pass in a terminal.</p>
+      <div class="panel-actions"><button disabled={browserLocked() !== false} onClick={() => void changeBrowserLock(true)}>Lock extensions</button><button disabled={browserLocked() !== true} onClick={() => void changeBrowserLock(false)}>Unlock extensions</button><button onClick={() => void refreshBrowserLock()}>Check lock status</button></div>
+      {browserLockError() && <p class="panel-error" role="alert">{browserLockError()}</p>}
+      <p>Enter the code shown in the extension to authorize this installation.</p>
+      <div class="panel-actions"><input aria-label="Pairing code" value={pairingCode()} maxLength={12} onInput={event => setPairingCode(event.currentTarget.value)} placeholder="12-character code" /><button disabled={!/^[a-f0-9]{12}$/i.test(pairingCode().trim())} onClick={() => void approvePairing()}>Authorize</button></div>
+      {pairings().map(pairing => <div class="pairing"><span>{pairing.origin}<small>{pairing.installationId}</small></span><button onClick={() => void revokePairing(pairing)}>Revoke</button></div>)}
+      <button onClick={() => void refreshPairings()}>Refresh list</button>
+      {pairingError() && <p class="panel-error" role="alert">{pairingError()}</p>}
+    </section>}
     {activeTab() === 'settings' && <section class="panel vault-panel" aria-label="About">
       <h2>About</h2>
       <p class="hint">Passage {appVersion}</p>
@@ -451,17 +461,6 @@ function App() {
       {git() && git().ahead > 0 && git().behind > 0 && <><button onClick={() => void setupGit('git_merge_preserving_both')}>Preserve both versions</button><p class="hint">Merge the commits and, when the same .gpg entry changed on both devices, keep the local version and save the remote version as another encrypted entry. .gpg-id conflicts require manual resolution. Pushing remains a separate action.</p></>}
       {gitError() && <p class="panel-error" role="alert">{gitError()}</p>}
       <p class="hint">Configure the remote through Git or  <code>pass git</code>. Conflicts and local changes prevent automatic sync.</p>
-    </section>}
-    {activeTab() === 'extensions' && <section class="panel" aria-label="Authorized extensions">
-      <h2>Authorized extensions</h2>
-      <p>{browserLocked() === null ? 'Access status unavailable.' : browserLocked() ? 'Extension access locked.' : 'Extension access unlocked.'} Locking does not clear the GPG cache or prevent using pass in a terminal.</p>
-      <div class="panel-actions"><button disabled={browserLocked() !== false} onClick={() => void changeBrowserLock(true)}>Lock extensions</button><button disabled={browserLocked() !== true} onClick={() => void changeBrowserLock(false)}>Unlock extensions</button><button onClick={() => void refreshBrowserLock()}>Check lock status</button></div>
-      {browserLockError() && <p class="panel-error" role="alert">{browserLockError()}</p>}
-      <p>Enter the code shown in the extension to authorize this installation.</p>
-      <div class="panel-actions"><input aria-label="Pairing code" value={pairingCode()} maxLength={12} onInput={event => setPairingCode(event.currentTarget.value)} placeholder="12-character code" /><button disabled={!/^[a-f0-9]{12}$/i.test(pairingCode().trim())} onClick={() => void approvePairing()}>Authorize</button></div>
-      {pairings().map(pairing => <div class="pairing"><span>{pairing.origin}<small>{pairing.installationId}</small></span><button onClick={() => void revokePairing(pairing)}>Revoke</button></div>)}
-      <button onClick={() => void refreshPairings()}>Refresh list</button>
-      {pairingError() && <p class="panel-error" role="alert">{pairingError()}</p>}
     </section>}
     </div>
     {navPosition() === 'bottom' && appBar()}

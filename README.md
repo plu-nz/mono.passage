@@ -68,7 +68,7 @@ After creating, editing or deleting entries, **Record Changes** creates a commit
 
 To generate a code, store a URI `otpauth://totp/...` in a line of the entry, as `pass-otp` does, open the entry, and click **Generate TOTP Code**. Passage also reads a `otpauth: URI` line. The code stays in memory and disappears when it expires or after closing the entry; it is not recorded in the vault.
 
-In the **Authorized Extensions** panel, **Block Extensions** prevents further reading by the Native Messaging host, even if the GPG key is cached. **Release Extensions** restores this access. The state persists until further action; blocking does not close the `gpg-agent` cache and does not prevent `pass show` in the terminal. An order already in progress may end before the block is applied.
+In **Settings → Browser extensions**, **Lock extensions** prevents further reading by the Native Messaging host, even if the GPG key is cached. **Unlock extensions** restores this access. The state persists until further action; blocking does not close the `gpg-agent` cache and does not prevent `pass show` in the terminal. An order already in progress may end before the block is applied.
 
 ## Installation on Linux
 
@@ -78,7 +78,7 @@ On Linux x86_64, with `curl`, `tar` and `sha256sum`. Releases after `v0.2.1` nee
 curl -LsSf https://passage.plu.nz/install.sh | sh
 ```
 
-The script downloads the ready-made binary from [latest release](https://github.com/plu-nz/mono.passage/releases/latest), checks SHA-256 and installs `~/.local/bin/passage` with a menu shortcut. Starting from `v0.2.1`, the package installs the unpacked extension to `~/.local/share/passage/extension-chromium` (or to `XDG_DATA_HOME/passage/extension-chromium`) and automatically registers the host for Brave and Chrome. Upload this folder once to `brave://extensions` and `chrome://extensions`, with developer mode enabled, and approve each browser in the **Authorized Extensions** panel. The ID of the unzipped extension is fixed: `edmjpcolampgjbnmldchmnkinmhakjgm`. You don't need to clone the repository or install Node.js, pnpm or Go to use the release. GNU `pass`, GPG, Python 3, GTK3 and WebKit2GTK 4.1 are runtime dependencies. `~/.local/bin` must be in the session's `PATH`.
+The script downloads the ready-made binary from [latest release](https://github.com/plu-nz/mono.passage/releases/latest), checks SHA-256 and installs `~/.local/bin/passage` with a menu shortcut. Starting from `v0.2.1`, the package installs the unpacked extension to `~/.local/share/passage/extension-chromium` (or to `XDG_DATA_HOME/passage/extension-chromium`) and automatically registers the host for Brave and Chrome. Upload this folder once to `brave://extensions` and `chrome://extensions`, with developer mode enabled, and approve each browser in **Settings → Browser extensions**. The ID of the unzipped extension is fixed: `edmjpcolampgjbnmldchmnkinmhakjgm`. You don't need to clone the repository or install Node.js, pnpm or Go to use the release. GNU `pass`, GPG, Python 3, GTK3 and WebKit2GTK 4.1 are runtime dependencies. `~/.local/bin` must be in the session's `PATH`.
 
 The same command upgrades an existing installation to the latest release. Close and open Passage after updating and click **Reload** on the extension in `brave://extensions` and `chrome://extensions` to apply the new version. The installed version changes only when a new release is published.
 
