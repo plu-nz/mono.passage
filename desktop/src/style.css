@@ -84,7 +84,7 @@ nav { padding: 10px; border-right: 1px solid var(--line); overflow: auto; } nav 
 
 /* Compact desktop layout inspired by the Stitch Passage prototype. */
 body { min-height: 100vh; background: var(--page); }
-.shell { display: flex; flex-direction: column; width: min(100%, 1100px); min-height: 100vh; max-width: none; padding: 0; background: var(--surface); border-inline: 1px solid var(--line); }
+.shell { display: flex; flex-direction: column; width: min(100%, 1100px); min-height: 100vh; max-width: none; padding: 0; background: var(--surface); }
 .status-line { display: flex; align-items: center; gap: 8px; }
 .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--pending); }
 .status-dot.ready { background: var(--ready); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ready) 14%, transparent); }
@@ -92,7 +92,7 @@ body { min-height: 100vh; background: var(--page); }
 .app-footer { position: sticky; bottom: 0; display: flex; align-items: center; gap: 14px; padding: 6px 22px; border-top: 1px solid var(--line); background: var(--surface); color: var(--muted); font-size: 11px; }
 .app-footer code { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .app-version { margin-left: auto; opacity: .8; }
-.app-tabs { display: flex; gap: 4px; padding: 0 0 16px; overflow-x: auto; border-bottom: 1px solid var(--line); }
+.app-tabs { display: flex; gap: 4px; padding: 0 0 16px; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); }
 .app-tabs button { flex: 0 0 auto; padding: 8px 12px; border-color: transparent; background: transparent; color: var(--muted); font-size: 12px; }
 .app-tabs button.active { color: var(--on-accent); background: var(--accent); border-color: var(--accent); font-weight: 700; }
 .toolbar { margin: 18px 0 14px; }
