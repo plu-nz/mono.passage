@@ -9,7 +9,7 @@ Este registro separa o que já foi implementado das escolhas ainda provisórias.
 
 ## 1. Repository structure
 
-The pnpm workspace lists `desktop/`, `extension/`, and `core/` explicitly at the repository root. `desktop/` contains the Wails/Go application and its Solid UI in `desktop/src/`; `extension/` contains the Chromium extension; `core/` remains the shared `@passage/core` TypeScript package. The Go module stays at the root, with the Native Messaging binary in `native-host/` and shared Go code in `internal/`. `website/`, `docs/`, and `scripts/` retain their existing roles.
+The pnpm workspace lists `desktop/`, `extension/`, and `core/` explicitly at the repository root. `desktop/` contains the Wails/Go application and its Solid UI in `desktop/src/`; `extension/` contains the Chromium extension; `core/` remains the shared `@passage/core` TypeScript package. The Go module stays at the root, with the Native Messaging binary in `native-host/` and shared Go code in `internal/`. `web/`, `docs/`, and `scripts/` retain their existing roles.
 
 Placing each application and package at the root removes the generic `src/` and `packages/` containers. Explicit workspace entries make package discovery independent of directory naming and keep paths in build scripts, CI, and documentation short. The `internal/` layout follows Go's shared-code convention; the desktop UI's own `src/` remains inside `desktop/`. This layout does not change the vault format or introduce an OpenPGP implementation.
 
@@ -70,8 +70,8 @@ O desktop lê URI `otpauth://totp/...` em linha própria, como no `pass-otp`, e 
 
 ## 6. Endereço do instalador
 
-O código público fica em `github.com/plu-nz/passage`. A raiz `https://passage.plu.nz/` publica a landing page de `website/index.html` por meio do Cloudflare Worker `passage-landing`, associado ao subdomínio como Worker Custom Domain. O endereço `https://passage.plu.nz/install.sh` continua sendo um redirecionamento HTTP 302 da Cloudflare para `https://raw.githubusercontent.com/plu-nz/passage/main/scripts/install.sh`, por uma Single Redirect Rule na fase `http_request_dynamic_redirect`. O instalador continua versionado neste repositório; o atalho não hospeda uma segunda cópia.
+O código público fica em `github.com/plu-nz/passage`. A raiz `https://passage.plu.nz/` publica a landing page de `web/index.html` por meio do Cloudflare Worker `passage-landing`, associado ao subdomínio como Worker Custom Domain. O endereço `https://passage.plu.nz/install.sh` continua sendo um redirecionamento HTTP 302 da Cloudflare para `https://raw.githubusercontent.com/plu-nz/passage/main/scripts/install.sh`, por uma Single Redirect Rule na fase `http_request_dynamic_redirect`. O instalador continua versionado neste repositório; o atalho não hospeda uma segunda cópia.
 
-Para reconstruir o Worker, execute `node website/build-worker.mjs`; o resultado fica em `website/dist/worker.js`. O deploy atual é manual pela API da Cloudflare. Mudanças na página exigem gerar e publicar novamente o Worker; um push no GitHub, por si só, não atualiza o site. O Worker também implementa o redirecionamento `/install.sh` como fallback caso a regra da Cloudflare seja removida.
+Para reconstruir o Worker, execute `node web/build-worker.mjs`; o resultado fica em `web/dist/worker.js`. O deploy atual é manual pela API da Cloudflare. Mudanças na página exigem gerar e publicar novamente o Worker; um push no GitHub, por si só, não atualiza o site. O Worker também implementa o redirecionamento `/install.sh` como fallback caso a regra da Cloudflare seja removida.
 
 O comando curto executa o script da branch `main`. O script baixa o pacote Linux x86_64 do release mais recente, verifica seu SHA-256 e instala sem clonar ou compilar o repositório. O arquivo de checksum protege contra transferência corrompida, mas ambos vêm do mesmo release. Versões fixas e assinatura de artefatos podem ser adicionadas antes de uma distribuição estável.

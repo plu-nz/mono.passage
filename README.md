@@ -16,7 +16,7 @@ O app desktop permite escolher um cofre GNU pass existente, criar outro com uma 
 | `desktop` | Interface Solid/Vite e aplicativo Wails 3/Go para Linux. |
 | `extension` | Extensão Manifest V3 para Brave e Chrome, construída com WXT. |
 | `native-host` | Conector local Native Messaging para as extensões. |
-| `website` | Landing page estática e gerador do Worker que a publica. |
+| `web` | Landing page estática e gerador do Worker que a publica. |
 
 Para desenvolver no Linux, instale Node.js, pnpm, Go 1.26+, GNU `pass`, GPG, GTK3 e WebKit2GTK 4.1. O desktop usa Wails 3.0.0 com o backend GTK3 nesta fase; veja as [dependências Linux do Wails](https://v3.wails.io/getting-started/installation/). Na raiz do repositório:
 
