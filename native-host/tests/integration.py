@@ -11,7 +11,7 @@ import time
 import unittest
 
 
-HOST = Path(sys.argv.pop(1)).resolve() if len(sys.argv) > 1 else Path("src/native-host/target/debug/passage-native-host").resolve()
+HOST = Path(sys.argv.pop(1)).resolve() if len(sys.argv) > 1 else Path("native-host/build/passage-native-host").resolve()
 ORIGIN_A = "chrome-extension://" + "a" * 32 + "/"
 ORIGIN_B = "chrome-extension://" + "b" * 32 + "/"
 

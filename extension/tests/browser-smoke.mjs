@@ -1,4 +1,4 @@
-// Run with: node src/extension/tests/browser-smoke.mjs BROWSER HOST INSTALLER
+// Run with: node extension/tests/browser-smoke.mjs BROWSER HOST INSTALLER
 // Uses a disposable profile and vault; never opens the user's own browser profile.
 import { spawn, spawnSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync, cpSync } from 'node:fs';
@@ -8,9 +8,9 @@ import https from 'node:https';
 
 const [browserBin, hostBin, installer, scenario = 'standard'] = process.argv.slice(2);
 if (!browserBin || !hostBin || !installer) throw new Error('Provide browser, host, and installer paths');
-const extensionDir = resolve('src/extension/.output/chrome-mv3');
+const extensionDir = resolve('extension/.output/chrome-mv3');
 if (!existsSync(join(extensionDir, 'manifest.json'))) throw new Error('Run pnpm build:extension first');
-const expectedId = JSON.parse(readFileSync(resolve('src/extension/identity.json'), 'utf8')).id;
+const expectedId = JSON.parse(readFileSync(resolve('extension/identity.json'), 'utf8')).id;
 const root = mkdtempSync(join(tmpdir(), 'passage-browser-test-'));
 // The copy gives each run a fresh extension ID while preserving shipped permissions.
 const testExtensionDir = join(root, 'extension');
