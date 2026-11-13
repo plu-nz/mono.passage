@@ -43,12 +43,12 @@ func settingsPath() (string, error) {
 	if base == "" {
 		home, err := os.UserHomeDir()
 		if err != nil {
-			return "", errors.New("HOME não está definido")
+			return "", errors.New("HOME is not defined")
 		}
 		base = filepath.Join(home, ".config")
 	}
 	if !filepath.IsAbs(base) {
-		return "", errors.New("XDG_CONFIG_HOME precisa ser absoluto")
+		return "", errors.New("XDG_CONFIG_HOME must be an absolute path")
 	}
 	return filepath.Join(base, "passage", "settings.json"), nil
 }
@@ -64,16 +64,16 @@ func ActiveVaultPath() (string, string, error) {
 	if err == nil {
 		var s settings
 		if json.Unmarshal(data, &s) != nil || !filepath.IsAbs(s.VaultPath) {
-			return "", "", errors.New("Configuração do cofre inválida. Corrija settings.json")
+			return "", "", errors.New("Invalid vault configuration. Fix settings.json")
 		}
 		return s.VaultPath, "selection", nil
 	}
 	if !errors.Is(err, os.ErrNotExist) {
-		return "", "", errors.New("Não foi possível ler as configurações do Passage")
+		return "", "", errors.New("Unable to read Passage settings")
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return "", "", errors.New("HOME não está definido")
+		return "", "", errors.New("HOME is not defined")
 	}
 	return filepath.Join(home, ".password-store"), "default", nil
 }
@@ -105,7 +105,7 @@ func VaultInfoCurrent() (VaultInfo, error) {
 func available(name string) bool { return exec.Command(name, "--version").Run() == nil }
 func allowed() error {
 	if _, ok := os.LookupEnv("PASSWORD_STORE_DIR"); ok {
-		return errors.New("PASSWORD_STORE_DIR está definido e prevalece sobre a seleção no Passage")
+		return errors.New("PASSWORD_STORE_DIR is defined and takes precedence over the selection in Passage")
 	}
 	return nil
 }
@@ -116,12 +116,12 @@ func persist(path string) error {
 	}
 	parent := filepath.Dir(config)
 	if err = os.MkdirAll(parent, 0700); err != nil {
-		return errors.New("Não foi possível criar a pasta de configuração")
+		return errors.New("Unable to create configuration folder")
 	}
 	data, _ := json.Marshal(settings{VaultPath: path})
 	f, err := os.CreateTemp(parent, ".settings-*.tmp")
 	if err != nil {
-		return errors.New("Não foi possível salvar a configuração")
+		return errors.New("Unable to save configuration")
 	}
 	defer os.Remove(f.Name())
 	if err = f.Chmod(0600); err != nil {
@@ -146,7 +146,7 @@ func SelectVault(path string) (VaultInfo, error) {
 		return VaultInfo{}, err
 	}
 	if !filepath.IsAbs(path) || !IsInitialized(path) {
-		return VaultInfo{}, errors.New("Escolha um cofre GNU pass existente com .gpg-id")
+		return VaultInfo{}, errors.New("Choose an existing GNU pass vault with .gpg-id")
 	}
 	canonical, err := filepath.EvalSymlinks(path)
 	if err != nil {
@@ -164,13 +164,13 @@ func CloneVault(path, rawURL string) (VaultInfo, error) {
 	}
 	rawURL = strings.TrimSpace(rawURL)
 	if rawURL == "" || strings.HasPrefix(rawURL, "-") || strings.ContainsAny(rawURL, "\x00\r\n") {
-		return VaultInfo{}, errors.New("URL do remoto Git inválida")
+		return VaultInfo{}, errors.New("Invalid Git remote URL")
 	}
 	if err := validateNewPath(path); err != nil {
 		return VaultInfo{}, err
 	}
 	if _, err := os.Lstat(path); err == nil {
-		return VaultInfo{}, errors.New("Escolha um diretório que ainda não existe para clonar o cofre")
+		return VaultInfo{}, errors.New("Choose a directory that doesn't yet exist to clone the vault")
 	}
 	useGitHub := strings.HasPrefix(rawURL, "https://github.com/") && github.Status("").Login != nil
 	args := []string{}
@@ -181,14 +181,14 @@ func CloneVault(path, rawURL string) (VaultInfo, error) {
 	cmd := exec.Command("git", args...)
 	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0", "GIT_ASKPASS=/bin/false")
 	if err := cmd.Run(); err != nil {
-		return VaultInfo{}, errors.New("Não foi possível clonar o cofre. Verifique URL, acesso e branch main. Se Git criou o diretório, revise-o antes de tentar novamente")
+		return VaultInfo{}, errors.New("Unable to clone the vault. Check URL, access and branch main. If Git created the directory, review it before trying again")
 	}
 	canonical, err := filepath.EvalSymlinks(path)
 	if err != nil {
-		return VaultInfo{}, errors.New("Cofre clonado, mas caminho indisponível")
+		return VaultInfo{}, errors.New("Vault cloned but path unavailable")
 	}
 	if !IsInitialized(canonical) {
-		return VaultInfo{}, errors.New("Repositório clonado sem .gpg-id na raiz. Revise o diretório; ele não foi selecionado")
+		return VaultInfo{}, errors.New("Cloned repository has no .gpg-id at its root. Review the directory; it was not selected")
 	}
 	if useGitHub {
 		git, err := gitvault.Open(canonical)
@@ -206,18 +206,18 @@ func CloneVault(path, rawURL string) (VaultInfo, error) {
 }
 func validateNewPath(path string) error {
 	if !filepath.IsAbs(path) || filepath.Clean(path) == "/" {
-		return errors.New("Escolha um diretório novo com caminho absoluto")
+		return errors.New("Choose a new directory with absolute path")
 	}
 	if info, err := os.Lstat(path); err == nil {
 		if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
-			return errors.New("Link ou arquivo inválido para criar cofre")
+			return errors.New("Invalid link or file to create vault")
 		}
 		entries, err := os.ReadDir(path)
 		if err != nil {
 			return err
 		}
 		if len(entries) != 0 {
-			return errors.New("O diretório do novo cofre precisa estar vazio")
+			return errors.New("The new vault directory must be empty")
 		}
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return err
@@ -225,7 +225,7 @@ func validateNewPath(path string) error {
 		parent := filepath.Dir(path)
 		info, err := os.Stat(parent)
 		if err != nil || !info.IsDir() {
-			return errors.New("O diretório pai precisa existir")
+			return errors.New("The parent directory must exist")
 		}
 	}
 	return nil
@@ -235,7 +235,7 @@ func CreateVault(path, keyID string) (VaultInfo, error) {
 		return VaultInfo{}, err
 	}
 	if !fingerprintPattern.MatchString(keyID) {
-		return VaultInfo{}, errors.New("Selecione uma chave GPG privada válida")
+		return VaultInfo{}, errors.New("Select a valid GPG private key")
 	}
 	found := false
 	for _, key := range GPGKeys() {
@@ -245,7 +245,7 @@ func CreateVault(path, keyID string) (VaultInfo, error) {
 		}
 	}
 	if !found {
-		return VaultInfo{}, errors.New("Selecione uma chave GPG privada capaz de cifrar")
+		return VaultInfo{}, errors.New("Select a private GPG key that can encrypt")
 	}
 	if err := validateNewPath(path); err != nil {
 		return VaultInfo{}, err
@@ -253,14 +253,14 @@ func CreateVault(path, keyID string) (VaultInfo, error) {
 	cmd := exec.Command("pass", "init", keyID)
 	cmd.Env = append(os.Environ(), "PASSWORD_STORE_DIR="+path, "GIT_TERMINAL_PROMPT=0")
 	if err := cmd.Run(); err != nil {
-		return VaultInfo{}, errors.New("Não foi possível criar o cofre. Verifique GPG e permissões")
+		return VaultInfo{}, errors.New("Unable to create vault. Check GPG and permissions")
 	}
 	canonical, err := filepath.EvalSymlinks(path)
 	if err != nil {
 		return VaultInfo{}, err
 	}
 	if !IsInitialized(canonical) {
-		return VaultInfo{}, errors.New("GNU pass não criou .gpg-id")
+		return VaultInfo{}, errors.New("GNU pass did not create .gpg-id")
 	}
 	if err = persist(canonical); err != nil {
 		return VaultInfo{}, err
@@ -318,7 +318,7 @@ func CreateKeyAndVault(path, name, email string) (CreatedKeyVault, error) {
 		return CreatedKeyVault{}, err
 	}
 	if !available("gpg") || !available("pass") {
-		return CreatedKeyVault{}, errors.New("GNU pass e GPG precisam estar instalados")
+		return CreatedKeyVault{}, errors.New("GNU pass and GPG must be installed")
 	}
 	uid, err := validatedUID(name, email)
 	if err != nil {
@@ -330,15 +330,15 @@ func validatedUID(name, email string) (string, error) {
 	name = strings.TrimSpace(name)
 	email = strings.TrimSpace(email)
 	if name == "" || len(name) > 100 || strings.ContainsAny(name, "<>()\r\n\x00") || len(email) > 254 || !strings.Contains(email, "@") || strings.ContainsAny(email, " \r\n\x00") {
-		return "", errors.New("Nome ou e-mail inválido para a chave GPG")
+		return "", errors.New("Invalid name or email for GPG key")
 	}
 	parts := strings.Split(email, "@")
 	if len(parts) != 2 || parts[0] == "" || !strings.Contains(parts[1], ".") {
-		return "", errors.New("E-mail inválido para a chave GPG")
+		return "", errors.New("Invalid email for GPG key")
 	}
 	for _, r := range email {
 		if !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || strings.ContainsRune("._+@-", r)) {
-			return "", errors.New("E-mail inválido para a chave GPG")
+			return "", errors.New("Invalid email for GPG key")
 		}
 	}
 	return name + " <" + email + ">", nil
@@ -348,12 +348,12 @@ func generateKey(uid string) (string, error) {
 	fp := createdFingerprint(out)
 	if err != nil {
 		if fp != "" {
-			return "", fmt.Errorf("GPG não concluiu geração; a chave %s pode existir. Verifique o pinentry", fp)
+			return "", fmt.Errorf("GPG did not complete generation; the key %s may exist. Check pinentry", fp)
 		}
-		return "", errors.New("GPG não criou a chave. Verifique o pinentry")
+		return "", errors.New("GPG did not create the key. Check pinentry")
 	}
 	if fp == "" {
-		return "", errors.New("GPG concluiu sem informar fingerprint; confira suas chaves")
+		return "", errors.New("GPG finished without reporting a fingerprint; check your keys")
 	}
 	return fp, nil
 }
@@ -376,7 +376,7 @@ func createKeyAndVaultWith(path, uid string, generate func(string) (string, erro
 	}
 	info, err := CreateVault(path, fp)
 	if err != nil {
-		return CreatedKeyVault{}, fmt.Errorf("Chave GPG %s criada, mas cofre não concluído: %w. A chave foi preservada", fp, err)
+		return CreatedKeyVault{}, fmt.Errorf("GPG key %s created but vault not completed: %w. The key has been preserved", fp, err)
 	}
 	return CreatedKeyVault{Info: info, Fingerprint: fp}, nil
 }

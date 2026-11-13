@@ -23,14 +23,14 @@ type VaultState struct {
 
 func (*DesktopService) VaultState() VaultState {
 	if err := exec.Command("pass", "--version").Run(); err != nil {
-		return VaultState{Kind: "unavailable", Reason: "GNU pass não está instalado ou não está no PATH."}
+		return VaultState{Kind: "unavailable", Reason: "GNU pass is not installed or is not in the PATH."}
 	}
 	v, err := vault.OpenEnv()
 	if err != nil {
 		return VaultState{Kind: "unavailable", Reason: err.Error()}
 	}
 	if !setup.IsInitialized(v.Root()) {
-		return VaultState{Kind: "unavailable", Reason: "O diretório ainda não foi inicializado com GNU pass (.gpg-id ausente)."}
+		return VaultState{Kind: "unavailable", Reason: "The directory is not yet initialized with GNU pass (.gpg-id missing)."}
 	}
 	return VaultState{Kind: "available"}
 }
@@ -210,7 +210,7 @@ func (*DesktopService) ListPairings() ([]pairing.Pairing, error) {
 }
 func (*DesktopService) ApprovePairing(code string) error {
 	if !pairingCode.MatchString(code) {
-		return errors.New("Código de pareamento inválido")
+		return errors.New("Invalid pairing code")
 	}
 	s, err := pairing.OpenDefault()
 	if err != nil {
@@ -221,7 +221,7 @@ func (*DesktopService) ApprovePairing(code string) error {
 }
 func (*DesktopService) RevokePairing(origin, installationID string) error {
 	if !extensionOrigin.MatchString(origin) || installationID == "" || len(installationID) > 128 {
-		return errors.New("Pareamento inválido")
+		return errors.New("Invalid pairing")
 	}
 	s, err := pairing.OpenDefault()
 	if err != nil {

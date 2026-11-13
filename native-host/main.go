@@ -33,7 +33,7 @@ func run(args []string) error {
 		return err
 	}
 	if len(args) == 0 {
-		return errors.New("origem da extensão ausente")
+		return errors.New("missing extension source")
 	}
 	switch args[0] {
 	case "list":
@@ -71,20 +71,20 @@ func run(args []string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Pareamento aprovado: %s (%s) — %s\n", item.Origin, item.InstallationID, item.VaultPath)
+		fmt.Printf("Pairing approved: %s (%s) — %s\n", item.Origin, item.InstallationID, item.VaultPath)
 		return nil
 	case "revoke":
 		if len(args) != 3 || !extensionPattern.MatchString(args[1]) || args[2] == "" {
-			return errors.New("uso: passage-native-host revoke ORIGEM ID")
+			return errors.New("usage: passage-native-host revoke ORIGIN ID")
 		}
 		removed, err := store.Revoke(args[1], args[2])
 		if err != nil {
 			return err
 		}
 		if !removed {
-			return errors.New("instalação não encontrada")
+			return errors.New("installation not found")
 		}
-		fmt.Println("Acesso revogado.")
+		fmt.Println("Access revoked.")
 		return nil
 	case "lock-status":
 		locked, err := store.Locked()
@@ -98,14 +98,14 @@ func run(args []string) error {
 			return err
 		}
 		if locked {
-			fmt.Println("Acesso das extensões bloqueado.")
+			fmt.Println("Extension access blocked.")
 		} else {
-			fmt.Println("Acesso das extensões liberado.")
+			fmt.Println("Extension access unlocked.")
 		}
 		return nil
 	}
 	if !extensionPattern.MatchString(args[0]) {
-		return errors.New("origem da extensão inválida")
+		return errors.New("invalid extension source")
 	}
 	for {
 		request, err := readMessage(os.Stdin)
@@ -137,7 +137,7 @@ func readMessage(input io.Reader) (map[string]json.RawMessage, error) {
 	}
 	var request map[string]json.RawMessage
 	if err := json.Unmarshal(data, &request); err != nil || request == nil {
-		return nil, errors.New("JSON inválido")
+		return nil, errors.New("Invalid JSON")
 	}
 	return request, nil
 }
@@ -159,7 +159,7 @@ func writeMessage(output io.Writer, value any) error {
 func field(request map[string]json.RawMessage, name string) (string, error) {
 	var value string
 	if err := json.Unmarshal(request[name], &value); err != nil || len(value) == 0 || len(value) > 4096 {
-		return "", fmt.Errorf("campo %s inválido", name)
+		return "", fmt.Errorf("invalid %s field", name)
 	}
 	return value, nil
 }
@@ -222,7 +222,7 @@ func dispatch(store *pairing.Store, extension string, request map[string]json.Ra
 		}
 		allowed, err := store.Authorized(extension, id, token, root)
 		if err != nil || !allowed {
-			return nil, errors.New("extensão não autorizada")
+			return nil, errors.New("unauthorized extension")
 		}
 		entries, err := active.List()
 		if err != nil {
@@ -239,7 +239,7 @@ func dispatch(store *pairing.Store, extension string, request map[string]json.Ra
 			}
 			allowed, err = store.Authorized(extension, id, token, root)
 			if err != nil || !allowed {
-				return nil, errors.New("acesso bloqueado ou revogado")
+				return nil, errors.New("access locked or revoked")
 			}
 			return map[string]any{"type": "entries", "entries": matched}, nil
 		}
@@ -255,15 +255,15 @@ func dispatch(store *pairing.Store, extension string, request map[string]json.Ra
 			}
 		}
 		if !found {
-			return nil, errors.New("entrada indisponível")
+			return nil, errors.New("entry unavailable")
 		}
 		secret, err := active.Read(entryID)
 		if err != nil || !matchesSite(secret.URLs, origin) {
-			return nil, errors.New("entrada indisponível")
+			return nil, errors.New("entry unavailable")
 		}
 		allowed, err = store.Authorized(extension, id, token, root)
 		if err != nil || !allowed {
-			return nil, errors.New("acesso bloqueado ou revogado")
+			return nil, errors.New("access locked or revoked")
 		}
 		return map[string]any{"type": "secret", "id": entryID, "username": secret.Username, "password": secret.Password}, nil
 	}
@@ -273,10 +273,10 @@ func dispatch(store *pairing.Store, extension string, request map[string]json.Ra
 func siteOrigin(raw string, exact bool) (string, error) {
 	u, err := url.Parse(raw)
 	if err != nil || u.Scheme != "https" || u.Hostname() == "" || u.User != nil || u.Opaque != "" {
-		return "", errors.New("origem inválida")
+		return "", errors.New("invalid origin")
 	}
 	if exact && (u.Path != "" && u.Path != "/" || u.RawQuery != "" || u.Fragment != "") {
-		return "", errors.New("origem inválida")
+		return "", errors.New("invalid origin")
 	}
 	host := strings.ToLower(u.Hostname())
 	if strings.Contains(host, ":") {

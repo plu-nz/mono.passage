@@ -52,12 +52,12 @@ func OpenDefault() (*Store, error) {
 	if base == "" {
 		home := os.Getenv("HOME")
 		if home == "" {
-			return nil, errors.New("HOME indisponível")
+			return nil, errors.New("HOME unavailable")
 		}
 		base = filepath.Join(home, ".config")
 	}
 	if !filepath.IsAbs(base) {
-		return nil, errors.New("XDG_CONFIG_HOME precisa ser absoluto")
+		return nil, errors.New("XDG_CONFIG_HOME must be an absolute path")
 	}
 	return OpenAt(filepath.Join(base, "passage"))
 }
@@ -65,10 +65,10 @@ func OpenDefault() (*Store, error) {
 // OpenAt is useful for isolated tests; its argument is the Passage config directory.
 func OpenAt(dir string) (*Store, error) {
 	if !filepath.IsAbs(dir) {
-		return nil, errors.New("diretório de configuração precisa ser absoluto")
+		return nil, errors.New("configuration directory needs to be absolute")
 	}
 	if info, err := os.Lstat(dir); err == nil && !info.IsDir() {
-		return nil, errors.New("diretório de configuração inválido")
+		return nil, errors.New("invalid configuration directory")
 	} else if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}
@@ -94,7 +94,7 @@ func tokenHash(token string) [32]byte { return sha256.Sum256([]byte(token)) }
 func (s *Store) withState(fn func(*state) error) error {
 	lockPath := filepath.Join(s.dir, "native-host.lock")
 	if info, err := os.Lstat(lockPath); err == nil && info.Mode()&os.ModeSymlink != 0 {
-		return errors.New("arquivo de lock inválido")
+		return errors.New("invalid lock file")
 	} else if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
@@ -110,7 +110,7 @@ func (s *Store) withState(fn func(*state) error) error {
 
 	path := filepath.Join(s.dir, "native-host.json")
 	if info, err := os.Lstat(path); err == nil && info.Mode()&os.ModeSymlink != 0 {
-		return errors.New("estado local inválido")
+		return errors.New("invalid local state")
 	} else if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
@@ -118,7 +118,7 @@ func (s *Store) withState(fn func(*state) error) error {
 	data, err := os.ReadFile(path)
 	if err == nil {
 		if len(data) > 1024*1024 || json.Unmarshal(data, &current) != nil {
-			return errors.New("estado local inválido")
+			return errors.New("invalid local state")
 		}
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return err
@@ -185,7 +185,7 @@ func normalize(current *state) {
 
 func (s *Store) Pair(origin, installationID, vaultPath string) (string, int64, error) {
 	if origin == "" || installationID == "" || vaultPath == "" {
-		return "", 0, errors.New("pareamento inválido")
+		return "", 0, errors.New("invalid pairing")
 	}
 	var code string
 	var expires int64
@@ -219,7 +219,7 @@ func (s *Store) Approve(code string) (Pairing, error) {
 				return nil
 			}
 		}
-		return errors.New("código inválido ou expirado")
+		return errors.New("invalid or expired code")
 	})
 	return approved, err
 }

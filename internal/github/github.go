@@ -65,20 +65,20 @@ func helperConfigured(root string) bool {
 }
 func StartLogin() error {
 	if !Status("").CLIInstalled {
-		return errors.New("Instale o GitHub CLI (gh) para conectar sua conta")
+		return errors.New("Install GitHub CLI (gh) to connect your account")
 	}
 	cmd := exec.Command("xdg-terminal-exec", "--title=Passage - GitHub", "--", "gh", "auth", "login", "--hostname", "github.com", "--web", "--git-protocol", "https")
 	cmd.Stdin = nil
 	cmd.Stdout = nil
 	cmd.Stderr = nil
 	if err := cmd.Start(); err != nil {
-		return errors.New("Não foi possível abrir o terminal. Execute gh auth login --web no terminal")
+		return errors.New("Unable to open terminal. Run gh auth login --web in terminal")
 	}
 	return cmd.Process.Release()
 }
 func ConfigureVault(root string) (StatusInfo, error) {
 	if Status(root).Login == nil {
-		return StatusInfo{}, errors.New("Conecte sua conta do GitHub antes de ativá-la neste cofre")
+		return StatusInfo{}, errors.New("Connect your GitHub account before activating it in this vault")
 	}
 	g, err := gitvault.Open(root)
 	if err != nil {

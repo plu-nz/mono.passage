@@ -44,7 +44,7 @@ func OpenEnv() (*Vault, error) {
 func Open(path string) (*Vault, error) {
 	info, err := os.Stat(path)
 	if err != nil || !info.IsDir() {
-		return nil, fmt.Errorf("Cofre não encontrado em %s", path)
+		return nil, fmt.Errorf("Vault not found at %s", path)
 	}
 	root, err := filepath.EvalSymlinks(path)
 	if err != nil {
@@ -59,15 +59,15 @@ func Open(path string) (*Vault, error) {
 func (v *Vault) Root() string { return v.root }
 func ValidateID(id string) error {
 	if id == "" || strings.HasSuffix(id, ".gpg") || strings.ContainsAny(id, "\\\x00") || filepath.IsAbs(id) {
-		return errors.New("Identificador de entrada inválido")
+		return errors.New("Invalid entry identifier")
 	}
 	for _, part := range strings.Split(id, "/") {
 		if part == "" || part == "." || part == ".." || strings.HasPrefix(part, "-") {
-			return errors.New("Identificador de entrada inválido")
+			return errors.New("Invalid entry identifier")
 		}
 	}
 	if strings.IndexFunc(id, unicode.IsControl) >= 0 {
-		return errors.New("Identificador de entrada inválido")
+		return errors.New("Invalid entry identifier")
 	}
 	return nil
 }
@@ -80,7 +80,7 @@ func (v *Vault) safeTarget(id string) (string, error) {
 		current = filepath.Join(current, part)
 		info, err := os.Lstat(current)
 		if err == nil && info.Mode()&os.ModeSymlink != 0 {
-			return "", errors.New("Links simbólicos não são permitidos no caminho da entrada")
+			return "", errors.New("Symbolic links are not allowed in the entry path")
 		}
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return "", err
@@ -95,14 +95,14 @@ func (v *Vault) existingFile(id string) (string, error) {
 	}
 	info, err := os.Stat(target)
 	if err != nil || !info.Mode().IsRegular() {
-		return "", errors.New("Entrada não encontrada")
+		return "", errors.New("Entry not found")
 	}
 	canonical, err := filepath.EvalSymlinks(target)
 	if err != nil {
 		return "", err
 	}
 	if !strings.HasPrefix(canonical, v.root+string(os.PathSeparator)) {
-		return "", errors.New("Entrada fora do cofre")
+		return "", errors.New("Entry is outside the vault")
 	}
 	return canonical, nil
 }
@@ -159,17 +159,17 @@ func (v *Vault) readContent(id string) (string, string, error) {
 	cmd.Env = append(os.Environ(), "PASSWORD_STORE_DIR="+v.root)
 	out, err := cmd.Output()
 	if err != nil {
-		return "", "", errors.New("Não foi possível abrir a entrada. Verifique a chave GPG e o gpg-agent")
+		return "", "", errors.New("Could not open the entry. Check the GPG key and gpg-agent")
 	}
 	after, err := hashFile(file)
 	if err != nil {
 		return "", "", err
 	}
 	if after != before {
-		return "", "", errors.New("A entrada mudou durante a leitura. Tente novamente")
+		return "", "", errors.New("The entry changed while being read. Try again")
 	}
 	if !utf8Valid(out) {
-		return "", "", errors.New("A entrada não contém texto UTF-8")
+		return "", "", errors.New("Entry does not contain UTF-8 text")
 	}
 	return string(out), before, nil
 }
@@ -234,22 +234,22 @@ func splitInclusive(s string) []string {
 }
 func compose(password, username, siteURL, details string) (string, error) {
 	if password == "" || len(password) > 16384 || strings.ContainsAny(password, "\r\n\x00") {
-		return "", errors.New("Senha da entrada inválida")
+		return "", errors.New("Invalid entry password")
 	}
 	if len(username) > 4096 || strings.ContainsAny(username, "\r\n\x00") {
-		return "", errors.New("Login da entrada inválido")
+		return "", errors.New("Invalid entry login")
 	}
 	if len(siteURL) > 4096 || strings.ContainsAny(siteURL, "\r\n\x00") {
-		return "", errors.New("URL da entrada inválida")
+		return "", errors.New("Invalid entry URL")
 	}
 	if strings.TrimSpace(siteURL) != "" {
 		parsed, err := url.Parse(strings.TrimSpace(siteURL))
 		if err != nil || parsed.Hostname() == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
-			return "", errors.New("Use uma URL HTTP ou HTTPS válida")
+			return "", errors.New("Use a valid HTTP or HTTPS URL")
 		}
 	}
 	if len(details) > 1048576 || strings.ContainsRune(details, '\x00') {
-		return "", errors.New("Outros campos da entrada são inválidos")
+		return "", errors.New("Invalid extra entry fields")
 	}
 	var out strings.Builder
 	out.WriteString(password + "\n")
@@ -306,7 +306,7 @@ func replaceKnown(original, password, username, siteURL string) (string, error) 
 }
 func (v *Vault) insert(id, content string) error {
 	if content == "" || strings.ContainsRune(content, '\x00') {
-		return errors.New("Conteúdo de entrada inválido")
+		return errors.New("Invalid entry content")
 	}
 	cmd := exec.Command("pass", "insert", "-m", "-f", id)
 	cmd.Env = append(os.Environ(), "PASSWORD_STORE_DIR="+v.root)
@@ -314,7 +314,7 @@ func (v *Vault) insert(id, content string) error {
 	cmd.Stdout = nil
 	cmd.Stderr = nil
 	if err := cmd.Run(); err != nil {
-		return errors.New("Não foi possível salvar a entrada. Verifique a chave GPG")
+		return errors.New("Unable to save entry. Check GPG key")
 	}
 	return nil
 }
@@ -324,7 +324,7 @@ func (v *Vault) Create(id, content string) error {
 		return err
 	}
 	if _, err = os.Lstat(target); err == nil {
-		return errors.New("A entrada já existe")
+		return errors.New("The entry already exists")
 	}
 	if !errors.Is(err, os.ErrNotExist) {
 		return err
@@ -341,7 +341,7 @@ func (v *Vault) CreateLogin(id, password, username, siteURL, details string) (Se
 	}
 	secret, err := v.Read(id)
 	if err != nil {
-		return Secret{}, fmt.Errorf("Entrada criada, mas não foi possível reabri-la: %w", err)
+		return Secret{}, fmt.Errorf("Entry created but could not be reopened: %w", err)
 	}
 	return secret, nil
 }
@@ -351,17 +351,17 @@ func (v *Vault) checkHash(id, expected string) error {
 		return err
 	}
 	if len(expected) != 64 {
-		return errors.New("Versão da entrada inválida")
+		return errors.New("Invalid entry version")
 	}
 	if _, err = hex.DecodeString(expected); err != nil {
-		return errors.New("Versão da entrada inválida")
+		return errors.New("Invalid entry version")
 	}
 	current, err := hashFile(file)
 	if err != nil {
 		return err
 	}
 	if current != expected {
-		return errors.New("A entrada foi alterada. Atualize antes de salvar")
+		return errors.New("The entry changed. Refresh before saving")
 	}
 	return nil
 }
@@ -377,7 +377,7 @@ func (v *Vault) UpdateLogin(id, password, username, siteURL, details, expectedHa
 		return Secret{}, err
 	}
 	if current != expectedHash {
-		return Secret{}, errors.New("A entrada foi alterada. Atualize antes de salvar")
+		return Secret{}, errors.New("The entry changed. Refresh before saving")
 	}
 	var content string
 	if details == ParseSecret(original).OtherDetails {
@@ -393,7 +393,7 @@ func (v *Vault) UpdateLogin(id, password, username, siteURL, details, expectedHa
 	}
 	secret, err := v.Read(id)
 	if err != nil {
-		return Secret{}, fmt.Errorf("Entrada atualizada, mas não foi possível reabri-la: %w", err)
+		return Secret{}, fmt.Errorf("Entry updated but unable to reopen: %w", err)
 	}
 	return secret, nil
 }
@@ -404,7 +404,7 @@ func (v *Vault) Remove(id, expectedHash string) error {
 	cmd := exec.Command("pass", "rm", "-f", id)
 	cmd.Env = append(os.Environ(), "PASSWORD_STORE_DIR="+v.root)
 	if err := cmd.Run(); err != nil {
-		return errors.New("Operação do pass falhou")
+		return errors.New("pass operation failed")
 	}
 	return nil
 }

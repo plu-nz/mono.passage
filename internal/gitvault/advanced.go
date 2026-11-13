@@ -31,7 +31,7 @@ func (g *GitVault) collectVaultFiles() ([]string, error) {
 			return nil
 		}
 		if !d.Type().IsRegular() {
-			return errors.New("O cofre contém links ou arquivos especiais. Revise antes de publicar")
+			return errors.New("The vault contains special links or files. Review before publishing")
 		}
 		if relative == ".gpg-id" {
 			return nil
@@ -40,7 +40,7 @@ func (g *GitVault) collectVaultFiles() ([]string, error) {
 			files = append(files, relative)
 			return nil
 		}
-		return errors.New("O cofre contém arquivos além de .gpg e .gpg-id. Revise antes de publicar")
+		return errors.New("The vault contains files other than .gpg and .gpg-id. Review before publishing")
 	})
 	sort.Strings(files)
 	return files, err
@@ -56,7 +56,7 @@ func (g *GitVault) verifyStaged(paths []string) error {
 			if _, err = os.Stat(filepath.Join(g.root, path)); errors.Is(err, os.ErrNotExist) {
 				continue
 			}
-			return errors.New("Não foi possível validar a entrada preparada no Git")
+			return errors.New("Unable to validate staged entry in Git")
 		}
 		if err = g.ValidateCiphertext(out); err != nil {
 			return err
@@ -77,14 +77,14 @@ func validRelative(path string) bool {
 }
 func (g *GitVault) rejectSymlinks(relative string) error {
 	if !validRelative(relative) {
-		return errors.New("Caminho Git inválido")
+		return errors.New("Invalid Git path")
 	}
 	current := g.root
 	for _, part := range strings.Split(relative, "/") {
 		current = filepath.Join(current, part)
 		info, err := os.Lstat(current)
 		if err == nil && info.Mode()&os.ModeSymlink != 0 {
-			return errors.New("Links simbólicos não são permitidos no cofre Git")
+			return errors.New("Symbolic links are not allowed in the Git vault")
 		}
 	}
 	return nil
@@ -95,17 +95,17 @@ func (g *GitVault) PublishNewVault() (Status, error) {
 		return Status{}, err
 	}
 	if status.Upstream != nil {
-		return Status{}, errors.New("Este cofre já tem upstream. Use Enviar para sincronizar")
+		return Status{}, errors.New("This vault already has upstream. Use Push to sync")
 	}
 	if _, ok := g.tryOutput("remote", "get-url", "origin"); !ok {
-		return Status{}, errors.New("Adicione um remoto origin antes de publicar o cofre")
+		return Status{}, errors.New("Add an origin remote before publishing the vault")
 	}
 	remote, err := g.output("ls-remote", "origin")
 	if err != nil {
 		return Status{}, err
 	}
 	if strings.TrimSpace(remote) != "" {
-		return Status{}, errors.New("O remoto já contém histórico. Conecte esse cofre manualmente pelo Git")
+		return Status{}, errors.New("The remote already contains history. Connect this vault manually via Git")
 	}
 	if _, hasHead := g.tryOutput("rev-parse", "--verify", "HEAD"); !hasHead {
 		staged, err := g.output("diff", "--cached", "--name-only")
@@ -113,7 +113,7 @@ func (g *GitVault) PublishNewVault() (Status, error) {
 			return Status{}, err
 		}
 		if staged != "" {
-			return Status{}, errors.New("Há arquivos preparados no Git. Revise-os antes de publicar")
+			return Status{}, errors.New("There are staged files in Git. Review them before publishing")
 		}
 		files, err := g.collectVaultFiles()
 		if err != nil {
@@ -146,10 +146,10 @@ func (g *GitVault) PublishNewVault() (Status, error) {
 			return Status{}, err
 		}
 		if _, err = g.output("commit", "-m", "Initialize encrypted vault"); err != nil {
-			return Status{}, errors.New("Falha ao criar commit. Configure user.name e user.email no Git")
+			return Status{}, errors.New("Failed to create commit. Configure user.name and user.email in Git")
 		}
 	} else if status.Dirty {
-		return Status{}, errors.New("Há alterações locais. Registre ou descarte antes de publicar")
+		return Status{}, errors.New("There are local changes. Record or discard before publishing")
 	}
 	status, err = g.Status()
 	if err != nil {
@@ -162,18 +162,18 @@ func (g *GitVault) PublishNewVault() (Status, error) {
 }
 func (g *GitVault) CommitChanges() (Status, error) {
 	if _, ok := g.tryOutput("rev-parse", "--verify", "HEAD"); !ok {
-		return Status{}, errors.New("Publique o cofre novo antes de registrar alterações")
+		return Status{}, errors.New("Publish the new vault before recording changes")
 	}
 	staged, err := g.output("diff", "--cached", "--name-only")
 	if err != nil {
 		return Status{}, err
 	}
 	if staged != "" {
-		return Status{}, errors.New("Há alterações já preparadas no Git. Revise-as pelo terminal")
+		return Status{}, errors.New("There are already staged changes in Git. Review them in the terminal")
 	}
 	out, err := g.git("ls-files", "-m", "-d", "-o", "--exclude-standard", "-z")
 	if err != nil {
-		return Status{}, errors.New("Falha ao listar alterações Git")
+		return Status{}, errors.New("Failed to list Git changes")
 	}
 	paths := []string{}
 	for _, path := range strings.Split(string(out), "\x00") {
@@ -181,10 +181,10 @@ func (g *GitVault) CommitChanges() (Status, error) {
 			continue
 		}
 		if !validRelative(path) {
-			return Status{}, errors.New("Caminho Git inválido")
+			return Status{}, errors.New("Invalid Git path")
 		}
 		if !strings.HasSuffix(path, ".gpg") && filepath.Base(path) != ".gpg-id" {
-			return Status{}, errors.New("Há arquivos fora do formato do cofre. Revise-os pelo terminal")
+			return Status{}, errors.New("There are files outside the vault format. Review them via the terminal")
 		}
 		if err = g.rejectSymlinks(path); err != nil {
 			return Status{}, err
@@ -192,7 +192,7 @@ func (g *GitVault) CommitChanges() (Status, error) {
 		full := filepath.Join(g.root, path)
 		if info, err := os.Lstat(full); err == nil {
 			if !info.Mode().IsRegular() {
-				return Status{}, errors.New("O cofre contém links ou arquivos especiais. Revise-os pelo terminal")
+				return Status{}, errors.New("The vault contains special links or files. Review them via the terminal")
 			}
 			if strings.HasSuffix(path, ".gpg") {
 				data, err := os.ReadFile(full)
@@ -207,7 +207,7 @@ func (g *GitVault) CommitChanges() (Status, error) {
 		paths = append(paths, ":(literal)"+path)
 	}
 	if len(paths) == 0 {
-		return Status{}, errors.New("Não há alterações no cofre para registrar")
+		return Status{}, errors.New("There are no changes to the vault to record")
 	}
 	args := append([]string{"add", "-A", "--"}, paths...)
 	if _, err = g.output(args...); err != nil {
@@ -219,7 +219,7 @@ func (g *GitVault) CommitChanges() (Status, error) {
 		return Status{}, err
 	}
 	if _, err = g.output("commit", "-m", "Update encrypted vault"); err != nil {
-		return Status{}, errors.New("Falha ao criar commit. Configure user.name e user.email no Git")
+		return Status{}, errors.New("Failed to create commit. Configure user.name and user.email in Git")
 	}
 	return g.Status()
 }
@@ -240,7 +240,7 @@ func (g *GitVault) MergePreservingBoth() (Status, error) {
 		return Status{}, err
 	}
 	if status.Ahead == 0 || status.Behind == 0 {
-		return Status{}, errors.New("Não há históricos divergentes para resolver")
+		return Status{}, errors.New("There are no conflicting histories to resolve")
 	}
 	localHead, err := g.output("rev-parse", "HEAD")
 	if err != nil {
@@ -268,7 +268,7 @@ func (g *GitVault) MergePreservingBoth() (Status, error) {
 	}
 	unmerged, err := g.git("ls-files", "-u", "-z")
 	if err != nil {
-		return rollback(errors.New("Índice Git inválido"))
+		return rollback(errors.New("Invalid Git index"))
 	}
 	conflicts := map[string]bool{}
 	for _, record := range strings.Split(string(unmerged), "\x00") {
@@ -277,15 +277,15 @@ func (g *GitVault) MergePreservingBoth() (Status, error) {
 		}
 		meta, path, ok := strings.Cut(record, "\t")
 		if !ok {
-			return rollback(errors.New("Índice Git inválido"))
+			return rollback(errors.New("Invalid Git index"))
 		}
 		if !strings.HasPrefix(meta, "100644 ") && !strings.HasPrefix(meta, "100755 ") {
-			return rollback(errors.New("Conflito com link ou arquivo especial. Resolva pelo Git; commits preservados"))
+			return rollback(errors.New("Conflict involving a symlink or special file. Resolve it with Git; commits were preserved"))
 		}
 		conflicts[path] = true
 	}
 	if mergeErr != nil && len(conflicts) == 0 {
-		return rollback(errors.New("O Git não conseguiu iniciar a mesclagem"))
+		return rollback(errors.New("Git was unable to start the merge"))
 	}
 	names := make([]string, 0, len(conflicts))
 	for path := range conflicts {
@@ -294,7 +294,7 @@ func (g *GitVault) MergePreservingBoth() (Status, error) {
 	sort.Strings(names)
 	for _, path := range names {
 		if !strings.HasSuffix(path, ".gpg") || !validRelative(path) {
-			return rollback(errors.New("Conflito fora de uma entrada .gpg; commits preservados"))
+			return rollback(errors.New("Conflict outside a .gpg entry; commits were preserved"))
 		}
 		if err = g.rejectSymlinks(path); err != nil {
 			return rollback(err)
@@ -302,7 +302,7 @@ func (g *GitVault) MergePreservingBoth() (Status, error) {
 		local, errLocal := g.git("show", ":2:"+path)
 		remote, errRemote := g.git("show", ":3:"+path)
 		if errLocal != nil || errRemote != nil {
-			return rollback(errors.New("Conflito com remoção ou renomeação; commits preservados"))
+			return rollback(errors.New("Conflict with removal or renaming; preserved commits"))
 		}
 		if err = g.ValidateCiphertext(local); err != nil {
 			return rollback(err)
@@ -312,7 +312,7 @@ func (g *GitVault) MergePreservingBoth() (Status, error) {
 		}
 		suffix := strings.TrimSpace(remoteHead)
 		if len(suffix) < 8 {
-			return rollback(errors.New("Commit remoto inválido"))
+			return rollback(errors.New("Invalid remote commit"))
 		}
 		suffix = suffix[:8]
 		base := strings.TrimSuffix(filepath.Base(path), ".gpg")
@@ -320,7 +320,7 @@ func (g *GitVault) MergePreservingBoth() (Status, error) {
 		full := filepath.Join(g.root, backup)
 		file, err := os.OpenFile(full, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 		if err != nil {
-			return rollback(errors.New("Já existe cópia com esse nome; commits preservados"))
+			return rollback(errors.New("A copy with that name already exists; preserved commits"))
 		}
 		created = append(created, full)
 		if _, err = file.Write(remote); err != nil {
@@ -342,7 +342,7 @@ func (g *GitVault) MergePreservingBoth() (Status, error) {
 		return rollback(err)
 	}
 	if remaining != "" {
-		return rollback(errors.New("Restaram conflitos Git; commits preservados"))
+		return rollback(errors.New("Git conflicts remain; commits were preserved"))
 	}
 	if _, err = g.output("commit", "-m", "Merge encrypted vault preserving both versions"); err != nil {
 		return rollback(err)

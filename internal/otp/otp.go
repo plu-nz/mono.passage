@@ -28,7 +28,7 @@ type Code struct {
 func Generate(secret vault.Secret) (Code, error) {
 	uri := findURI(secret)
 	if uri == "" {
-		return Code{}, errors.New("Esta entrada não contém um URI TOTP compatível com pass-otp")
+		return Code{}, errors.New("This entry does not contain a TOTP URI compatible with pass-otp")
 	}
 	return CodeAt(uri, uint64(time.Now().Unix()))
 }
@@ -46,33 +46,33 @@ func findURI(secret vault.Secret) string {
 }
 func CodeAt(uri string, now uint64) (Code, error) {
 	if len(uri) > 8192 {
-		return Code{}, errors.New("URI TOTP muito longo")
+		return Code{}, errors.New("TOTP URI is too long")
 	}
 	parsed, err := url.Parse(uri)
 	if err != nil {
-		return Code{}, errors.New("URI TOTP inválido")
+		return Code{}, errors.New("Invalid TOTP URI")
 	}
 	if parsed.Scheme != "otpauth" || parsed.Host != "totp" || strings.Trim(parsed.Path, "/") == "" {
-		return Code{}, errors.New("Somente URI otpauth://totp é suportado")
+		return Code{}, errors.New("Only otpauth://totp URI is supported")
 	}
 	values, err := url.ParseQuery(parsed.RawQuery)
 	if err != nil {
-		return Code{}, errors.New("URI TOTP inválido")
+		return Code{}, errors.New("Invalid TOTP URI")
 	}
 	for _, key := range []string{"secret", "algorithm", "digits", "period"} {
 		if len(values[key]) > 1 {
-			return Code{}, errors.New("Parâmetro TOTP duplicado")
+			return Code{}, errors.New("Duplicate TOTP parameter")
 		}
 	}
 	secret := values.Get("secret")
 	if secret == "" {
-		return Code{}, errors.New("URI TOTP sem segredo")
+		return Code{}, errors.New("TOTP URI has no secret")
 	}
 	secret = strings.ToUpper(strings.Join(strings.Fields(secret), ""))
 	secret = strings.TrimRight(secret, "=")
 	key, err := base32.StdEncoding.WithPadding(base32.NoPadding).DecodeString(secret)
 	if err != nil || len(key) == 0 {
-		return Code{}, errors.New("Segredo TOTP Base32 inválido")
+		return Code{}, errors.New("Invalid TOTP Base32 secret")
 	}
 	algorithm := strings.ToUpper(values.Get("algorithm"))
 	if algorithm == "" {
@@ -82,21 +82,21 @@ func CodeAt(uri string, now uint64) (Code, error) {
 	if value := values.Get("digits"); value != "" {
 		digits, err = strconv.Atoi(value)
 		if err != nil {
-			return Code{}, errors.New("Quantidade de dígitos TOTP inválida")
+			return Code{}, errors.New("Invalid number of TOTP digits")
 		}
 	}
 	if digits < 6 || digits > 8 {
-		return Code{}, errors.New("Quantidade de dígitos TOTP inválida")
+		return Code{}, errors.New("Invalid number of TOTP digits")
 	}
 	period := uint64(30)
 	if value := values.Get("period"); value != "" {
 		period, err = strconv.ParseUint(value, 10, 64)
 		if err != nil {
-			return Code{}, errors.New("Período TOTP inválido")
+			return Code{}, errors.New("Invalid TOTP period")
 		}
 	}
 	if period < 1 || period > 3600 {
-		return Code{}, errors.New("Período TOTP inválido")
+		return Code{}, errors.New("Invalid TOTP period")
 	}
 	var hashFactory func() hash.Hash
 	switch algorithm {
@@ -107,7 +107,7 @@ func CodeAt(uri string, now uint64) (Code, error) {
 	case "SHA512":
 		hashFactory = sha512.New
 	default:
-		return Code{}, errors.New("Algoritmo TOTP não suportado")
+		return Code{}, errors.New("TOTP algorithm not supported")
 	}
 	mac := hmac.New(hashFactory, key)
 	var counter [8]byte
