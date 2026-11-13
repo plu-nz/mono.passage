@@ -2,13 +2,13 @@
 set -eu
 
 if [ "$(uname -s)" != Linux ] || [ "$(uname -m)" != x86_64 ]; then
-  echo 'Passage: este instalador oferece binário apenas para Linux x86_64.' >&2
+  echo 'Passage: this installer provides a binary only for Linux x86_64.' >&2
   exit 1
 fi
 
 for command_name in curl tar sha256sum install mktemp mkdir; do
   if ! command -v "$command_name" >/dev/null 2>&1; then
-    echo "Passage: comando necessário não encontrado: $command_name" >&2
+    echo "Passage: required command not found: $command_name" >&2
     exit 1
   fi
 done
@@ -48,7 +48,7 @@ if [ "$extension_available" = true ]; then
   extension_dir="$install_root/passage/extension-chromium"
   mkdir -p "$extension_dir"
   tar -xzf "$temp_dir/$extension_archive" -C "$extension_dir"
-  printf 'Extensão descompactada em %s; carregue essa pasta no Brave ou Chrome e registre os IDs no conector.\n' "$extension_dir"
+  printf 'Extension unpacked to %s; load this folder in Brave or Chrome and register the IDs with the connector.\n' "$extension_dir"
 fi
 
 host_registered=false
@@ -65,7 +65,7 @@ if [ -f "$temp_dir/passage-native-host" ] && [ -f "$temp_dir/install-native-host
   fi
 fi
 
-printf 'Passage instalado em %s\n' "$user_bin/passage"
+printf 'Passage installed at %s\n' "$user_bin/passage"
 if [ -f "$temp_dir/passage-native-host" ] && [ "$host_registered" = false ]; then
-  printf 'Conector instalado. Para registrar Brave e Chrome, execute: %s/passage-install-native-host %s/passage-native-host ID_BRAVE ID_CHROME\n' "$user_bin" "$user_bin"
+  printf 'Connector installed. To register Brave and Chrome, run: %s/passage-install-native-host %s/passage-native-host ID_BRAVE ID_CHROME\n' "$user_bin" "$user_bin"
 fi

@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=Passage
-Comment=Interface para cofres GNU pass
+Comment=Interface for GNU pass vaults
 Exec=passage
 Icon=nz.plu.passage
 Terminal=false

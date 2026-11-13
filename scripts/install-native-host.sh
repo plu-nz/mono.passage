@@ -2,7 +2,7 @@
 set -eu
 
 if [ "$#" -ne 3 ]; then
-  echo 'Uso: scripts/install-native-host.sh CAMINHO_DO_HOST ID_BRAVE ID_CHROME' >&2
+  echo 'Usage: scripts/install-native-host.sh HOST_PATH BRAVE_ID CHROME_ID' >&2
   exit 2
 fi
 
@@ -11,7 +11,7 @@ brave_id=$2
 chrome_id=$3
 
 if [ ! -x "$host_path" ]; then
-  echo 'O host precisa existir e ser executável.' >&2
+  echo 'The host must exist and be executable.' >&2
   exit 2
 fi
 
@@ -25,7 +25,7 @@ import sys
 host, brave_id, chrome_id = sys.argv[1:]
 for extension_id in (brave_id, chrome_id):
     if not re.fullmatch(r"[a-p]{32}", extension_id):
-        raise SystemExit("ID de extensão inválido; consulte brave://extensions e chrome://extensions")
+        raise SystemExit("Invalid extension ID; check brave://extensions and chrome://extensions")
 
 config_home = pathlib.Path(os.environ.get("XDG_CONFIG_HOME", pathlib.Path.home() / ".config"))
 host = str(pathlib.Path(host).resolve(strict=True))
@@ -39,7 +39,7 @@ for profile, extension_id in profiles:
     directory.mkdir(parents=True, exist_ok=True)
     manifest = directory / "com.plunz.passage.json"
     if manifest.is_symlink():
-        raise SystemExit(f"Manifesto simbólico recusado: {manifest}")
+        raise SystemExit(f"Symlinked manifest rejected: {manifest}")
     data = {
         "name": "com.plunz.passage",
         "description": "Passage native messaging host",

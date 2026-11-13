@@ -29,11 +29,11 @@ from pathlib import Path
 identity = json.loads(Path('extension/identity.json').read_text(encoding='utf-8'))
 manifest = json.loads(Path('extension/.output/chrome-mv3/manifest.json').read_text(encoding='utf-8'))
 if manifest.get('key') != identity['key']:
-    raise SystemExit('Chave da extensão não corresponde ao ID configurado')
+    raise SystemExit('Extension key does not match the configured ID')
 digest = hashlib.sha256(base64.b64decode(identity['key'], validate=True)).digest()
 extension_id = ''.join(chr(97 + nibble) for byte in digest[:16] for nibble in (byte >> 4, byte & 15))
 if extension_id != identity['id']:
-    raise SystemExit('ID da extensão inválido')
+    raise SystemExit('Invalid extension ID')
 print(extension_id)
 PY
 )"
@@ -41,5 +41,5 @@ PY
 install -Dm644 desktop/icons/icon.png "$install_root/icons/hicolor/512x512/apps/nz.plu.passage.png"
 install -Dm644 scripts/nz.plu.passage.desktop "$install_root/applications/nz.plu.passage.desktop"
 
-printf 'Passage instalado em %s\n' "$user_bin/passage"
-printf 'Extensão instalada em %s; carregue essa pasta em Brave e Chrome e aprove cada pareamento.\n' "$extension_dir"
+printf 'Passage installed at %s\n' "$user_bin/passage"
+printf 'Extension installed at %s; load this folder in Brave and Chrome and approve each pairing.\n' "$extension_dir"

@@ -8,15 +8,15 @@ extension_archive='passage-extension-chromium.tar.gz'
 extension_dir="$repo_dir/extension/.output/chrome-mv3"
 
 if [[ "$(uname -s)" != Linux || "$(uname -m)" != x86_64 ]]; then
-  echo 'Empacotamento disponível apenas em Linux x86_64.' >&2
+  echo 'Packaging is available only on Linux x86_64.' >&2
   exit 1
 fi
 if ! command -v python3 >/dev/null 2>&1; then
-  echo 'Python 3 é necessário para empacotar a identidade da extensão.' >&2
+  echo 'Python 3 is required to package the extension identity.' >&2
   exit 1
 fi
 if [[ ! -f "$extension_dir/manifest.json" ]]; then
-  echo 'Extensão compilada não encontrada; execute pnpm build:extension.' >&2
+  echo 'Built extension not found; run pnpm build:extension.' >&2
   exit 1
 fi
 
@@ -41,11 +41,11 @@ import sys
 identity = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 manifest = json.loads(pathlib.Path(sys.argv[2]).read_text(encoding="utf-8"))
 if manifest.get("key") != identity["key"]:
-    raise SystemExit("Chave pública da extensão não corresponde à identidade do release")
+    raise SystemExit("Extension public key does not match the release identity")
 digest = hashlib.sha256(base64.b64decode(identity["key"], validate=True)).digest()
 extension_id = "".join(chr(97 + nibble) for byte in digest[:16] for nibble in (byte >> 4, byte & 15))
 if extension_id != identity["id"]:
-    raise SystemExit("ID da extensão não corresponde à chave pública")
+    raise SystemExit("Extension ID does not match the public key")
 pathlib.Path(sys.argv[3]).write_text(extension_id + "\n", encoding="utf-8")
 PY
 install -Dm644 "$repo_dir/desktop/icons/icon.png" "$stage_dir/nz.plu.passage.png"
