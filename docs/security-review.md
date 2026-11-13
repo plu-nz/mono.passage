@@ -7,7 +7,7 @@ In the migration branch, the Go core continues to call GNU `pass`, GPG, Git, and
 The desktop exposes JavaScript-specific Go methods, mapped to `desktop/src/service.ts`. The UI clears the displayed secrets after 30 seconds, as before. The Linux backend uses GTK3/WebKit2GTK 4.1 because WebKitGTK 6.0 is not installed on this machine; Migrating to the GTK4 backend requires a new testing cycle. Wails version `v3.0.0` is fixed to `go.mod`.
 
 
-Review carried out with code and disposable vault. On temporary profiles on Brave Origin and stable Chrome, the actual popup paired, listed input, and filled username and password on a local HTTPS page and on the actual GitHub login, without submitting the form. The test repeated the click after browsing the tab and confirmed that the filling was rejected. No personal profiles or real credentials were used.
+Review carried out with code and disposable vault. On temporary profiles on Brave Origin and stable Chrome, the actual popup paired, listed entries, and filled username and password on a local HTTPS page and on the actual GitHub login, without submitting the form. The test repeated the click after browsing the tab and confirmed that the filling was rejected. No personal profiles or real credentials were used.
 
 ## Verified controls
 

@@ -6,7 +6,7 @@ This plan turns [README](../README.md) requirements into verifiable deliverables
 
 ## Expected outcome
 
-A local installation of Passage uses an existing GNU `pass` vault. The user unlocks his GPG key by the system mechanism once; Brave and Chrome can request filling from the same local service, without an independent password per extension. Each extension installation must be authorized and can be revoked. The user can also read and edit entries on the desktop, use `pass` in the terminal, and synchronize encrypted files with a private Git, with explicit conflicts.
+A local installation of Passage uses an existing GNU `pass` vault. The user unlocks their GPG key by the system mechanism once; Brave and Chrome can request filling from the same local service, without an independent password per extension. Each extension installation must be authorized and can be revoked. The user can also read and edit entries on the desktop, use `pass` in the terminal, and synchronize encrypted files with a private Git, with explicit conflicts.
 
 ## Implementation rules
 
@@ -30,7 +30,7 @@ A local installation of Passage uses an existing GNU `pass` vault. The user unlo
 1. Extract from the Tauri command the Rust logic of finding, listing, reading, creating, updating, and removing entries. Validate IDs, canonical path, symlinks, empty names, subprocess errors and UTF-8 result.
 2. Define an interoperable text convention: first line as password; fields `login`, `url` and `otpauth` in the following lines. Preserve unknown lines and existing order when editing. Document how an old item without metadata appears.
 3. Specify source normalization and matching: schema, host, subdomain, and port; avoid matching by insecure suffix (e.g. `example.com.evil.test`). The tab domain will be obtained by the extension, never accepted from the page content.
-4. Implement operations via `pass` and round-trip testing with `pass show`, including editing via the terminal followed by updating on the desktop. Handle changed inputs externally before writing.
+4. Implement operations via `pass` and round-trip testing with `pass show`, including editing via the terminal followed by updating on the desktop. Handle entries changed externally before writing.
 5. Define stable errors for missing vault, unavailable key, invalid item, edit conflict and Git, without secreting messages.
 
 **Accept:** creating, editing and removing by core keeps files readable by GNU `pass`; unknown fields survive editing; Malicious entries do not escape the vault. Automated tests only use disposable vaults.
@@ -44,7 +44,7 @@ A local installation of Passage uses an existing GNU `pass` vault. The user unlo
 5. Record process decision: Native Messaging host initiated on demand for each browser, with persisted authorizations and system-shared GPG. If a Tauri window is required to approve pairing, expose only that local stream.
 6. Perform protocol testing with truncated input, invalid JSON, incompatible version, invalid origin, unpaired identity, and revocation during a session.
 
-**Accept:** Brave and Chrome can call the installed host; an unpaired installation does not read inputs; revocation prevents subsequent requests; Closing the Tauri app does not render the integration inoperative. There is never a password in the error output or logs.
+**Accept:** Brave and Chrome can call the installed host; an unpaired installation cannot read entries; revocation prevents subsequent requests; Closing the Tauri app does not render the integration inoperative. There is never a password in the error output or logs.
 
 ## Milestone 3 — Brave and Chrome Extensions and Autofill (4–7 days)
 
