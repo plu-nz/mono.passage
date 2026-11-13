@@ -20,7 +20,22 @@
   }
 }
 
-:root { font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: var(--text); background: var(--page); font-synthesis: none; }
+/* Desktop theme. theme.ts sets data-system and --gtk-* from the GTK theme;
+   the palettes above remain the fallback when those colors are unavailable. */
+:root[data-system] {
+  --text: var(--gtk-fg); --text-soft: color-mix(in srgb, var(--gtk-fg) 78%, var(--gtk-bg));
+  --muted: var(--gtk-placeholder, color-mix(in srgb, var(--gtk-fg) 60%, var(--gtk-bg))); --code: var(--gtk-text, var(--gtk-fg));
+  --page: var(--gtk-bg); --surface: var(--gtk-bg); --header: var(--gtk-bg); --raised: color-mix(in srgb, var(--gtk-fg) 4%, var(--gtk-bg));
+  --panel: var(--gtk-base); --sunken: var(--gtk-base); --input: var(--gtk-base);
+  --line: var(--gtk-border, color-mix(in srgb, var(--gtk-fg) 14%, var(--gtk-bg))); --control-line: color-mix(in srgb, var(--gtk-fg) 24%, var(--gtk-bg));
+  --accent: var(--gtk-accent); --on-accent: var(--gtk-accent-fg, var(--gtk-bg)); --button: color-mix(in srgb, var(--gtk-fg) 8%, var(--gtk-bg));
+  --selected: color-mix(in srgb, var(--gtk-accent) 22%, var(--gtk-base)); --icon-bg: color-mix(in srgb, var(--gtk-accent) 18%, var(--gtk-base));
+  --warn-line: color-mix(in srgb, var(--gtk-warning, #c8963e) 45%, var(--gtk-bg)); --warn-bg: color-mix(in srgb, var(--gtk-warning, #c8963e) 12%, var(--gtk-bg));
+  --success-bg: color-mix(in srgb, var(--gtk-success, var(--gtk-accent)) 14%, var(--gtk-bg));
+  --danger: var(--gtk-error, #d9534f); --pending: var(--gtk-warning, #c8963e); --ready: var(--gtk-success, var(--gtk-accent));
+}
+
+:root { font-family: var(--gtk-font, Inter, ui-sans-serif, system-ui, sans-serif); color: var(--text); background: var(--page); font-synthesis: none; }
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; }
 button, input, select, textarea { font: inherit; }

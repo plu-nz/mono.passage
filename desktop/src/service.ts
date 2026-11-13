@@ -17,6 +17,7 @@ const commands: Record<string, [string, string[]]> = {
   list_pairings: ['ListPairings', []], approve_pairing: ['ApprovePairing', ['code']],
   revoke_pairing: ['RevokePairing', ['origin', 'installationId']], browser_access_state: ['BrowserAccessState', []],
   lock_browser_access: ['LockBrowserAccess', []], unlock_browser_access: ['UnlockBrowserAccess', []],
+  system_theme: ['SystemTheme', []],
 };
 
 export function invoke<T = unknown>(command: string, args: Record<string, unknown> = {}): Promise<T> {
