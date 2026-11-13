@@ -418,14 +418,14 @@ function App() {
     finally { setVaultBusy(false); }
   }
 
-  // Section navigation plus the always-visible vault search; at the top the
-  // order is mirrored so the navigation sits at the window edge. Typing in the
-  // search returns to the Vault tab. The memo keeps vault refreshes from
-  // rebuilding the bar (and dropping focus) while someone is typing.
+  // Section navigation plus the vault search, shown on the Vault tab only; at
+  // the top the order is mirrored so the navigation sits at the window edge.
+  // The memo keeps vault refreshes from rebuilding the bar (and dropping focus)
+  // while someone is typing.
   const unavailable = createMemo(() => state().kind === 'unavailable');
   const tabButton = (tab: (typeof tabs)[number]) => <button class={activeTab() === tab.id ? 'active' : ''} aria-current={activeTab() === tab.id ? 'page' : undefined} onClick={() => setActiveTab(tab.id)}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">{tab.icon()}</svg><span>{tab.label}</span></button>;
   const appBar = () => {
-    const toolbar = <div class="toolbar"><input type="search" aria-label="Search entries" placeholder="Search vault…" value={query()} disabled={unavailable()} onInput={event => { setQuery(event.currentTarget.value); setActiveTab('vault'); }} onKeyDown={event => { if (event.key === 'Escape') setQuery(''); }} /></div>;
+    const toolbar = activeTab() === 'vault' && <div class="toolbar"><input type="search" aria-label="Search entries" placeholder="Search vault…" value={query()} disabled={unavailable()} onInput={event => setQuery(event.currentTarget.value)} onKeyDown={event => { if (event.key === 'Escape') setQuery(''); }} /></div>;
     const nav = <nav class="app-nav" aria-label="Sections">{tabButton(tabs[0])}<button aria-label="New entry" disabled={unavailable()} onClick={() => { setActiveTab('vault'); startCreate(); }}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg><span>New</span></button>{tabs.slice(1).map(tabButton)}</nav>;
     return <div class={`app-bar ${navPosition()}`}>{navPosition() === 'top' ? <>{nav}{toolbar}</> : <>{toolbar}{nav}</>}</div>;
   };
