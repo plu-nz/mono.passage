@@ -12,12 +12,11 @@ type GitStatus = { branch: string; upstream: string | null; dirty: boolean; ahea
 type GithubStatus = { cli_installed: boolean; login: string | null; vault_git_configured: boolean };
 type Pairing = { origin: string; installationId: string };
 
-type Tab = 'vault' | 'sync' | 'settings';
+type Tab = 'vault' | 'settings';
 
 // Bottom navigation: icon above label, the active tab in the accent color.
 const tabs: { id: Tab; label: string; icon: () => JSX.Element }[] = [
   { id: 'vault', label: 'Vault', icon: () => <><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></> },
-  { id: 'sync', label: 'Git Sync', icon: () => <><path d="M20 11a8 8 0 0 0-14.9-3.9L4 8" /><path d="M4 4v4h4" /><path d="M4 13a8 8 0 0 0 14.9 3.9L20 16" /><path d="M20 20v-4h-4" /></> },
   { id: 'settings', label: 'Settings', icon: () => <><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12" /><circle cx="16" cy="6" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="18" r="2" /></> },
 ];
 
@@ -429,6 +428,21 @@ function App() {
       <button onClick={() => void refreshVaultInfo()} disabled={vaultBusy()}>Check keys and vault</button>
       {vaultError() && <p class="panel-error" role="alert">{vaultError()}</p>}
     </section>}
+    {activeTab() === 'settings' && <section class="panel vault-panel" aria-label="Git sync">
+      <h2>Git sync</h2>
+      <h3>GitHub</h3>
+      <p>{!github() ? 'Checking account…' : !github().cli_installed ? 'Install GitHub CLI (gh) to connect your account.' : github().login ? `Connected as @${github().login}.` : 'No GitHub account connected through gh.'} {github()?.vault_git_configured ? 'This vault uses your gh account for GitHub HTTPS remotes.' : ''}</p>
+      <div class="panel-actions"><button disabled={!github()?.cli_installed} onClick={() => void connectGithub()}>{github()?.login ? 'Switch account' : 'Sign in with GitHub'}</button><button onClick={() => void refreshGithub()}>Check account</button><button disabled={!github()?.login || !git()} onClick={() => void configureGithubVault()}>Use for this vault</button></div>
+      {githubError() && <p class="panel-error" role="alert">{githubError()}</p>}
+      <p class="hint">Sign-in opens GitHub CLI in a terminal. After completing it in your browser, click Check account. gh manages your account; Passage does not store the token. Use for this vault configures only this local Git repository for GitHub HTTPS remotes.</p>
+      {git() ? <p>Branch {git().branch}{git().upstream ? ` · upstream ${git().upstream}` : ' · no upstream'} · {git().dirty ? 'local changes' : 'no local changes'} · ↑{git().ahead} ↓{git().behind}</p> : <p>This vault is not ready for Git sync yet.</p>}
+      {!git() && state().kind === 'available' && <button onClick={() => void setupGit('git_initialize')}>Initialize Git in this vault</button>}
+      {git() && !git().upstream && <><div class="panel-actions"><input aria-label="Git origin remote URL" value={gitRemote()} onInput={event => setGitRemote(event.currentTarget.value)} placeholder="HTTPS URL, SSH URL, or remote path" autocomplete="off" /><button disabled={!gitRemote().trim()} onClick={() => void setupGit('git_set_remote')}>Add origin remote</button></div><button onClick={() => void setupGit('git_publish_new_vault')}>Publish new vault</button><p class="hint">This creates the first commit using only .gpg and .gpg-id files and sets the upstream if the remote is empty. Connect a remote with existing history through Git. Future changes remain available through  <code>pass git</code>.</p></>}
+      <div class="panel-actions"><button onClick={() => void refreshGit()}>Check</button><button disabled={!git()?.dirty || !git().upstream} onClick={() => void setupGit('git_commit_changes')}>Commit changes</button><button disabled={!git()?.upstream} onClick={() => void sync('git_pull')}>Pull</button><button disabled={!git()?.upstream} onClick={() => void sync('git_push')}>Push</button></div>
+      {git() && git().ahead > 0 && git().behind > 0 && <><button onClick={() => void setupGit('git_merge_preserving_both')}>Preserve both versions</button><p class="hint">Merge the commits and, when the same .gpg entry changed on both devices, keep the local version and save the remote version as another encrypted entry. .gpg-id conflicts require manual resolution. Pushing remains a separate action.</p></>}
+      {gitError() && <p class="panel-error" role="alert">{gitError()}</p>}
+      <p class="hint">Configure the remote through Git or  <code>pass git</code>. Conflicts and local changes prevent automatic sync.</p>
+    </section>}
     {activeTab() === 'settings' && <section class="panel vault-panel" aria-label="Browser extensions">
       <h2>Browser extensions</h2>
       <p>{browserLocked() === null ? 'Access status unavailable.' : browserLocked() ? 'Extension access locked.' : 'Extension access unlocked.'} Locking does not clear the GPG cache or prevent using pass in a terminal.</p>
@@ -460,21 +474,6 @@ function App() {
       </> : selected() ? <><div class="detail-heading"><div><small>VAULT ENTRY</small><h2>{selected()}</h2></div><button onClick={startEdit} disabled={!secret()}>Edit</button></div>{secret() ? <>{secret().username && <div class="field-card"><label>Username</label><div class="field-value">{secret().username}</div></div>}{secret().urls.length > 0 && <div class="field-card"><label>URL</label><div class="field-value">{secret().urls[0]}</div></div>}<div class="field-card"><label>Password</label><div class="password"><code>{visible() ? secret().password : '••••••••••••'}</code><button onClick={() => setVisible(!visible())}>{visible() ? 'Hide' : 'Show'}</button></div></div>{secret().details && <div class="field-card"><label>Other fields</label><pre>{displayDetails(secret().details)}</pre></div>}<button disabled={entryBusy()} onClick={() => void deleteEntry()}>Delete</button><button onClick={() => void showTotp()}>Generate TOTP code</button>{totp() && <p role="status">TOTP code: <code>{totp().code}</code> · valid for up to {Math.max(0, Math.ceil(totp().validUntil - Date.now() / 1000))} s</p>}<p class="hint">The secret disappears from the screen after 30 seconds. gpg-agent may keep the key cached.</p></> : <p>Open the entry to view its contents.</p>}</> : <p>Select an entry.</p>}</section></div>
     </>)}
     {error() && <p class="error" role="alert">{error()}</p>}
-    {activeTab() === 'sync' && <section class="panel" aria-label="Git sync">
-      <h2>Git sync</h2>
-      <h3>GitHub</h3>
-      <p>{!github() ? 'Checking account…' : !github().cli_installed ? 'Install GitHub CLI (gh) to connect your account.' : github().login ? `Connected as @${github().login}.` : 'No GitHub account connected through gh.'} {github()?.vault_git_configured ? 'This vault uses your gh account for GitHub HTTPS remotes.' : ''}</p>
-      <div class="panel-actions"><button disabled={!github()?.cli_installed} onClick={() => void connectGithub()}>{github()?.login ? 'Switch account' : 'Sign in with GitHub'}</button><button onClick={() => void refreshGithub()}>Check account</button><button disabled={!github()?.login || !git()} onClick={() => void configureGithubVault()}>Use for this vault</button></div>
-      {githubError() && <p class="panel-error" role="alert">{githubError()}</p>}
-      <p class="hint">Sign-in opens GitHub CLI in a terminal. After completing it in your browser, click Check account. gh manages your account; Passage does not store the token. Use for this vault configures only this local Git repository for GitHub HTTPS remotes.</p>
-      {git() ? <p>Branch {git().branch}{git().upstream ? ` · upstream ${git().upstream}` : ' · no upstream'} · {git().dirty ? 'local changes' : 'no local changes'} · ↑{git().ahead} ↓{git().behind}</p> : <p>This vault is not ready for Git sync yet.</p>}
-      {!git() && state().kind === 'available' && <button onClick={() => void setupGit('git_initialize')}>Initialize Git in this vault</button>}
-      {git() && !git().upstream && <><div class="panel-actions"><input aria-label="Git origin remote URL" value={gitRemote()} onInput={event => setGitRemote(event.currentTarget.value)} placeholder="HTTPS URL, SSH URL, or remote path" autocomplete="off" /><button disabled={!gitRemote().trim()} onClick={() => void setupGit('git_set_remote')}>Add origin remote</button></div><button onClick={() => void setupGit('git_publish_new_vault')}>Publish new vault</button><p class="hint">This creates the first commit using only .gpg and .gpg-id files and sets the upstream if the remote is empty. Connect a remote with existing history through Git. Future changes remain available through  <code>pass git</code>.</p></>}
-      <div class="panel-actions"><button onClick={() => void refreshGit()}>Check</button><button disabled={!git()?.dirty || !git().upstream} onClick={() => void setupGit('git_commit_changes')}>Commit changes</button><button disabled={!git()?.upstream} onClick={() => void sync('git_pull')}>Pull</button><button disabled={!git()?.upstream} onClick={() => void sync('git_push')}>Push</button></div>
-      {git() && git().ahead > 0 && git().behind > 0 && <><button onClick={() => void setupGit('git_merge_preserving_both')}>Preserve both versions</button><p class="hint">Merge the commits and, when the same .gpg entry changed on both devices, keep the local version and save the remote version as another encrypted entry. .gpg-id conflicts require manual resolution. Pushing remains a separate action.</p></>}
-      {gitError() && <p class="panel-error" role="alert">{gitError()}</p>}
-      <p class="hint">Configure the remote through Git or  <code>pass git</code>. Conflicts and local changes prevent automatic sync.</p>
-    </section>}
     </div>
     {navPosition() === 'bottom' && appBar()}
   </main>;

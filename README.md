@@ -54,7 +54,7 @@ With the vault open, click on **New Entry** and enter the entry path, password, 
 
 ### Connect a GitHub account
 
-Install [GitHub CLI (`gh`)](https://cli.github.com/). In the **Git Sync** panel, click **Sign in with GitHub**. Passage opens `gh auth login` in the default terminal; Complete your browser login and return to Passage to click **Verify Account**. If the default terminal cannot be opened, run `gh auth login --web` manually. The token is managed by `gh`, which can use secure system storage or, if that is not available, a local file; check `gh auth status` for the location used.
+Install [GitHub CLI (`gh`)](https://cli.github.com/). In **Settings → Git sync**, click **Sign in with GitHub**. Passage opens `gh auth login` in the default terminal; Complete your browser login and return to Passage to click **Check account**. If the default terminal cannot be opened, run `gh auth login --web` manually. The token is managed by `gh`, which can use secure system storage or, if that is not available, a local file; check `gh auth status` for the location used.
 
 If the vault is already the root of a Git repository, **Use in this vault** only configures that vault's `.git/config` to ask `gh` for the HTTPS remote credentials on `github.com`. Passage does not receive or save the token. This step does not create a remote repository or change the existing remote; configure the URL and tracking branch via Git or `pass git`. SSH remotes and private Git servers continue to use their normal authentication.
 
