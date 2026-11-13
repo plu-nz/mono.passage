@@ -1,6 +1,7 @@
 import { createSignal, createEffect, createMemo, onCleanup, onMount } from 'solid-js';
 import { render } from 'solid-js/web';
 import { invoke } from './service';
+import { version as appVersion } from '../package.json';
 import type { VaultState } from '@passage/core';
 import './style.css';
 
@@ -307,7 +308,7 @@ function App() {
   }
 
   return <main class="shell">
-    <header class="app-header"><div class="brand"><div class="mark" aria-hidden="true">P</div><div><h1>Passage</h1><p>Seu cofre GNU pass</p></div></div><div class="header-status"><span class={state().kind === 'available' ? 'status-dot ready' : 'status-dot'} />{state().kind === 'available' ? 'Cofre disponível' : 'Cofre indisponível'}</div></header>
+    <header class="app-header"><div class="brand"><div class="mark" aria-hidden="true">P</div><div><h1>Passage</h1><p>Seu cofre GNU pass</p></div></div><div class="header-status"><div class="status-line"><span class={state().kind === 'available' ? 'status-dot ready' : 'status-dot'} />{state().kind === 'available' ? 'Cofre disponível' : 'Cofre indisponível'}</div><small class="app-version">v{appVersion}</small></div></header>
     <div class="app-body"><div class="context-bar"><span>Cofre <code>{vaultInfo()?.path || 'verificando…'}</code></span><span>{git()?.upstream ? `Git · ↑${git().ahead} ↓${git().behind}` : 'Armazenamento local'}</span></div>
     <nav class="app-tabs" aria-label="Seções"><button class={activeTab() === 'vault' ? 'active' : ''} onClick={() => setActiveTab('vault')}>Cofre</button><button class={activeTab() === 'sync' ? 'active' : ''} onClick={() => setActiveTab('sync')}>Git Sync</button><button class={activeTab() === 'extensions' ? 'active' : ''} onClick={() => setActiveTab('extensions')}>Extensões</button><button class={activeTab() === 'settings' ? 'active' : ''} onClick={() => setActiveTab('settings')}>Configurações</button></nav>
     {activeTab() === 'settings' && <section class="panel vault-panel" aria-label="Configuração do cofre">

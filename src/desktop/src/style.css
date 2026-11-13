@@ -57,7 +57,9 @@ body { min-height: 100vh; background: #101613; }
 .mark { width: 36px; height: 36px; border-radius: 10px; font-size: 20px; }
 h1 { font-size: 18px; letter-spacing: .01em; }
 header p { font-size: 11px; }
-.header-status { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.header-status { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.status-line { display: flex; align-items: center; gap: 8px; }
+.app-version { color: var(--muted); font-size: 10px; opacity: .8; }
 .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #b88b61; }
 .status-dot.ready { background: #8ddca6; box-shadow: 0 0 0 3px #8ddca622; }
 .app-body { flex: 1; padding: 0 22px 24px; }
