@@ -14,7 +14,7 @@ type Pairing = { origin: string; installationId: string };
 
 type Tab = 'vault' | 'sync' | 'extensions' | 'settings';
 
-// Bottom navigation. Only the active tab shows its icon.
+// Bottom navigation: icon above label, the active tab in the accent color.
 const tabs: { id: Tab; label: string; icon: () => JSX.Element }[] = [
   { id: 'vault', label: 'Vault', icon: () => <><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></> },
   { id: 'sync', label: 'Git Sync', icon: () => <><path d="M20 11a8 8 0 0 0-14.9-3.9L4 8" /><path d="M4 4v4h4" /><path d="M4 13a8 8 0 0 0 14.9 3.9L20 16" /><path d="M20 20v-4h-4" /></> },
@@ -435,7 +435,7 @@ function App() {
       {pairingError() && <p class="panel-error" role="alert">{pairingError()}</p>}
     </section>}
     </div>
-    <nav class="app-nav" aria-label="Sections">{tabs.map(tab => <button class={activeTab() === tab.id ? 'active' : ''} aria-current={activeTab() === tab.id ? 'page' : undefined} onClick={() => setActiveTab(tab.id)}>{activeTab() === tab.id && <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">{tab.icon()}</svg>}{tab.label}</button>)}</nav>
+    <nav class="app-nav" aria-label="Sections">{tabs.map(tab => <button class={activeTab() === tab.id ? 'active' : ''} aria-current={activeTab() === tab.id ? 'page' : undefined} onClick={() => setActiveTab(tab.id)}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">{tab.icon()}</svg><span>{tab.label}</span></button>)}</nav>
     <footer class="app-footer"><span class="status-line"><span class={state().kind === 'available' ? 'status-dot ready' : 'status-dot'} />{state().kind === 'available' ? 'Vault available' : 'Vault unavailable'}</span><code>{vaultInfo()?.path || 'checking…'}</code><span class="app-version">{appVersion}</span></footer>
   </main>;
 }
