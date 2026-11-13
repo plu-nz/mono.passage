@@ -2,8 +2,6 @@
 
 Passage is a cross-platform interface in development for vaults compatible with [GNU `pass`](https://www.passwordstore.org/). The vault belongs to you: your encrypted files are synchronized through a private Git repository that can be hosted on a Git service or on your own infrastructure.
 
-Project site: [passage.plu.nz](https://passage.plu.nz/).
-
 This document records the requirements discussed so far. It describes the desired product, and distinguishes implemented features from planned ones.
 
 ## Code status
