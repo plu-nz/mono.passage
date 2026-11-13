@@ -7,6 +7,8 @@ export default defineConfig({
     host: '127.0.0.1',
     port: 1420,
     strictPort: true,
+    // The Wails window proxies the page, so point HMR at Vite directly.
+    hmr: { host: '127.0.0.1', port: 1420 },
     watch: { ignored: ['**/build/**'] },
   },
   clearScreen: false,

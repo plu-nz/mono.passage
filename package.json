@@ -3,7 +3,7 @@
   "private": true,
   "packageManager": "pnpm@12.18.0",
   "scripts": {
-    "dev:desktop": "pnpm --filter @passage/desktop build && go run ./desktop",
+    "dev:desktop": "./scripts/dev-desktop.sh",
     "build:desktop": "pnpm --filter @passage/desktop build && go build -o desktop/build/passage ./desktop",
     "dev:extension": "pnpm --filter @passage/extension dev",
     "build:extension": "pnpm --filter @passage/extension build",
