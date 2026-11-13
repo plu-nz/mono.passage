@@ -397,7 +397,6 @@ function App() {
       <p class="hint">Passage {appVersion}</p>
     </section>}
     {activeTab() === 'vault' && (state().kind === 'unavailable' ? <section class="notice">{(state() as {kind: "unavailable"; reason: string}).reason}</section> : <>
-      <div class="toolbar"><input aria-label="Search entries" placeholder="Search vault…" value={query()} onInput={event => setQuery(event.currentTarget.value)} /><button onClick={startCreate}>New entry</button></div>
       <div class="workspace"><nav aria-label="Vault entries">{filtered().length ? filtered().map(entry => <button class={selected() === entry.id ? 'entry selected' : 'entry'} onClick={() => void openEntry(entry.id)}><span class="entry-icon" aria-hidden="true">{entry.title.slice(0, 2).toUpperCase()}</span><span class="entry-text"><strong>{entry.title}</strong><small>{entry.id}</small></span><span class="entry-chevron" aria-hidden="true">›</span></button>) : <p>No entries found.</p>}</nav>
       <section class="detail" aria-label="Entry details">{editing() ? <>
         <h2>{creating() ? 'New entry' : `Edit ${selected()}`}</h2>
@@ -441,6 +440,7 @@ function App() {
     </section>}
     </div>
     <div class="app-bottom">
+      {activeTab() === 'vault' && state().kind !== 'unavailable' && <div class="toolbar"><input aria-label="Search entries" placeholder="Search vault…" value={query()} onInput={event => setQuery(event.currentTarget.value)} /><button onClick={startCreate}>New entry</button></div>}
       <nav class="app-nav" aria-label="Sections">{tabs.map(tab => <button class={activeTab() === tab.id ? 'active' : ''} aria-current={activeTab() === tab.id ? 'page' : undefined} onClick={() => setActiveTab(tab.id)}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">{tab.icon()}</svg><span>{tab.label}</span></button>)}</nav>
     </div>
   </main>;
