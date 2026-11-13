@@ -50,7 +50,7 @@ The chosen directory is saved in the local Passage configuration and is used by 
 
 ### Create and edit entries
 
-With the vault open, click on **New Entry** and enter the entry path, password, username and URL. Passage writes via GNU `pass`: the password is on the first line, followed by `login:` and `url:`. The **Other Pass Lines** field accepts additional metadata, such as `otpauth:` or annotations. To edit an entry, open it and click **Edit**. To remove it, click **Delete** and confirm. These operations check whether the encrypted file has changed since reading; in this case, update the entry before trying again. The opened password is removed from the interface after 30 seconds; the creation form closes after 30 seconds without changing the password. The operation does not automatically make `git push`.
+With the vault open, click **New** and, in the dialog that opens, enter the entry path, password, username and URL. Passage writes via GNU `pass`: the password is on the first line, followed by `login:` and `url:`. The **Other Pass Lines** field accepts additional metadata, such as `otpauth:` or annotations. To edit an entry, open it and click **Edit**. To remove it, click **Delete** and confirm. These operations check whether the encrypted file has changed since reading; in this case, update the entry before trying again. The opened password is removed from the interface after 30 seconds; the creation form closes after 30 seconds without changing the password. The operation does not automatically make `git push`.
 
 ### Generate passwords
 

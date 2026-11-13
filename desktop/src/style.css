@@ -179,3 +179,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .gen-stepper button { display: grid; place-items: center; width: 42px; height: 42px; padding: 0; color: var(--on-accent); background: var(--accent); }
 .gen-stepper button:hover { background: color-mix(in srgb, var(--accent) 88%, var(--text)); }
 .gen-stepper button:disabled { opacity: .4; cursor: default; }
+/* New entry modal (native <dialog>, so focus stays inside and Escape closes it). */
+.modal { width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 48px); padding: 22px 24px 24px; overflow: auto; border: 0; border-radius: 20px; color: var(--text); background: var(--surface); box-shadow: 0 24px 64px rgb(0 0 0 / .4); }
+.modal::backdrop { background: rgb(0 0 0 / .5); }
+.modal-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.modal-heading h2 { margin: 0; font-size: 18px; }
+.modal label { display: block; margin: 16px 0 8px; color: var(--muted); font-size: 12px; font-weight: 700; text-transform: uppercase; }
+.modal .panel-error { margin: 12px 0 0; color: var(--danger); }

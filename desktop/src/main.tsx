@@ -307,6 +307,33 @@ function App() {
     </div>
   </div>;
 
+  function cancelEntry() {
+    if (entryBusy()) return;
+    setEditing(false);
+    setCreating(false);
+    setEntryPassword('');
+    setEntryDetails('');
+  }
+
+  // Shared by the Edit pane and the New entry modal.
+  const entryForm = () => <div class="entry-form">
+      <label for="entry-id">Entry name or path</label><input id="entry-id" value={entryId()} onInput={event => setEntryId(event.currentTarget.value)} disabled={!creating() || entryBusy()} placeholder="sites/example.com" autocomplete="off" />
+      <label for="entry-password">Password</label><input id="entry-password" type="password" value={entryPassword()} onInput={event => setEntryPassword(event.currentTarget.value)} disabled={entryBusy()} autocomplete="new-password" />
+      <label for="entry-username">Username</label><input id="entry-username" value={entryUsername()} onInput={event => setEntryUsername(event.currentTarget.value)} disabled={entryBusy()} autocomplete="off" />
+      <label for="entry-url">URL</label><input id="entry-url" type="url" value={entryUrl()} onInput={event => setEntryUrl(event.currentTarget.value)} disabled={entryBusy()} placeholder="https://example.com" autocomplete="url" />
+      <label for="entry-details">Other pass lines</label><textarea id="entry-details" value={entryDetails()} onInput={event => setEntryDetails(event.currentTarget.value)} disabled={entryBusy()} rows={6} spellcheck={false} />
+      <p class="hint">The first line is the password. GNU pass can still read the other fields.</p>
+      <div class="form-actions"><button disabled={entryBusy() || !entryId().trim() || !entryPassword()} onClick={() => void saveEntry()}>{entryBusy() ? 'Saving…' : 'Save'}</button><button disabled={entryBusy()} onClick={cancelEntry}>Cancel</button></div>
+  </div>;
+
+  // New entry opens as a modal over the current tab. Escape or Cancel closes
+  // it; clicking outside does not, so a half-filled form is not lost.
+  const openModal = (dialog: HTMLDialogElement) => queueMicrotask(() => {
+    if (!dialog.isConnected || dialog.open) return;
+    dialog.showModal();
+    dialog.querySelector<HTMLInputElement>('#entry-id')?.focus();
+  });
+
   const filtered = createMemo(() => entries().filter(entry => entry.id.toLocaleLowerCase().includes(query().toLocaleLowerCase())));
 
   async function sync(operation: 'git_pull' | 'git_push') {
@@ -517,21 +544,18 @@ function App() {
     </section>}
     {activeTab() === 'vault' && (state().kind === 'unavailable' ? <section class="notice">{(state() as {kind: "unavailable"; reason: string}).reason}</section> : <>
       <div class="workspace"><nav aria-label="Vault entries">{filtered().length ? filtered().map(entry => <button class={selected() === entry.id ? 'entry selected' : 'entry'} onClick={() => void openEntry(entry.id)}><span class="entry-icon" aria-hidden="true">{entry.title.slice(0, 2).toUpperCase()}</span><span class="entry-text"><strong>{entry.title}</strong><small>{entry.id}</small></span><span class="entry-chevron" aria-hidden="true">›</span></button>) : <p>No entries found.</p>}</nav>
-      <section class="detail" aria-label="Entry details">{editing() ? <>
-        <h2>{creating() ? 'New entry' : `Edit ${selected()}`}</h2>
-        <div class="entry-form">
-          <label for="entry-id">Entry name or path</label><input id="entry-id" value={entryId()} onInput={event => setEntryId(event.currentTarget.value)} disabled={!creating() || entryBusy()} placeholder="sites/example.com" autocomplete="off" />
-          <label for="entry-password">Password</label><input id="entry-password" type="password" value={entryPassword()} onInput={event => setEntryPassword(event.currentTarget.value)} disabled={entryBusy()} autocomplete="new-password" />
-          <label for="entry-username">Username</label><input id="entry-username" value={entryUsername()} onInput={event => setEntryUsername(event.currentTarget.value)} disabled={entryBusy()} autocomplete="off" />
-          <label for="entry-url">URL</label><input id="entry-url" type="url" value={entryUrl()} onInput={event => setEntryUrl(event.currentTarget.value)} disabled={entryBusy()} placeholder="https://example.com" autocomplete="url" />
-          <label for="entry-details">Other pass lines</label><textarea id="entry-details" value={entryDetails()} onInput={event => setEntryDetails(event.currentTarget.value)} disabled={entryBusy()} rows={6} spellcheck={false} />
-          <p class="hint">The first line is the password. GNU pass can still read the other fields.</p>
-          <div class="form-actions"><button disabled={entryBusy() || !entryId().trim() || !entryPassword()} onClick={() => void saveEntry()}>{entryBusy() ? 'Saving…' : 'Save'}</button><button disabled={entryBusy()} onClick={() => { setEditing(false); setCreating(false); setEntryPassword(''); setEntryDetails(''); }}>Cancel</button></div>
-        </div>
+      <section class="detail" aria-label="Entry details">{editing() && !creating() ? <>
+        <h2>Edit {selected()}</h2>
+        {entryForm()}
       </> : selected() ? <><div class="detail-heading"><div><small>VAULT ENTRY</small><h2>{selected()}</h2></div><button onClick={startEdit} disabled={!secret()}>Edit</button></div>{secret() ? <>{secret().username && <div class="field-card"><label>Username</label><div class="field-value">{secret().username}</div></div>}{secret().urls.length > 0 && <div class="field-card"><label>URL</label><div class="field-value">{secret().urls[0]}</div></div>}<div class="field-card"><label>Password</label><div class="password"><code>{visible() ? secret().password : '••••••••••••'}</code><button onClick={() => setVisible(!visible())}>{visible() ? 'Hide' : 'Show'}</button></div></div>{secret().details && <div class="field-card"><label>Other fields</label><pre>{displayDetails(secret().details)}</pre></div>}<button disabled={entryBusy()} onClick={() => void deleteEntry()}>Delete</button><button onClick={() => void showTotp()}>Generate TOTP code</button>{totp() && <p role="status">TOTP code: <code>{totp().code}</code> · valid for up to {Math.max(0, Math.ceil(totp().validUntil - Date.now() / 1000))} s</p>}<p class="hint">The secret disappears from the screen after 30 seconds. gpg-agent may keep the key cached.</p></> : <p>Open the entry to view its contents.</p>}</> : <p>Select an entry.</p>}</section></div>
     </>)}
-    {error() && <p class="error" role="alert">{error()}</p>}
+    {error() && !creating() && <p class="error" role="alert">{error()}</p>}
     </div>
+    {creating() && <dialog class="modal" ref={openModal} aria-labelledby="new-entry-title" onCancel={event => { event.preventDefault(); cancelEntry(); }}>
+      <div class="modal-heading"><h2 id="new-entry-title">New entry</h2><button class="icon-button" aria-label="Close" disabled={entryBusy()} onClick={cancelEntry}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></div>
+      {entryForm()}
+      {error() && <p class="panel-error" role="alert">{error()}</p>}
+    </dialog>}
     {navPosition() === 'bottom' && appBar()}
   </main>;
 }
