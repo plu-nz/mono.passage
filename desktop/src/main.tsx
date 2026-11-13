@@ -377,7 +377,7 @@ function App() {
   // so the navigation always sits at the window edge.
   const appBar = () => {
     const toolbar = activeTab() === 'vault' && state().kind !== 'unavailable' && <div class="toolbar"><input aria-label="Search entries" placeholder="Search vault…" value={query()} onInput={event => setQuery(event.currentTarget.value)} /></div>;
-    const nav = <nav class="app-nav" aria-label="Sections">{tabs.map(tab => <button class={activeTab() === tab.id ? 'active' : ''} aria-current={activeTab() === tab.id ? 'page' : undefined} onClick={() => setActiveTab(tab.id)}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">{tab.icon()}</svg><span>{tab.label}</span></button>)}<button class="nav-new" disabled={state().kind === 'unavailable'} onClick={() => { setActiveTab('vault'); startCreate(); }}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg><span>New entry</span></button></nav>;
+    const nav = <nav class="app-nav" aria-label="Sections">{tabs.map(tab => <button class={activeTab() === tab.id ? 'active' : ''} aria-current={activeTab() === tab.id ? 'page' : undefined} onClick={() => setActiveTab(tab.id)}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">{tab.icon()}</svg><span>{tab.label}</span></button>)}<button class="nav-new" aria-label="New entry" disabled={state().kind === 'unavailable'} onClick={() => { setActiveTab('vault'); startCreate(); }}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg><span>New</span></button></nav>;
     return <div class={`app-bar ${navPosition()}`}>{navPosition() === 'top' ? <>{nav}{toolbar}</> : <>{toolbar}{nav}</>}</div>;
   };
   return <main class="shell">
