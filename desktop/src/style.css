@@ -105,12 +105,7 @@ body { min-height: 100vh; background: var(--page); }
 .app-nav button span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .app-nav button:hover { color: var(--text); }
 .app-nav button.active { color: var(--accent); font-weight: 700; }
-/* New entry: the one filled action in the navigation, kept at its right end. */
-.app-nav button.nav-new { flex: none; align-self: center; margin-left: 12px; padding: 8px 22px; border-radius: 16px; background: var(--accent); color: var(--on-accent); font-weight: 700; box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 30%, transparent); }
-.app-nav button.nav-new:hover, .app-nav button.nav-new:focus-visible { background: color-mix(in srgb, var(--accent) 88%, var(--text)); color: var(--on-accent); }
-.app-nav button.nav-new:disabled { opacity: .5; cursor: default; box-shadow: none; }
-.app-nav button.nav-search:disabled { opacity: .5; cursor: default; }
-.app-nav button.nav-new .nav-icon { stroke-width: 2.4; }
+.app-nav button:disabled { opacity: .5; cursor: default; }
 .nav-icon { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .app-bar .toolbar { margin: 0; padding: 10px 22px 4px; }
 .app-bar.top .toolbar { padding: 4px 22px 10px; }
