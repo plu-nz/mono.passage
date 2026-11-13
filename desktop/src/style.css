@@ -92,7 +92,7 @@ body { min-height: 100vh; background: var(--page); }
 .app-footer { position: sticky; bottom: 0; display: flex; align-items: center; gap: 14px; padding: 6px 22px; border-top: 1px solid var(--line); background: var(--surface); color: var(--muted); font-size: 11px; }
 .app-footer code { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .app-version { margin-left: auto; opacity: .8; }
-.app-tabs { display: flex; gap: 4px; padding: 0 0 16px; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); }
+.app-tabs { display: flex; gap: 4px; padding: 0 0 16px; overflow-x: auto; border: 0; }
 .app-tabs button { flex: 0 0 auto; padding: 8px 12px; border-color: transparent; background: transparent; color: var(--muted); font-size: 12px; }
 .app-tabs button.active { color: var(--on-accent); background: var(--accent); border-color: var(--accent); font-weight: 700; }
 .toolbar { margin: 18px 0 14px; }
