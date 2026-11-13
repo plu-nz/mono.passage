@@ -69,7 +69,7 @@ jobs:
           from pathlib import Path
 
           version = os.environ['VERSION']
-          for name in ('src/desktop/package.json', 'src/extension/package.json'):
+          for name in ('desktop/package.json', 'extension/package.json'):
               path = Path(name)
               data = json.loads(path.read_text())
               data['version'] = version
@@ -81,10 +81,10 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm check
           pnpm build:extension
-          go test ./internal/... ./src/native-host/...
-          go build -tags gtk3 -o src/desktop/build/passage ./src/desktop
-          go build -o src/native-host/build/passage-native-host ./src/native-host
-          python3 src/native-host/tests/integration.py src/native-host/build/passage-native-host
+          go test ./internal/... ./native-host/...
+          go build -tags gtk3 -o desktop/build/passage ./desktop
+          go build -o native-host/build/passage-native-host ./native-host
+          python3 native-host/tests/integration.py native-host/build/passage-native-host
 
       - name: Package
         run: |
