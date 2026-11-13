@@ -3,5 +3,7 @@ dist/
 .output/
 .wxt/
 target/
+src/desktop/build/
+src/native-host/build/
 src/desktop/src-tauri/gen/
 *.log

@@ -21,12 +21,14 @@ if [[ ! -f "$extension_dir/manifest.json" ]]; then
 fi
 
 mkdir -p "$output_dir"
-stage_dir="$(mktemp -d)"
+stage_parent="${TMPDIR:-${XDG_CACHE_HOME:-$HOME/.cache}}"
+mkdir -p "$stage_parent"
+stage_dir="$(mktemp -d -p "$stage_parent" passage-package.XXXXXX)"
 trap 'rm -rf -- "$stage_dir"' EXIT
 
-desktop_binary="${PASSAGE_DESKTOP_BINARY:-$repo_dir/src/desktop/src-tauri/target/release/passage_desktop}"
+desktop_binary="${PASSAGE_DESKTOP_BINARY:-$repo_dir/src/desktop/build/passage}"
 install -Dm755 "$desktop_binary" "$stage_dir/passage"
-host_binary="${PASSAGE_NATIVE_HOST_BINARY:-$repo_dir/src/native-host/target/release/passage-native-host}"
+host_binary="${PASSAGE_NATIVE_HOST_BINARY:-$repo_dir/src/native-host/build/passage-native-host}"
 install -Dm755 "$host_binary" "$stage_dir/passage-native-host"
 install -Dm755 "$repo_dir/scripts/install-native-host.sh" "$stage_dir/install-native-host.sh"
 python3 - "$repo_dir/src/extension/identity.json" "$extension_dir/manifest.json" "$stage_dir/extension-id.txt" <<'PY'
@@ -46,7 +48,7 @@ if extension_id != identity["id"]:
     raise SystemExit("ID da extensão não corresponde à chave pública")
 pathlib.Path(sys.argv[3]).write_text(extension_id + "\n", encoding="utf-8")
 PY
-install -Dm644 "$repo_dir/src/desktop/src-tauri/icons/icon.png" "$stage_dir/nz.plu.passage.png"
+install -Dm644 "$repo_dir/src/desktop/icons/icon.png" "$stage_dir/nz.plu.passage.png"
 install -Dm644 "$repo_dir/scripts/nz.plu.passage.desktop" "$stage_dir/nz.plu.passage.desktop"
 
 tar -C "$stage_dir" -czf "$output_dir/$archive" passage passage-native-host install-native-host.sh extension-id.txt nz.plu.passage.png nz.plu.passage.desktop

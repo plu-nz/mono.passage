@@ -1,4 +1,6 @@
-# Plano de execução: desktop Linux e extensões
+# Plano de execução: desktop Linux e extensões (histórico)
+
+O desktop e o host foram migrados para Wails 3, Solid e Go. Para o estado atual e os testes de migração, veja [o plano de migração](wails3-solid-migration-plan.md). As tarefas Tauri/Rust abaixo registram a sequência do MVP anterior.
 
 Este plano transforma os requisitos do [README](../README.md) em entregas verificáveis. Cobre o aplicativo Linux, as extensões Brave/Chrome, a interoperabilidade com GNU `pass` no terminal, Git, segurança e distribuição. Android, cliente web e iOS ficam fora deste plano. Estimativas são esforço aproximado de uma pessoa familiarizada com Rust, TypeScript e extensões Chromium, não prazos prometidos.
 

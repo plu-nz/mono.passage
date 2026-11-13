@@ -112,11 +112,21 @@ try {
   if (!loadedExtensionId) throw new Error('The browser did not load Passage');
   const siteTarget = await cdp(browserWs, 'Target.createTarget', { url: site });
   await cdp(browserWs, 'Target.activateTarget', { targetId: siteTarget.targetId });
+  const earlyPage = (await targets()).find(target => target.id === siteTarget.targetId);
+  if (earlyPage?.webSocketDebuggerUrl) {
+    const earlyPageWs = await connect(earlyPage.webSocketDebuggerUrl);
+    try {
+      await cdp(earlyPageWs, 'ServiceWorker.enable');
+      await cdp(earlyPageWs, 'ServiceWorker.startWorker', { scopeURL: `chrome-extension://${loadedExtensionId}/` });
+    } catch { /* The extension may already be active or this CDP backend may omit the domain. */ }
+    earlyPageWs.close();
+  }
   let worker, page;
   for (let i = 0; i < 100; i++) {
     const current = await targets();
     worker = current.find(target => target.type === 'service_worker' && target.url === `chrome-extension://${loadedExtensionId}/background.js`);
     if (worker) break;
+    if (i === 20) await cdp(browserWs, 'Target.createTarget', { url: `chrome-extension://${loadedExtensionId}/popup.html` });
     await delay(100);
   }
   if (!worker) throw new Error(`Extension worker unavailable: ${JSON.stringify({ loadedExtensionId, targets: (await targets()).map(t => ({ type: t.type, url: t.url })) })}`);

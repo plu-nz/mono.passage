@@ -8,22 +8,23 @@ Este documento registra os requisitos discutidos até agora. Ele descreve o prod
 
 ## Estado do código
 
-O app desktop permite escolher um cofre GNU pass existente, criar outro com uma chave GPG nova ou já disponível, listar, buscar, abrir, criar, editar e excluir entradas, gerar TOTP e bloquear o acesso das extensões. A branch `main` também contém conexão à conta GitHub pelo GitHub CLI, inicialização do Git no cofre, configuração do remoto, registro de alterações cifradas, sincronização Git e uma ação para preservar as duas versões de entradas `.gpg` conflitantes. Aprovação e revogação de extensões estão na interface, e o host Native Messaging oferece busca por URL e preenchimento após ação do usuário. A matriz de formulários controlados passou em Brave Origin e Chrome estável; o formulário real de login do GitHub também foi testado nos dois navegadores com credenciais fictícias, sem envio do formulário.
+O app desktop permite escolher um cofre GNU pass existente, criar outro com uma chave GPG nova ou já disponível, listar, buscar, abrir, criar, editar e excluir entradas, gerar TOTP e bloquear o acesso das extensões. O aplicativo também contém conexão à conta GitHub pelo GitHub CLI, inicialização do Git no cofre, configuração do remoto, registro de alterações cifradas, sincronização Git e uma ação para preservar as duas versões de entradas `.gpg` conflitantes. Aprovação e revogação de extensões estão na interface, e o host Native Messaging oferece busca por URL e preenchimento após ação do usuário. A matriz de formulários controlados passou em Brave Origin e Chrome estável; o formulário real de login do GitHub também foi testado nos dois navegadores com credenciais fictícias, sem envio do formulário.
 
 | Diretório | Responsabilidade |
 | --- | --- |
 | `packages/core` | Tipos e contrato compartilhado do cofre e das mensagens locais. |
-| `src/desktop` | Interface React/Vite e aplicativo Tauri 2 para Linux. |
+| `src/desktop` | Interface Solid/Vite e aplicativo Wails 3/Go para Linux. |
 | `src/extension` | Extensão Manifest V3 para Brave e Chrome, construída com WXT. |
 | `src/native-host` | Conector local Native Messaging para as extensões. |
 | `website` | Landing page estática e gerador do Worker que a publica. |
 
-Para desenvolver no Linux, instale Node.js, pnpm, Rust e as [dependências de sistema do Tauri](https://v2.tauri.app/start/prerequisites/). Na raiz do repositório:
+Para desenvolver no Linux, instale Node.js, pnpm, Go 1.26+, GNU `pass`, GPG, GTK3 e WebKit2GTK 4.1. O desktop usa Wails 3.0.0 com o backend GTK3 nesta fase; veja as [dependências Linux do Wails](https://v3.wails.io/getting-started/installation/). Na raiz do repositório:
 
 ```bash
 pnpm install
 pnpm check
-pnpm dev:desktop
+pnpm --filter @passage/desktop build
+go run -tags gtk3 ./src/desktop
 ```
 
 Para gerar a extensão, execute `pnpm build:extension` e carregue `src/extension/.output/chrome-mv3` como extensão descompactada em `brave://extensions` ou `chrome://extensions`. Siga [as instruções do conector local](src/native-host/README.md) para compilá-lo e registrar os IDs das extensões; o código mostrado pelo popup pode ser aprovado na interface desktop ou pelo CLI. Para usar o desktop, instale GNU `pass` e GPG. A chave GPG e o `gpg-agent` continuam sob controle do sistema.
@@ -77,7 +78,7 @@ Em Linux x86_64, com `curl`, `tar` e `sha256sum`:
 curl -LsSf https://passage.plu.nz/install.sh | sh
 ```
 
-O script baixa o binário pronto do [release mais recente](https://github.com/plu-nz/passage/releases/latest), verifica o SHA-256 e instala `~/.local/bin/passage` com um atalho no menu. A partir de `v0.2.1`, o pacote instala a extensão descompactada em `~/.local/share/passage/extension-chromium` (ou em `XDG_DATA_HOME/passage/extension-chromium`) e registra automaticamente o host para Brave e Chrome. Carregue essa pasta uma vez em `brave://extensions` e `chrome://extensions`, com o modo de desenvolvedor ativado, e aprove cada navegador no painel **Extensões autorizadas**. O ID da extensão descompactada é fixo: `edmjpcolampgjbnmldchmnkinmhakjgm`. Não é preciso clonar o repositório, nem instalar Node.js, pnpm ou Rust. GNU `pass`, GPG, Python 3 e as bibliotecas gráficas do Tauri ainda são dependências de execução. `~/.local/bin` deve estar no `PATH` da sessão.
+O script baixa o binário pronto do [release mais recente](https://github.com/plu-nz/passage/releases/latest), verifica o SHA-256 e instala `~/.local/bin/passage` com um atalho no menu. A partir de `v0.2.1`, o pacote instala a extensão descompactada em `~/.local/share/passage/extension-chromium` (ou em `XDG_DATA_HOME/passage/extension-chromium`) e registra automaticamente o host para Brave e Chrome. Carregue essa pasta uma vez em `brave://extensions` e `chrome://extensions`, com o modo de desenvolvedor ativado, e aprove cada navegador no painel **Extensões autorizadas**. O ID da extensão descompactada é fixo: `edmjpcolampgjbnmldchmnkinmhakjgm`. Não é preciso clonar o repositório nem instalar Node.js, pnpm ou Go para usar o release. GNU `pass`, GPG, Python 3, GTK3 e WebKit2GTK 4.1 são dependências de execução. `~/.local/bin` deve estar no `PATH` da sessão.
 
 O mesmo comando atualiza uma instalação existente para a release mais recente. Feche e abra o Passage após atualizar e clique em **Recarregar** na extensão em `brave://extensions` e `chrome://extensions` para aplicar a versão nova. A versão instalada muda apenas quando uma nova release é publicada.
 
@@ -185,7 +186,7 @@ O MVP entrega **aplicativo desktop para Linux e extensões para Brave e Chrome**
 
 ## Decisões técnicas em aberto
 
-- Tecnologia da interface: TypeScript com Tauri 2 e código compartilhado com extensões foi escolhida para o MVP; revisar após validar o fluxo completo.
+- Tecnologia da interface: Solid/Vite com Wails 3 e núcleo Go compartilhado com o host; extensões continuam em TypeScript/WXT.
 - Uso direto do Browserpass ou criação de uma extensão e conector próprios.
 - Modelo de desbloqueio biométrico no Linux, armazenamento da chave local e interação com `gpg-agent`.
 - Como oferecer uma cópia cifrada da chave PGP para acesso web emergencial e como autorizar o serviço web a ler o Git privado.

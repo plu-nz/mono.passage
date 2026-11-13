@@ -1,10 +1,15 @@
 # Decisões do MVP para revisão
 
+## Migração Wails 3 e Go
+
+O desktop passou a usar Solid/Vite e Wails 3.0.0 com Go. O host Native Messaging também foi portado para Go e compartilha o núcleo em `internal/`. O backend GTK3/WebKit2GTK 4.1 permite compilar nesta máquina e no Ubuntu 22.04; GTK4/WebKitGTK 6.0 poderá ser adotado quando estiver disponível no ambiente alvo. O protocolo v1, os caminhos de configuração, o ID da extensão e os nomes dos executáveis foram mantidos. A UI usa serviços Go explícitos, sem ponte genérica para executar comandos externos. Esta seção substitui as referências históricas a Tauri, React e Rust abaixo.
+
+
 Este registro separa o que já foi implementado das escolhas ainda provisórias. Ele pode ser alterado após o primeiro teste com um cofre de exemplo.
 
 ## 1. Estrutura do repositório
 
-- `src/desktop`: interface React/Vite e shell Tauri 2.
+- `src/desktop`: interface Solid/Vite e shell Wails 3/Go.
 - `src/extension`: extensão Chromium em WXT, para Brave e Chrome.
 - `packages/core`: contratos TypeScript compartilhados.
 
@@ -12,7 +17,7 @@ Este registro separa o que já foi implementado das escolhas ainda provisórias.
 
 ## 2. Leitura do cofre no Linux
 
-**Implementado:** o desktop permite escolher um cofre existente ou criar um novo com uma chave GPG privada presente no sistema. Também oferece gerar uma chave pelo GPG e inicializar o cofre no mesmo fluxo; a frase secreta é coletada pelo `pinentry`, fora da interface Passage. A seleção fica em `XDG_CONFIG_HOME/passage/settings.json` (ou `~/.config/passage/settings.json`); `PASSWORD_STORE_DIR` tem prioridade, seguido da seleção e de `~/.password-store`. A criação chama `pass init` e recusa sobrescrever um cofre inicializado. O desktop lista os arquivos `.gpg` sem entrar em `.git` ou seguir links simbólicos e chama `pass show` para abrir uma entrada. O conteúdo completo só é solicitado quando o usuário seleciona a entrada. A primeira linha é tratada como senha; as demais ficam em “Outros campos”. A interface limpa o conteúdo exibido após 30 segundos. O núcleo Rust interpreta `login`/`username` e `url`; a UI cria e edita entradas por `pass` e preserva as outras linhas. Atualização e remoção exigem hash do arquivo cifrado lido anteriormente, mas há uma janela de corrida com alterações externas entre a verificação e o subprocesso `pass`.
+**Implementado:** o desktop permite escolher um cofre existente ou criar um novo com uma chave GPG privada presente no sistema. Também oferece gerar uma chave pelo GPG e inicializar o cofre no mesmo fluxo; a frase secreta é coletada pelo `pinentry`, fora da interface Passage. A seleção fica em `XDG_CONFIG_HOME/passage/settings.json` (ou `~/.config/passage/settings.json`); `PASSWORD_STORE_DIR` tem prioridade, seguido da seleção e de `~/.password-store`. A criação chama `pass init` e recusa sobrescrever um cofre inicializado. O desktop lista os arquivos `.gpg` sem entrar em `.git` ou seguir links simbólicos e chama `pass show` para abrir uma entrada. O conteúdo completo só é solicitado quando o usuário seleciona a entrada. A primeira linha é tratada como senha; as demais ficam em “Outros campos”. A interface limpa o conteúdo exibido após 30 segundos. O núcleo Go interpreta `login`/`username` e `url`; a UI cria e edita entradas por `pass` e preserva as outras linhas. Atualização e remoção exigem hash do arquivo cifrado lido anteriormente, mas há uma janela de corrida com alterações externas entre a verificação e o subprocesso `pass`.
 
 **Motivo:** delegar descriptografia e regras do cofre ao GNU `pass` e ao GPG preserva a interoperabilidade com o terminal e com Android Password Store. Nenhum segredo é gravado pelo aplicativo nesta etapa.
 

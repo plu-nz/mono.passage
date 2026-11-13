@@ -1,13 +1,13 @@
 import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+import solid from 'vite-plugin-solid';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [solid()],
   server: {
     host: '127.0.0.1',
     port: 1420,
     strictPort: true,
-    watch: { ignored: ['**/src-tauri/**'] },
+    watch: { ignored: ['**/build/**'] },
   },
   clearScreen: false,
 });
