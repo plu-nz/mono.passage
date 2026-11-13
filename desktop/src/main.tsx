@@ -309,8 +309,7 @@ function App() {
   }
 
   return <main class="shell">
-    <header class="app-header"><div class="brand"><div class="mark" aria-hidden="true">P</div><div><h1>Passage</h1><p>Your GNU pass vault</p></div></div><div class="header-status"><div class="status-line"><span class={state().kind === 'available' ? 'status-dot ready' : 'status-dot'} />{state().kind === 'available' ? 'Vault available' : 'Vault unavailable'}</div><small class="app-version">v{appVersion}</small></div></header>
-    <div class="app-body"><div class="context-bar"><span>Vault <code>{vaultInfo()?.path || 'checking…'}</code></span><span>{git()?.upstream ? `Git · ↑${git().ahead} ↓${git().behind}` : 'Local storage'}</span></div>
+    <div class="app-body">
     <nav class="app-tabs" aria-label="Sections"><button class={activeTab() === 'vault' ? 'active' : ''} onClick={() => setActiveTab('vault')}>Vault</button><button class={activeTab() === 'sync' ? 'active' : ''} onClick={() => setActiveTab('sync')}>Git Sync</button><button class={activeTab() === 'extensions' ? 'active' : ''} onClick={() => setActiveTab('extensions')}>Extensions</button><button class={activeTab() === 'settings' ? 'active' : ''} onClick={() => setActiveTab('settings')}>Settings</button></nav>
     {activeTab() === 'settings' && <section class="panel vault-panel" aria-label="Vault setup">
       <h2>Vault</h2>
@@ -374,6 +373,7 @@ function App() {
       {pairingError() && <p class="panel-error" role="alert">{pairingError()}</p>}
     </section>}
     </div>
+    <footer class="app-footer"><span class="status-line"><span class={state().kind === 'available' ? 'status-dot ready' : 'status-dot'} />{state().kind === 'available' ? 'Vault available' : 'Vault unavailable'}</span><code>{vaultInfo()?.path || 'checking…'}</code><span class="app-version">{appVersion}</span></footer>
   </main>;
 }
 
