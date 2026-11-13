@@ -185,6 +185,12 @@ func (*DesktopService) SetRefreshSeconds(seconds int) error {
 	return setup.SetRefreshSeconds(seconds)
 }
 
+// NavPosition is where the section navigation sits: "top" or "bottom".
+func (*DesktopService) NavPosition() (string, error) { return setup.NavPosition() }
+func (*DesktopService) SetNavPosition(position string) error {
+	return setup.SetNavPosition(position)
+}
+
 func (*DesktopService) GithubStatus() github.StatusInfo {
 	v, _ := vault.OpenEnv()
 	if v == nil {

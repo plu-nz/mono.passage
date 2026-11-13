@@ -83,3 +83,25 @@ func TestInvalidSettingsFileIsReported(t *testing.T) {
 		t.Fatal("RefreshSeconds() accepted invalid settings")
 	}
 }
+
+func TestNavPositionDefaultsToTopAndPersists(t *testing.T) {
+	isolateSettings(t)
+	if got, err := NavPosition(); err != nil || got != "top" {
+		t.Fatalf("NavPosition() = %q, %v; want top", got, err)
+	}
+	if err := SetRefreshSeconds(60); err != nil {
+		t.Fatal(err)
+	}
+	if err := SetNavPosition("bottom"); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := NavPosition(); got != "bottom" {
+		t.Fatalf("NavPosition() = %q; want bottom", got)
+	}
+	if got, _ := RefreshSeconds(); got != 60 {
+		t.Fatalf("refresh interval lost: %d", got)
+	}
+	if err := SetNavPosition("left"); err == nil {
+		t.Fatal("SetNavPosition accepted an unsupported position")
+	}
+}

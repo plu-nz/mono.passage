@@ -72,6 +72,8 @@ function App() {
   const [createdFingerprint, setCreatedFingerprint] = createSignal('');
   const [refreshSeconds, setRefreshSeconds] = createSignal(30);
   const [refreshError, setRefreshError] = createSignal('');
+  const [navPosition, setNavPosition] = createSignal<'top' | 'bottom'>('top');
+  const [navError, setNavError] = createSignal('');
   const requestNumber = { current: 0 };
 
   const refresh = async () => {
@@ -116,6 +118,7 @@ function App() {
   };
   onMount(async () => {
     try { setRefreshSeconds(await invoke<number>('refresh_seconds')); } catch (cause) { setRefreshError(String(cause)); }
+    try { setNavPosition(await invoke<'top' | 'bottom'>('nav_position')); } catch (cause) { setNavError(String(cause)); }
   });
   createEffect(() => {
     const seconds = refreshSeconds();
@@ -130,6 +133,15 @@ function App() {
       setRefreshSeconds(seconds);
     } catch (cause) {
       setRefreshError(String(cause));
+    }
+  };
+  const changeNavPosition = async (position: 'top' | 'bottom') => {
+    setNavError('');
+    try {
+      await invoke('set_nav_position', { position });
+      setNavPosition(position);
+    } catch (cause) {
+      setNavError(String(cause));
     }
   };
   const refreshVaultInfo = async () => {
@@ -362,8 +374,21 @@ function App() {
     finally { setVaultBusy(false); }
   }
 
+  // Section navigation plus the vault search; at the top the order is mirrored
+  // so the navigation always sits at the window edge.
+  const appBar = () => {
+    const toolbar = activeTab() === 'vault' && state().kind !== 'unavailable' && <div class="toolbar"><input aria-label="Search entries" placeholder="Search vault…" value={query()} onInput={event => setQuery(event.currentTarget.value)} /><button onClick={startCreate}>New entry</button></div>;
+    const nav = <nav class="app-nav" aria-label="Sections">{tabs.map(tab => <button class={activeTab() === tab.id ? 'active' : ''} aria-current={activeTab() === tab.id ? 'page' : undefined} onClick={() => setActiveTab(tab.id)}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">{tab.icon()}</svg><span>{tab.label}</span></button>)}</nav>;
+    return <div class={`app-bar ${navPosition()}`}>{navPosition() === 'top' ? <>{nav}{toolbar}</> : <>{toolbar}{nav}</>}</div>;
+  };
   return <main class="shell">
+    {navPosition() === 'top' && appBar()}
     <div class="app-body">
+    {activeTab() === 'settings' && <section class="panel vault-panel" aria-label="Layout">
+      <h2>Layout</h2>
+      <label class="check"><input type="checkbox" checked={navPosition() === 'bottom'} onChange={event => void changeNavPosition(event.currentTarget.checked ? 'bottom' : 'top')} />Show navigation at the bottom</label>
+      {navError() && <p class="panel-error" role="alert">{navError()}</p>}
+    </section>}
     {activeTab() === 'settings' && <section class="panel vault-panel" aria-label="Entry list">
       <h2>Entry list</h2>
       <label for="refresh-seconds">Refresh automatically</label>
@@ -439,10 +464,7 @@ function App() {
       {pairingError() && <p class="panel-error" role="alert">{pairingError()}</p>}
     </section>}
     </div>
-    <div class="app-bottom">
-      {activeTab() === 'vault' && state().kind !== 'unavailable' && <div class="toolbar"><input aria-label="Search entries" placeholder="Search vault…" value={query()} onInput={event => setQuery(event.currentTarget.value)} /><button onClick={startCreate}>New entry</button></div>}
-      <nav class="app-nav" aria-label="Sections">{tabs.map(tab => <button class={activeTab() === tab.id ? 'active' : ''} aria-current={activeTab() === tab.id ? 'page' : undefined} onClick={() => setActiveTab(tab.id)}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">{tab.icon()}</svg><span>{tab.label}</span></button>)}</nav>
-    </div>
+    {navPosition() === 'bottom' && appBar()}
   </main>;
 }
 
