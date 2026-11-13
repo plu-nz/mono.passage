@@ -4,6 +4,7 @@ import { invoke } from './service';
 import { version as appVersion } from '../package.json';
 import type { VaultState } from '@passage/core';
 import './style.css';
+import './theme';
 
 type Entry = { id: string; title: string };
 type Secret = { password: string; details: string; other_details: string; username: string | null; urls: string[]; ciphertext_hash: string };

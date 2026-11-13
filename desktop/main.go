@@ -20,6 +20,7 @@ func main() {
 			application.NewService(&DesktopService{}),
 		},
 	})
+	go watchColorScheme(func(dark bool) { app.Event.Emit(themeChangedEvent, dark) })
 	app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:     "Passage",
 		Width:     1060,
