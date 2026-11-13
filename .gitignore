@@ -2,7 +2,6 @@ node_modules/
 dist/
 .output/
 .wxt/
-target/
 desktop/build/
 native-host/build/
 *.log
