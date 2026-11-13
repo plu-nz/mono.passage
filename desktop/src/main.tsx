@@ -435,8 +435,10 @@ function App() {
       {pairingError() && <p class="panel-error" role="alert">{pairingError()}</p>}
     </section>}
     </div>
-    <nav class="app-nav" aria-label="Sections">{tabs.map(tab => <button class={activeTab() === tab.id ? 'active' : ''} aria-current={activeTab() === tab.id ? 'page' : undefined} onClick={() => setActiveTab(tab.id)}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">{tab.icon()}</svg><span>{tab.label}</span></button>)}</nav>
-    <footer class="app-footer"><span class="status-line"><span class={state().kind === 'available' ? 'status-dot ready' : 'status-dot'} />{state().kind === 'available' ? 'Vault available' : 'Vault unavailable'}</span><code>{vaultInfo()?.path || 'checking…'}</code><span class="app-version">{appVersion}</span></footer>
+    <div class="app-bottom">
+      <nav class="app-nav" aria-label="Sections">{tabs.map(tab => <button class={activeTab() === tab.id ? 'active' : ''} aria-current={activeTab() === tab.id ? 'page' : undefined} onClick={() => setActiveTab(tab.id)}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">{tab.icon()}</svg><span>{tab.label}</span></button>)}</nav>
+      <footer class="app-footer"><span class="status-line"><span class={state().kind === 'available' ? 'status-dot ready' : 'status-dot'} />{state().kind === 'available' ? 'Vault available' : 'Vault unavailable'}</span><code>{vaultInfo()?.path || 'checking…'}</code><span class="app-version">{appVersion}</span></footer>
+    </div>
   </main>;
 }
 
