@@ -479,20 +479,6 @@ function App() {
         {stepper('minSpecial', 'Minimum special', () => genOptions().special)}
       </section>
     </div>}
-    {activeTab() === 'settings' && <section class="panel vault-panel" aria-label="Layout">
-      <h2>Layout</h2>
-      <label class="check"><input type="checkbox" checked={navPosition() === 'bottom'} onChange={event => void changeNavPosition(event.currentTarget.checked ? 'bottom' : 'top')} />Show navigation at the bottom</label>
-      {navError() && <p class="panel-error" role="alert">{navError()}</p>}
-    </section>}
-    {activeTab() === 'settings' && <section class="panel vault-panel" aria-label="Entry list">
-      <h2>Entry list</h2>
-      <label for="refresh-seconds">Refresh automatically</label>
-      <div class="panel-actions"><select id="refresh-seconds" value={String(refreshSeconds())} onChange={event => void changeRefreshSeconds(Number(event.currentTarget.value))}>
-        {refreshChoices.map(([seconds, label]) => <option value={String(seconds)}>{label}</option>)}
-      </select></div>
-      <p class="hint">Reloads the list so entries added or removed with <code>pass</code> or Git appear without reopening Passage.</p>
-      {refreshError() && <p class="panel-error" role="alert">{refreshError()}</p>}
-    </section>}
     {activeTab() === 'settings' && <section class="panel vault-panel" aria-label="Vault setup">
       <h2>Vault</h2>
       <p class="status-line"><span class={state().kind === 'available' ? 'status-dot ready' : 'status-dot'} />{state().kind === 'available' ? 'Vault available' : 'Vault unavailable'}</p>
@@ -511,6 +497,20 @@ function App() {
       {vaultInfo() && <p class="hint">{!vaultInfo().passInstalled ? 'GNU pass not found. ' : ''}{!vaultInfo().gpgInstalled ? 'GPG not found. ' : ''}{vaultInfo().initialized ? `Initialized for: ${vaultInfo().recipientIds.join(', ') || 'unknown key'}.` : 'Vault not initialized yet.'} {vaultInfo().gpgKeys.length === 0 && vaultInfo().gpgInstalled ? 'No private GPG key found. Create or import one before creating a vault.' : ''}</p>}
       <button onClick={() => void refreshVaultInfo()} disabled={vaultBusy()}>Check keys and vault</button>
       {vaultError() && <p class="panel-error" role="alert">{vaultError()}</p>}
+    </section>}
+    {activeTab() === 'settings' && <section class="panel vault-panel" aria-label="Layout">
+      <h2>Layout</h2>
+      <label class="check"><input type="checkbox" checked={navPosition() === 'bottom'} onChange={event => void changeNavPosition(event.currentTarget.checked ? 'bottom' : 'top')} />Show navigation at the bottom</label>
+      {navError() && <p class="panel-error" role="alert">{navError()}</p>}
+    </section>}
+    {activeTab() === 'settings' && <section class="panel vault-panel" aria-label="Entry list">
+      <h2>Entry list</h2>
+      <label for="refresh-seconds">Refresh automatically</label>
+      <div class="panel-actions"><select id="refresh-seconds" value={String(refreshSeconds())} onChange={event => void changeRefreshSeconds(Number(event.currentTarget.value))}>
+        {refreshChoices.map(([seconds, label]) => <option value={String(seconds)}>{label}</option>)}
+      </select></div>
+      <p class="hint">Reloads the list so entries added or removed with <code>pass</code> or Git appear without reopening Passage.</p>
+      {refreshError() && <p class="panel-error" role="alert">{refreshError()}</p>}
     </section>}
     {activeTab() === 'settings' && <section class="panel vault-panel" aria-label="Git sync">
       <h2>Git sync</h2>
