@@ -13,7 +13,7 @@ for command_name in curl tar sha256sum install mktemp mkdir; do
   fi
 done
 
-release_url="${PASSAGE_RELEASE_URL:-https://github.com/plu-nz/passage/releases/latest/download}"
+release_url="${PASSAGE_RELEASE_URL:-https://github.com/plu-nz/mono.passage/releases/latest/download}"
 archive='passage-linux-x86_64.tar.gz'
 temp_dir="$(mktemp -d)"
 trap 'rm -rf -- "$temp_dir"' EXIT

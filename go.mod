@@ -1,4 +1,4 @@
-module github.com/plu-nz/passage
+module github.com/plu-nz/mono.passage
 
 go 1.26.0
 

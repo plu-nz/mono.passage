@@ -5,12 +5,12 @@ import (
 	"os/exec"
 	"regexp"
 
-	"github.com/plu-nz/passage/internal/github"
-	"github.com/plu-nz/passage/internal/gitvault"
-	"github.com/plu-nz/passage/internal/otp"
-	"github.com/plu-nz/passage/internal/pairing"
-	"github.com/plu-nz/passage/internal/setup"
-	"github.com/plu-nz/passage/internal/vault"
+	"github.com/plu-nz/mono.passage/internal/github"
+	"github.com/plu-nz/mono.passage/internal/gitvault"
+	"github.com/plu-nz/mono.passage/internal/otp"
+	"github.com/plu-nz/mono.passage/internal/pairing"
+	"github.com/plu-nz/mono.passage/internal/setup"
+	"github.com/plu-nz/mono.passage/internal/vault"
 )
 
 // DesktopService exposes a fixed set of Passage actions to the embedded UI.

@@ -10,7 +10,7 @@ export default {
   async fetch(request) {
     const { pathname } = new URL(request.url);
     if (pathname === '/install.sh') {
-      return Response.redirect('https://raw.githubusercontent.com/plu-nz/passage/main/scripts/install.sh', 302);
+      return Response.redirect('https://raw.githubusercontent.com/plu-nz/mono.passage/main/scripts/install.sh', 302);
     }
     if (pathname !== '/') return new Response('Page not found', { status: 404 });
     return new Response(request.method === 'HEAD' ? null : html, {

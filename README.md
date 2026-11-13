@@ -78,7 +78,7 @@ On Linux x86_64, with `curl`, `tar` and `sha256sum`:
 curl -LsSf https://passage.plu.nz/install.sh | sh
 ```
 
-The script downloads the ready-made binary from [latest release](https://github.com/plu-nz/passage/releases/latest), checks SHA-256 and installs `~/.local/bin/passage` with a menu shortcut. Starting from `v0.2.1`, the package installs the unpacked extension to `~/.local/share/passage/extension-chromium` (or to `XDG_DATA_HOME/passage/extension-chromium`) and automatically registers the host for Brave and Chrome. Upload this folder once to `brave://extensions` and `chrome://extensions`, with developer mode enabled, and approve each browser in the **Authorized Extensions** panel. The ID of the unzipped extension is fixed: `edmjpcolampgjbnmldchmnkinmhakjgm`. You don't need to clone the repository or install Node.js, pnpm or Go to use the release. GNU `pass`, GPG, Python 3, GTK3 and WebKit2GTK 4.1 are runtime dependencies. `~/.local/bin` must be in the session's `PATH`.
+The script downloads the ready-made binary from [latest release](https://github.com/plu-nz/mono.passage/releases/latest), checks SHA-256 and installs `~/.local/bin/passage` with a menu shortcut. Starting from `v0.2.1`, the package installs the unpacked extension to `~/.local/share/passage/extension-chromium` (or to `XDG_DATA_HOME/passage/extension-chromium`) and automatically registers the host for Brave and Chrome. Upload this folder once to `brave://extensions` and `chrome://extensions`, with developer mode enabled, and approve each browser in the **Authorized Extensions** panel. The ID of the unzipped extension is fixed: `edmjpcolampgjbnmldchmnkinmhakjgm`. You don't need to clone the repository or install Node.js, pnpm or Go to use the release. GNU `pass`, GPG, Python 3, GTK3 and WebKit2GTK 4.1 are runtime dependencies. `~/.local/bin` must be in the session's `PATH`.
 
 The same command upgrades an existing installation to the latest release. Close and open Passage after updating and click **Reload** on the extension in `brave://extensions` and `chrome://extensions` to apply the new version. The installed version changes only when a new release is published.
 
@@ -170,7 +170,7 @@ MVP delivers **desktop application for Linux and extensions for Brave and Chrome
 
 ## Sync and recovery
 
-- Use a **private Git repository for the vault**, separate from the `plu-nz/passage` code repository.
+- Use a **private Git repository for the vault**, separate from the `plu-nz/mono.passage` code repository.
 - Accept hosting on GitHub or a private Git server, including on the user's NAS.
 - Detect simultaneous changes. Conflicts in the same entry cannot be resolved silently, as `.gpg` files do not support useful textual merging.
 - Provide PGP key backup and recovery. Losing your cell phone, biometric reader or device cannot be the only cause of permanent loss of your vault.
