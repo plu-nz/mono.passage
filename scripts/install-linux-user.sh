@@ -12,22 +12,22 @@ cd "$repo_dir"
 pnpm install --frozen-lockfile
 pnpm --filter @passage/desktop build
 pnpm build:extension
-go build -tags gtk3 -o src/desktop/build/passage ./src/desktop
-go build -o src/native-host/build/passage-native-host ./src/native-host
+go build -tags gtk3 -o desktop/build/passage ./desktop
+go build -o native-host/build/passage-native-host ./native-host
 
-install -Dm755 src/desktop/build/passage "$user_bin/passage"
-install -Dm755 src/native-host/build/passage-native-host "$user_bin/passage-native-host"
+install -Dm755 desktop/build/passage "$user_bin/passage"
+install -Dm755 native-host/build/passage-native-host "$user_bin/passage-native-host"
 install -Dm755 scripts/install-native-host.sh "$user_bin/passage-install-native-host"
 extension_dir="$install_root/passage/extension-chromium"
 mkdir -p "$extension_dir"
-cp -a src/extension/.output/chrome-mv3/. "$extension_dir/"
+cp -a extension/.output/chrome-mv3/. "$extension_dir/"
 extension_id="$(python3 - <<'PY'
 import base64
 import hashlib
 import json
 from pathlib import Path
-identity = json.loads(Path('src/extension/identity.json').read_text(encoding='utf-8'))
-manifest = json.loads(Path('src/extension/.output/chrome-mv3/manifest.json').read_text(encoding='utf-8'))
+identity = json.loads(Path('extension/identity.json').read_text(encoding='utf-8'))
+manifest = json.loads(Path('extension/.output/chrome-mv3/manifest.json').read_text(encoding='utf-8'))
 if manifest.get('key') != identity['key']:
     raise SystemExit('Chave da extensão não corresponde ao ID configurado')
 digest = hashlib.sha256(base64.b64decode(identity['key'], validate=True)).digest()
@@ -38,7 +38,7 @@ print(extension_id)
 PY
 )"
 "$user_bin/passage-install-native-host" "$user_bin/passage-native-host" "$extension_id" "$extension_id"
-install -Dm644 src/desktop/icons/icon.png "$install_root/icons/hicolor/512x512/apps/nz.plu.passage.png"
+install -Dm644 desktop/icons/icon.png "$install_root/icons/hicolor/512x512/apps/nz.plu.passage.png"
 install -Dm644 scripts/nz.plu.passage.desktop "$install_root/applications/nz.plu.passage.desktop"
 
 printf 'Passage instalado em %s\n' "$user_bin/passage"
