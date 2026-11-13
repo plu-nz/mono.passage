@@ -177,7 +177,7 @@ try {
     throw new Error(`Popup did not list matching login: ${JSON.stringify({ status, tabs })}`);
   }
   await evaluate(popupWs, `document.querySelector('#entries button').click(); true`);
-  const expectedStatus = { standard: 'preenchidas', usernameOnly: 'Usuário preenchido', passwordOnly: 'preenchidas', autocompleteOff: 'preenchidas', ambiguousPassword: 'ambíguos', ambiguousUsername: 'ambíguos', hiddenPassword: 'Nenhum campo', transparentPassword: 'Nenhum campo', newPassword: 'Nenhum campo', iframe: 'Nenhum campo', noFields: 'Nenhum campo', githubLive: 'preenchidas', herokuLive: 'preenchidas' }[scenario];
+  const expectedStatus = { standard: 'filled', usernameOnly: 'Username filled', passwordOnly: 'filled', autocompleteOff: 'filled', ambiguousPassword: 'Ambiguous', ambiguousUsername: 'Ambiguous', hiddenPassword: 'No suitable login field', transparentPassword: 'No suitable login field', newPassword: 'No suitable login field', iframe: 'No suitable login field', noFields: 'No suitable login field', githubLive: 'filled', herokuLive: 'filled' }[scenario];
   for (let i = 0; i < 100; i++) {
     if ((await evaluate(popupWs, `document.querySelector('#status')?.textContent || ''`)).includes(expectedStatus)) break;
     await delay(100);
@@ -201,12 +201,12 @@ try {
   }
   await evaluate(popupWs, `document.querySelector('#entries button').click(); true`);
   for (let i = 0; i < 100; i++) {
-    if ((await evaluate(popupWs, `document.querySelector('#status')?.textContent || ''`)).includes('mudou')) break;
+    if ((await evaluate(popupWs, `document.querySelector('#status')?.textContent || ''`)).includes('changed')) break;
     await delay(100);
   }
   const afterNavigation = await evaluate(pageWs, `({user:document.querySelector('${userSelector}')?.value || '',password:document.querySelector('${passwordSelector}')?.value || ''})`);
   const rejected = await evaluate(popupWs, `document.querySelector('#status')?.textContent || ''`);
-  if (afterNavigation.user || afterNavigation.password || !(rejected.includes('mudou') || (['githubLive', 'herokuLive'].includes(scenario) && rejected.includes('Aba ativa indisponível')))) throw new Error(`Navigation was not rejected: ${JSON.stringify({ afterNavigation, rejected, currentUrl: await evaluate(pageWs, 'location.href') })}`);
+  if (afterNavigation.user || afterNavigation.password || !(rejected.includes('changed') || (['githubLive', 'herokuLive'].includes(scenario) && rejected.includes('Active tab unavailable')))) throw new Error(`Navigation was not rejected: ${JSON.stringify({ afterNavigation, rejected, currentUrl: await evaluate(pageWs, 'location.href') })}`);
   console.log(JSON.stringify({ browser: browserBin, scenario, extensionId, paired: true, popupListed: true, outcome: expectedStatus, navigationRejected: true }));
   popupWs.close(); browserWs.close(); workerWs.close(); pageWs.close();
 } finally {

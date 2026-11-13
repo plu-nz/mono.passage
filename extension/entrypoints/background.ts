@@ -16,23 +16,23 @@ async function installationId(): Promise<string> {
 async function credentials(): Promise<{ installationId: string; token: string }> {
   const id = await installationId();
   const stored = await browser.storage.local.get('token');
-  if (typeof stored.token !== 'string' || !stored.token) throw new Error('Pareie esta extensão primeiro.');
+  if (typeof stored.token !== 'string' || !stored.token) throw new Error('Pair this extension first.');
   return { installationId: id, token: stored.token };
 }
 
 async function native(request: Record<string, unknown>): Promise<NativeReply> {
   const requestId = identifier();
   const response = await browser.runtime.sendNativeMessage(NATIVE_HOST_NAME, { ...request, requestId }) as NativeReply;
-  if (!response || response.requestId !== requestId) throw new Error('Resposta inválida do conector local.');
-  if (response.type === 'error') throw new Error(typeof response.message === 'string' ? response.message : 'Falha no conector local.');
+  if (!response || response.requestId !== requestId) throw new Error('Invalid local host response.');
+  if (response.type === 'error') throw new Error(typeof response.message === 'string' ? response.message : 'Local host error.');
   return response;
 }
 
 async function activeTab() {
   const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.id || !tab.url) throw new Error('Aba ativa indisponível.');
+  if (!tab?.id || !tab.url) throw new Error('Active tab unavailable.');
   const url = new URL(tab.url);
-  if (url.protocol !== 'https:') throw new Error('O preenchimento requer uma página HTTPS.');
+  if (url.protocol !== 'https:') throw new Error('Filling requires an HTTPS page.');
   return { id: tab.id, origin: url.origin, url: tab.url };
 }
 
@@ -54,14 +54,14 @@ async function handle(message: PopupRequest): Promise<NativeReply> {
     return { ...response, tabId: tab.id, url: tab.url };
   }
   if (message.type === 'fill') {
-    if (typeof message.id !== 'string' || !message.id || !Number.isInteger(message.tabId) || typeof message.url !== 'string') throw new Error('Entrada inválida.');
+    if (typeof message.id !== 'string' || !message.id || !Number.isInteger(message.tabId) || typeof message.url !== 'string') throw new Error('Invalid entry.');
     const tab = await activeTab();
-    if (tab.id !== message.tabId || tab.url !== message.url) throw new Error('A aba mudou desde a escolha da entrada.');
+    if (tab.id !== message.tabId || tab.url !== message.url) throw new Error('The tab changed after you selected the entry.');
     const response = await native({ type: 'readForOrigin', ...await credentials(), origin: tab.origin, id: message.id });
-    if (response.type !== 'secret' || typeof response.password !== 'string') throw new Error('Resposta de segredo inválida.');
+    if (response.type !== 'secret' || typeof response.password !== 'string') throw new Error('Invalid secret response.');
     const current = await browser.tabs.get(tab.id);
     const active = await browser.tabs.query({ active: true, currentWindow: true });
-    if (current.url !== tab.url || active[0]?.id !== tab.id) throw new Error('A aba mudou antes do preenchimento.');
+    if (current.url !== tab.url || active[0]?.id !== tab.id) throw new Error('The tab changed before filling.');
     const result = await browser.scripting.executeScript({
       target: { tabId: tab.id },
       func: (url: string, username: string, password: string) => {
@@ -100,7 +100,7 @@ async function handle(message: PopupRequest): Promise<NativeReply> {
     });
     return { type: result[0]?.result || 'noFields' };
   }
-  throw new Error('Pedido desconhecido.');
+  throw new Error('Unknown request.');
 }
 
 export default defineBackground(() => {

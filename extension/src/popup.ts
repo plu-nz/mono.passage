@@ -22,17 +22,17 @@ function showError(error: unknown) {
 
 async function loadEntries() {
   const response = await request({ type: 'list' });
-  if (response.type !== 'entries' || !Array.isArray(response.entries) || !Number.isInteger(response.tabId) || typeof response.url !== 'string') throw new Error('Resposta inválida do conector.');
-  status.textContent = response.entries.length ? 'Escolha uma entrada para preencher.' : 'Nenhuma entrada corresponde a este site.';
+  if (response.type !== 'entries' || !Array.isArray(response.entries) || !Number.isInteger(response.tabId) || typeof response.url !== 'string') throw new Error('Invalid host response.');
+  status.textContent = response.entries.length ? 'Choose an entry to fill.' : 'No entry matches this site.';
   entries.replaceChildren();
   for (const entry of response.entries) {
     if (!entry || typeof entry.id !== 'string' || typeof entry.title !== 'string') continue;
     entries.append(button(`${entry.title}${typeof entry.username === 'string' ? ` · ${entry.username}` : ''}`, async () => {
       const result = await request({ type: 'fill', id: entry.id, tabId: response.tabId, url: response.url });
-      status.textContent = result.type === 'filled' ? 'Credenciais preenchidas.'
-        : result.type === 'usernameOnly' ? 'Usuário preenchido. Avance para a etapa da senha e clique novamente no Passage.'
-        : result.type === 'ambiguous' ? 'Há campos de login ambíguos. Nenhuma credencial foi preenchida.'
-        : 'Nenhum campo de login seguro foi encontrado nesta página.';
+      status.textContent = result.type === 'filled' ? 'Credentials filled.'
+        : result.type === 'usernameOnly' ? 'Username filled. Continue to the password step and click Passage again.'
+        : result.type === 'ambiguous' ? 'Ambiguous login fields found. No credentials were filled.'
+        : 'No suitable login field was found on this page.';
     }));
   }
 }
@@ -43,24 +43,24 @@ async function checkPairing() {
     actions.replaceChildren();
     try { await loadEntries(); }
     catch (error) { showError(error); offerPairing(); }
-  } else status.textContent = 'Aguardando autorização local.';
+  } else status.textContent = 'Waiting for local approval.';
 }
 
 function offerPairing() {
-  actions.replaceChildren(button('Solicitar novo pareamento', async () => {
+  actions.replaceChildren(button('Request new pairing', async () => {
     const pair = await request({ type: 'pair' });
-    if (pair.type !== 'pairPending' || typeof pair.code !== 'string') throw new Error('Pareamento indisponível.');
-    status.textContent = `Autorize no terminal: passage-native-host approve ${pair.code}`;
-    actions.replaceChildren(button('Verificar autorização', checkPairing));
+    if (pair.type !== 'pairPending' || typeof pair.code !== 'string') throw new Error('Pairing unavailable.');
+    status.textContent = `Approve in a terminal: passage-native-host approve ${pair.code}`;
+    actions.replaceChildren(button('Check approval', checkPairing));
   }));
 }
 
 async function initialize() {
   const response = await request({ type: 'status' });
-  if (response.type !== 'status') throw new Error('Conector local indisponível.');
+  if (response.type !== 'status') throw new Error('Local host unavailable.');
   if (response.locked === true) {
-    status.textContent = 'Acesso das extensões bloqueado no Passage.';
-    actions.replaceChildren(button('Verificar novamente', initialize));
+    status.textContent = 'Extension access is locked in Passage.';
+    actions.replaceChildren(button('Check again', initialize));
     entries.replaceChildren();
     return;
   }
@@ -69,7 +69,7 @@ async function initialize() {
     catch (error) { showError(error); offerPairing(); }
     return;
   }
-  status.textContent = 'Esta extensão ainda não foi pareada.';
+  status.textContent = 'This extension is not paired yet.';
   offerPairing();
 }
 
