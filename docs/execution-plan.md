@@ -1,8 +1,8 @@
-# Execution plan: Linux desktop and extensions (history)
+# Execution plan: Linux desktop and extensions
 
-The desktop and host have been migrated to Wails 3, Solid, and Go. For the current state and migration testing, see [migration plan](wails3-solid-migration-plan.md). The Tauri/Rust tasks below record the sequence of the previous MVP.
+The desktop uses Wails 3, Solid, and Go; the Native Messaging host is a separate Go executable. Both share the vault core in `internal/`. The first MVP was built with Tauri and Rust and later ported; see the [migration plan](wails3-solid-migration-plan.md) for that history.
 
-This plan turns [README](../README.md) requirements into verifiable deliverables. Covers the Linux application, Brave/Chrome extensions, interoperability with GNU `pass` in the terminal, Git, security and distribution. Android, web client and iOS are excluded from this plan. Estimates are the approximate effort of a person familiar with Rust, TypeScript, and Chromium extensions, not promised deadlines.
+This plan turns [README](../README.md) requirements into verifiable deliverables. Covers the Linux application, Brave/Chrome extensions, interoperability with GNU `pass` in the terminal, Git, security and distribution. Android, web client and iOS are excluded from this plan. Estimates are the approximate effort of a person familiar with Go, TypeScript, and Chromium extensions, not promised deadlines.
 
 ## Expected outcome
 
@@ -11,7 +11,7 @@ A local installation of Passage uses an existing GNU `pass` vault. The user unlo
 ## Implementation rules
 
 - Preserve the format `.gpg`, the directory structure, `.gpg-id`, and the behavior of `pass`; Do not implement your own OpenPGP encryption in MVP.
-- Treat the local Rust process as the authority to access the vault. The Tauri interface and extensions are clients; share domain rules, entry format, and protocol in testable code.
+- Treat the local Go process as the authority to access the vault. The desktop interface and extensions are clients; share domain rules, entry format, and protocol in testable code.
 - Do not consider the GPG key blocked just because the interface hid the password: the `gpg-agent` cache is independent.
 - Do not store open credentials in logs, temporary files, Git, extension storage, or telemetry.
 - Test real integration with Brave and Chrome and a disposable vault before marking a step as complete.
@@ -20,14 +20,14 @@ A local installation of Passage uses an existing GNU `pass` vault. The user unlo
 
 1. Create a disposable vault with test GPG key, subfolder entries, multiple recipients via `.gpg-id`, URLs, user, TOTP, and test private remote Git. Do not use real credentials.
 2. Exercise `pass show`, `insert`, `edit`, `rm`, `git pull` and `git push`; record the initial field convention and expected behavior of `gpg-agent`.
-3. Run `pnpm check`, build the desktop and extension, Rust tests and installation using the current release. Log execution dependencies and reproducible failures.
+3. Run `pnpm check`, build the desktop and extension, Go tests and installation using the current release. Log execution dependencies and reproducible failures.
 4. Validate desktop app against test vault: `PASSWORD_STORE_DIR`, missing `pass`, incorrect password in GPG, update after external change and symbolic files.
 
 **Accepted:** reproducible test script and disposable vault; reading on the desktop and via the terminal confirmed; documented current limitations. This step establishes the reference for the following ones.
 
 ## Milestone 1 — Vault Core and Entry Format (3–5 days)
 
-1. Extract from the Tauri command the Rust logic of finding, listing, reading, creating, updating, and removing entries. Validate IDs, canonical path, symlinks, empty names, subprocess errors and UTF-8 result.
+1. Keep the logic of finding, listing, reading, creating, updating, and removing entries in the Go core (`internal/vault`), outside the desktop window code. Validate IDs, canonical path, symlinks, empty names, subprocess errors and UTF-8 result.
 2. Define an interoperable text convention: first line as password; fields `login`, `url` and `otpauth` in the following lines. Preserve unknown lines and existing order when editing. Document how an old item without metadata appears.
 3. Specify source normalization and matching: schema, host, subdomain, and port; avoid matching by insecure suffix (e.g. `example.com.evil.test`). The tab domain will be obtained by the extension, never accepted from the page content.
 4. Implement operations via `pass` and round-trip testing with `pass show`, including editing via the terminal followed by updating on the desktop. Handle entries changed externally before writing.
@@ -37,14 +37,14 @@ A local installation of Passage uses an existing GNU `pass` vault. The user unlo
 
 ## Milestone 2 — Local service and extension protocol (4–7 days)
 
-1. Implement Native Messaging host executable in Rust, with JSON messages framed by the Chromium protocol, size limits, protocol version, timeouts and clean termination. Reuse the Milestone 1 core without relying on an open Tauri window.
+1. Implement Native Messaging host executable in Go, with JSON messages framed by the Chromium protocol, size limits, protocol version, timeouts and clean termination. Reuse the Milestone 1 core without relying on an open desktop window.
 2. Decide and set the authorization model: each installation of the extension identifies itself and requests pairing on the desktop; explicit user authorization; local credential per protected installation in the user profile; listing and revocation. An extension ID allowed in the host manifest is necessary, but not sufficient for instance authorization.
 3. Set minimum orders `status`, `pair`, `listForOrigin` and `readForOrigin`. Link each sensitive request to the tab origin and authorized scope; validate version, identity, pairing status, and order size on the host.
 4. Avoid indiscriminate enumeration of entries by the browser. The host only returns candidates for the requested source and only releases the password after explicit action in the extension. Do not send secrets in response to `ping` or while the popup is just opening.
-5. Record process decision: Native Messaging host initiated on demand for each browser, with persisted authorizations and system-shared GPG. If a Tauri window is required to approve pairing, expose only that local stream.
+5. Record process decision: Native Messaging host initiated on demand for each browser, with persisted authorizations and system-shared GPG. If the desktop window is required to approve pairing, expose only that local stream.
 6. Perform protocol testing with truncated input, invalid JSON, incompatible version, invalid origin, unpaired identity, and revocation during a session.
 
-**Accept:** Brave and Chrome can call the installed host; an unpaired installation cannot read entries; revocation prevents subsequent requests; Closing the Tauri app does not render the integration inoperative. There is never a password in the error output or logs.
+**Accept:** Brave and Chrome can call the installed host; an unpaired installation cannot read entries; revocation prevents subsequent requests; Closing the desktop app does not render the integration inoperative. There is never a password in the error output or logs.
 
 ## Milestone 3 — Brave and Chrome Extensions and Autofill (4–7 days)
 
@@ -79,8 +79,8 @@ A local installation of Passage uses an existing GNU `pass` vault. The user unlo
 
 ## Milestone 6 — Distribution, security, and release (3–5 days)
 
-1. Package Tauri app, Native Messaging host, manifests for Brave/Chrome and extensions as versioned set. The remote installer must install/update each part and offer clean removal, without requiring a clone of the repository.
-2. Automate build, types, Rust/TypeScript tests, artifacts and checksums in CI. Fix dependency versions and consider signing artifacts before recommending `curl | sh` as the main installation path.
+1. Package the desktop app, Native Messaging host, manifests for Brave/Chrome and extensions as versioned set. The remote installer must install/update each part and offer clean removal, without requiring a clone of the repository.
+2. Automate build, types, Go/TypeScript tests, artifacts and checksums in CI. Fix dependency versions and consider signing artifacts before recommending `curl | sh` as the main installation path.
 3. Review extension permissions, injection surfaces, protocol, local storage of pairings, subprocesses, protection against arbitrary paths and accidental exposure of secrets. Perform manual review with a disposable vault.
 4. Run final matrix: Brave and Chrome on new and already used profiles; local vault with and without Git; absence of `pass`; GPG with and without cache; lock/revocation; installer without cloned repo; upgrade from a previous version.
 5. Update README, installation page and decisions with actually available features and known limitations. Publish release only after matrix passes.

@@ -2,7 +2,7 @@
 
 ## Wails 3/Solid/Go Migration
 
-In the migration branch, the Go core continues to call GNU `pass`, GPG, Git, and `gh` as processes with separate arguments. The host maintains the v1 protocol and reads the JSON state created by the Rust host, preserving tokens tied to the vault. Go tests cover read/write with disposable GPG vault, concurrent edit hash, symlinks, TOTP RFC 6238, legacy pairing state and Git publish flow, divergence, and preservation of two encrypted versions. The host's Python test and actual completion in Brave and Chrome passed again with the Go host and disposable profiles. The frontend is built into the Wails binary; no remote sites are loaded in the WebView.
+The Go core calls GNU `pass`, GPG, Git, and `gh` as processes with separate arguments. The host maintains the v1 protocol and still reads the JSON state created by the earlier Rust host, preserving tokens tied to the vault. Go tests cover read/write with disposable GPG vault, concurrent edit hash, symlinks, TOTP RFC 6238, legacy pairing state and Git publish flow, divergence, and preservation of two encrypted versions. The host's Python test and actual completion in Brave and Chrome passed again with the Go host and disposable profiles. The frontend is built into the Wails binary; no remote sites are loaded in the WebView.
 
 The desktop exposes JavaScript-specific Go methods, mapped to `desktop/src/service.ts`. The UI clears the displayed secrets after 30 seconds, as before. The Linux backend uses GTK3/WebKit2GTK 4.1 because WebKitGTK 6.0 is not installed on this machine; Migrating to the GTK4 backend requires a new testing cycle. Wails version `v3.0.0` is fixed to `go.mod`.
 

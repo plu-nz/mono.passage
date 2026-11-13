@@ -2,7 +2,7 @@
 
 ## Wails 3 and Go Migration
 
-The desktop now uses Solid/Vite and Wails 3.0.0 with Go. The Native Messaging host has also been ported to Go and shares the core at `internal/`. The GTK3/WebKit2GTK 4.1 backend allows you to compile on this machine and on Ubuntu 22.04; GTK4/WebKitGTK 6.0 may be adopted when available in the target environment. The v1 protocol, configuration paths, extension ID, and executable names have been maintained. The UI uses explicit Go services, with no generic bridge to execute external commands. This section replaces the historical references to Tauri, React, and Rust below.
+The desktop now uses Solid/Vite and Wails 3.0.0 with Go. The Native Messaging host has also been ported to Go and shares the core at `internal/`. The GTK3/WebKit2GTK 4.1 backend allows you to compile on this machine and on Ubuntu 22.04; GTK4/WebKitGTK 6.0 may be adopted when available in the target environment. The v1 protocol, configuration paths, extension ID, and executable names have been maintained. The UI uses explicit Go services, with no generic bridge to execute external commands.
 
 
 This record separates what has already been implemented from choices that are still provisional. It can be changed after the first test with a sample vault.
