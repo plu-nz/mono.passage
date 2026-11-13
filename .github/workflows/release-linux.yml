@@ -80,8 +80,9 @@ jobs:
         run: |
           pnpm install --frozen-lockfile
           pnpm check
+          pnpm --filter @passage/desktop build
           pnpm build:extension
-          go test ./internal/... ./native-host/...
+          go test ./internal/... ./native-host/... ./desktop/...
           go build -o desktop/build/passage ./desktop
           go build -o native-host/build/passage-native-host ./native-host
           python3 native-host/tests/integration.py native-host/build/passage-native-host
