@@ -12,10 +12,10 @@ O app desktop permite escolher um cofre GNU pass existente, criar outro com uma 
 
 | Diretório | Responsabilidade |
 | --- | --- |
-| `packages/core` | Tipos e contrato compartilhado do cofre e das mensagens locais. |
-| `src/desktop` | Interface Solid/Vite e aplicativo Wails 3/Go para Linux. |
-| `src/extension` | Extensão Manifest V3 para Brave e Chrome, construída com WXT. |
-| `src/native-host` | Conector local Native Messaging para as extensões. |
+| `core` | Tipos e contrato compartilhado do cofre e das mensagens locais. |
+| `desktop` | Interface Solid/Vite e aplicativo Wails 3/Go para Linux. |
+| `extension` | Extensão Manifest V3 para Brave e Chrome, construída com WXT. |
+| `native-host` | Conector local Native Messaging para as extensões. |
 | `website` | Landing page estática e gerador do Worker que a publica. |
 
 Para desenvolver no Linux, instale Node.js, pnpm, Go 1.26+, GNU `pass`, GPG, GTK3 e WebKit2GTK 4.1. O desktop usa Wails 3.0.0 com o backend GTK3 nesta fase; veja as [dependências Linux do Wails](https://v3.wails.io/getting-started/installation/). Na raiz do repositório:
@@ -24,12 +24,12 @@ Para desenvolver no Linux, instale Node.js, pnpm, Go 1.26+, GNU `pass`, GPG, GTK
 pnpm install
 pnpm check
 pnpm --filter @passage/desktop build
-go run -tags gtk3 ./src/desktop
+go run -tags gtk3 ./desktop
 ```
 
-Para gerar a extensão, execute `pnpm build:extension` e carregue `src/extension/.output/chrome-mv3` como extensão descompactada em `brave://extensions` ou `chrome://extensions`. Siga [as instruções do conector local](src/native-host/README.md) para compilá-lo e registrar os IDs das extensões; o código mostrado pelo popup pode ser aprovado na interface desktop ou pelo CLI. Para usar o desktop, instale GNU `pass` e GPG. A chave GPG e o `gpg-agent` continuam sob controle do sistema.
+Para gerar a extensão, execute `pnpm build:extension` e carregue `extension/.output/chrome-mv3` como extensão descompactada em `brave://extensions` ou `chrome://extensions`. Siga [as instruções do conector local](native-host/README.md) para compilá-lo e registrar os IDs das extensões; o código mostrado pelo popup pode ser aprovado na interface desktop ou pelo CLI. Para usar o desktop, instale GNU `pass` e GPG. A chave GPG e o `gpg-agent` continuam sob controle do sistema.
 
-O teste de navegador usa um cofre, servidor HTTPS e perfis descartáveis, com o manifesto original da extensão. Após compilar extensão e host, execute `node src/extension/tests/browser-smoke.mjs CAMINHO_DO_NAVEGADOR CAMINHO_DO_HOST CAMINHO_DO_INSTALADOR_DO_HOST CENÁRIO`. Os cenários são `standard`, `usernameOnly`, `passwordOnly`, `autocompleteOff`, `ambiguousPassword`, `ambiguousUsername`, `hiddenPassword`, `transparentPassword`, `newPassword`, `iframe`, `noFields`, `githubLive` e `herokuLive`. Cada cenário verifica pareamento, lista, resultado do preenchimento e recusa após navegação. Os cenários `*Live` preenchem apenas campos de teste em páginas externas; não enviam formulários. `githubLive` passou no Brave Origin e Chrome estável; `herokuLive` passou no Chrome estável, mas o Brave não carregou essa página neste ambiente. O Chrome estável recente não aceita `--load-extension`; execute o teste com `PASSAGE_BROWSER_HEADED=1` para carregar a extensão no perfil descartável pelo protocolo de depuração. A matriz passou no Chrome estável e no Brave Origin; o teste exige OpenSSL.
+O teste de navegador usa um cofre, servidor HTTPS e perfis descartáveis, com o manifesto original da extensão. Após compilar extensão e host, execute `node extension/tests/browser-smoke.mjs CAMINHO_DO_NAVEGADOR CAMINHO_DO_HOST CAMINHO_DO_INSTALADOR_DO_HOST CENÁRIO`. Os cenários são `standard`, `usernameOnly`, `passwordOnly`, `autocompleteOff`, `ambiguousPassword`, `ambiguousUsername`, `hiddenPassword`, `transparentPassword`, `newPassword`, `iframe`, `noFields`, `githubLive` e `herokuLive`. Cada cenário verifica pareamento, lista, resultado do preenchimento e recusa após navegação. Os cenários `*Live` preenchem apenas campos de teste em páginas externas; não enviam formulários. `githubLive` passou no Brave Origin e Chrome estável; `herokuLive` passou no Chrome estável, mas o Brave não carregou essa página neste ambiente. O Chrome estável recente não aceita `--load-extension`; execute o teste com `PASSAGE_BROWSER_HEADED=1` para carregar a extensão no perfil descartável pelo protocolo de depuração. A matriz passou no Chrome estável e no Brave Origin; o teste exige OpenSSL.
 
 ### Abrir ou criar um cofre no desktop
 
@@ -82,7 +82,7 @@ O script baixa o binário pronto do [release mais recente](https://github.com/pl
 
 O mesmo comando atualiza uma instalação existente para a release mais recente. Feche e abra o Passage após atualizar e clique em **Recarregar** na extensão em `brave://extensions` e `chrome://extensions` para aplicar a versão nova. A versão instalada muda apenas quando uma nova release é publicada.
 
-A chave pública da identidade da extensão está em `src/extension/identity.json`. A chave privada correspondente foi gerada fora do repositório, em `~/.local/share/passage/signing/extension.pem`, com permissão de acesso somente ao usuário. Faça backup **cifrado** dela fora do cofre Git; não a inclua no repositório nem no pacote. Ela será necessária se uma distribuição CRX assinada com o mesmo ID for adotada. A extensão descompactada funciona apenas com a chave pública do manifesto. Uma futura publicação em loja precisa confirmar como preservar o mesmo ID antes da migração.
+A chave pública da identidade da extensão está em `extension/identity.json`. A chave privada correspondente foi gerada fora do repositório, em `~/.local/share/passage/signing/extension.pem`, com permissão de acesso somente ao usuário. Faça backup **cifrado** dela fora do cofre Git; não a inclua no repositório nem no pacote. Ela será necessária se uma distribuição CRX assinada com o mesmo ID for adotada. A extensão descompactada funciona apenas com a chave pública do manifesto. Uma futura publicação em loja precisa confirmar como preservar o mesmo ID antes da migração.
 
 Para publicar uma nova versão Linux a partir de `main`, execute com acesso de escrita ao repositório:
 

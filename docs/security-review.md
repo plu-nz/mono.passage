@@ -4,7 +4,7 @@
 
 Na branch de migração, o núcleo Go continua a chamar GNU `pass`, GPG, Git e `gh` como processos com argumentos separados. O host mantém o protocolo v1 e lê o estado JSON criado pelo host Rust, preservando tokens vinculados ao cofre. Testes Go cobrem leitura/escrita com cofre GPG descartável, hash de edição concorrente, symlinks, TOTP RFC 6238, estado legado do pareamento e fluxo Git de publicação, divergência e preservação de duas versões cifradas. O teste Python do host e o preenchimento real no Brave e Chrome passaram novamente com o host Go e perfis descartáveis. O frontend é embutido no binário Wails; nenhum site remoto é carregado no WebView.
 
-O desktop expõe métodos Go específicos ao JavaScript, mapeados em `src/desktop/src/service.ts`. A UI limpa os segredos exibidos após 30 segundos, como antes. O backend Linux usa GTK3/WebKit2GTK 4.1 porque WebKitGTK 6.0 não está instalado nesta máquina; migrar para o backend GTK4 requer novo ciclo de testes. A versão `v3.0.0` do Wails está fixada no `go.mod`.
+O desktop expõe métodos Go específicos ao JavaScript, mapeados em `desktop/src/service.ts`. A UI limpa os segredos exibidos após 30 segundos, como antes. O backend Linux usa GTK3/WebKit2GTK 4.1 porque WebKitGTK 6.0 não está instalado nesta máquina; migrar para o backend GTK4 requer novo ciclo de testes. A versão `v3.0.0` do Wails está fixada no `go.mod`.
 
 
 Revisão feita com código e cofre descartável. Em perfis temporários do Brave Origin e Chrome estável, o popup real pareou, listou a entrada e preencheu usuário e senha numa página HTTPS local e no login real do GitHub, sem submeter o formulário. O teste repetiu o clique após navegar a aba e confirmou que o preenchimento foi recusado. Nenhum perfil pessoal ou credencial real foi usado.

@@ -7,13 +7,11 @@ O desktop passou a usar Solid/Vite e Wails 3.0.0 com Go. O host Native Messaging
 
 Este registro separa o que já foi implementado das escolhas ainda provisórias. Ele pode ser alterado após o primeiro teste com um cofre de exemplo.
 
-## 1. Estrutura do repositório
+## 1. Repository structure
 
-- `src/desktop`: interface Solid/Vite e shell Wails 3/Go.
-- `src/extension`: extensão Chromium em WXT, para Brave e Chrome.
-- `packages/core`: contratos TypeScript compartilhados.
+The pnpm workspace lists `desktop/`, `extension/`, and `core/` explicitly at the repository root. `desktop/` contains the Wails/Go application and its Solid UI in `desktop/src/`; `extension/` contains the Chromium extension; `core/` remains the shared `@passage/core` TypeScript package. The Go module stays at the root, with the Native Messaging binary in `native-host/` and shared Go code in `internal/`. `website/`, `docs/`, and `scripts/` retain their existing roles.
 
-`src` agrupa as aplicações executáveis conforme a preferência atual. Mantemos `packages` separado para bibliotecas reutilizáveis. Não há uma reimplementação do formato OpenPGP no MVP.
+Placing each application and package at the root removes the generic `src/` and `packages/` containers. Explicit workspace entries make package discovery independent of directory naming and keep paths in build scripts, CI, and documentation short. The `internal/` layout follows Go's shared-code convention; the desktop UI's own `src/` remains inside `desktop/`. This layout does not change the vault format or introduce an OpenPGP implementation.
 
 ## 2. Leitura do cofre no Linux
 

@@ -13,9 +13,9 @@ Também é possível definir `PASSAGE_BRAVE_EXTENSION_ID` e `PASSAGE_CHROME_EXTE
 ## Desenvolver e registrar
 
 ```sh
-go build -o src/native-host/build/passage-native-host ./src/native-host
+go build -o native-host/build/passage-native-host ./native-host
 sh scripts/install-native-host.sh \
-  "$PWD/src/native-host/build/passage-native-host" \
+  "$PWD/native-host/build/passage-native-host" \
   ID_MOSTRADO_EM_BRAVE_EXTENSIONS \
   ID_MOSTRADO_EM_CHROME_EXTENSIONS
 ```
@@ -25,8 +25,8 @@ Os IDs de extensão aparecem no gerenciador de cada navegador após carregar a e
 Para testar o protocolo sem tocar no cofre nem nos perfis reais:
 
 ```sh
-go test ./internal/pairing ./src/native-host
-python3 src/native-host/tests/integration.py "$PWD/src/native-host/build/passage-native-host"
+go test ./internal/pairing ./native-host
+python3 native-host/tests/integration.py "$PWD/native-host/build/passage-native-host"
 ```
 
 ## Parear e revogar
