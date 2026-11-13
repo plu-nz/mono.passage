@@ -18,7 +18,7 @@ concurrency:
 jobs:
   release:
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -43,7 +43,7 @@ jobs:
       - name: Install Linux build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev build-essential pkg-config
+          sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev build-essential pkg-config
 
       - uses: actions/setup-go@v5
         with:
@@ -82,7 +82,7 @@ jobs:
           pnpm check
           pnpm build:extension
           go test ./internal/... ./native-host/...
-          go build -tags gtk3 -o desktop/build/passage ./desktop
+          go build -o desktop/build/passage ./desktop
           go build -o native-host/build/passage-native-host ./native-host
           python3 native-host/tests/integration.py native-host/build/passage-native-host
 

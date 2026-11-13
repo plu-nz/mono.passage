@@ -12,7 +12,7 @@ cd "$repo_dir"
 pnpm install --frozen-lockfile
 pnpm --filter @passage/desktop build
 pnpm build:extension
-go build -tags gtk3 -o desktop/build/passage ./desktop
+go build -o desktop/build/passage ./desktop
 go build -o native-host/build/passage-native-host ./native-host
 
 install -Dm755 desktop/build/passage "$user_bin/passage"

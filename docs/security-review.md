@@ -4,7 +4,7 @@
 
 The Go core calls GNU `pass`, GPG, Git, and `gh` as processes with separate arguments. The host maintains the v1 protocol and still reads the JSON state created by the earlier Rust host, preserving tokens tied to the vault. Go tests cover read/write with disposable GPG vault, concurrent edit hash, symlinks, TOTP RFC 6238, legacy pairing state and Git publish flow, divergence, and preservation of two encrypted versions. The host's Python test and actual completion in Brave and Chrome passed again with the Go host and disposable profiles. The frontend is built into the Wails binary; no remote sites are loaded in the WebView.
 
-The desktop exposes JavaScript-specific Go methods, mapped to `desktop/src/service.ts`. The UI clears the displayed secrets after 30 seconds, as before. The Linux backend uses GTK3/WebKit2GTK 4.1 because WebKitGTK 6.0 is not installed on this machine; Migrating to the GTK4 backend requires a new testing cycle. Wails version `v3.0.0` is fixed to `go.mod`.
+The desktop exposes JavaScript-specific Go methods, mapped to `desktop/src/service.ts`. The UI clears the displayed secrets after 30 seconds, as before. The Linux backend uses GTK4/WebKitGTK 6.0; the switch from GTK3/WebKit2GTK 4.1 requires repeating the browser and vault test cycle before the next release. Wails version `v3.0.0` is fixed to `go.mod`.
 
 
 Review carried out with code and disposable vault. On temporary profiles on Brave Origin and stable Chrome, the actual popup paired, listed entries, and filled username and password on a local HTTPS page and on the actual GitHub login, without submitting the form. The test repeated the click after browsing the tab and confirmed that the filling was rejected. No personal profiles or real credentials were used.

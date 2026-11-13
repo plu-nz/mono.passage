@@ -16,13 +16,13 @@ The desktop app allows you to choose an existing GNU pass vault, create another 
 | `native-host` | Local Native Messaging connector for extensions. |
 | `web` | Static landing page and generator of the Worker that publishes it. |
 
-To develop on Linux, install Node.js, pnpm, Go 1.26+, GNU `pass`, GPG, GTK3 and WebKit2GTK 4.1. The desktop uses Wails 3.0.0 with the GTK3 backend at this stage; see [Wails](https://v3.wails.io/getting-started/installation/) Linux dependencies. In the repository root:
+To develop on Linux, install Node.js, pnpm, Go 1.26+, GNU `pass`, GPG, GTK4 and WebKitGTK 6.0. The desktop uses Wails 3.0.0 with its default GTK4 backend; see [Wails](https://v3.wails.io/getting-started/installation/) Linux dependencies. In the repository root:
 
 ```bash
 pnpm install
 pnpm check
 pnpm --filter @passage/desktop build
-go run -tags gtk3 ./desktop
+go run ./desktop
 ```
 
 To generate the extension, run `pnpm build:extension` and load `extension/.output/chrome-mv3` as the unpacked extension into `brave://extensions` or `chrome://extensions`. Follow [local connector instructions](native-host/README.md) to compile it and register the extension IDs; the code shown by the popup can be approved in the desktop interface or through the CLI. To use the desktop, install GNU `pass` and GPG. The GPG key and `gpg-agent` remain under system control.
@@ -70,7 +70,7 @@ In the **Authorized Extensions** panel, **Block Extensions** prevents further re
 
 ## Installation on Linux
 
-On Linux x86_64, with `curl`, `tar` and `sha256sum`:
+On Linux x86_64, with `curl`, `tar` and `sha256sum`. Releases after `v0.2.1` need GTK4 and WebKitGTK 6.0 (for example Ubuntu 24.04, Debian 13, Fedora 39, or Arch Linux); `v0.2.1` and earlier use GTK3 and WebKit2GTK 4.1:
 
 ```sh
 curl -LsSf https://passage.plu.nz/install.sh | sh
@@ -89,7 +89,7 @@ gh workflow run release-linux.yml --ref main -f version=0.2.2
 gh run watch
 ```
 
-The [workflow manual](.github/workflows/release-linux.yml) validates that the tag does not yet exist, compiles desktop, connector and extension in Ubuntu 22.04, runs the checks and publishes the files and their SHA-256 as the latest release. The version is reported without the prefix `v` and needs to be increased with each publication. The extension is published as a file to upload manually; Store posting and permanent IDs are still pending.
+The [workflow manual](.github/workflows/release-linux.yml) validates that the tag does not yet exist, compiles desktop, connector and extension in Ubuntu 24.04, runs the checks and publishes the files and their SHA-256 as the latest release. The version is reported without the prefix `v` and needs to be increased with each publication. The extension is published as a file to upload manually; Store posting and permanent IDs are still pending.
 
 To compile and install from local source, use `./scripts/install-linux-user.sh`.
 

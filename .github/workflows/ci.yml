@@ -10,13 +10,13 @@ permissions:
 
 jobs:
   linux:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev build-essential pkg-config pass gnupg
+          sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev build-essential pkg-config pass gnupg
       - uses: actions/setup-go@v5
         with:
           go-version: '1.26.0'
@@ -34,8 +34,8 @@ jobs:
           pnpm check
           pnpm --filter @passage/desktop build
           pnpm build:extension
-          go test -tags gtk3 ./internal/... ./native-host/... ./desktop/...
-          go build -tags gtk3 -o desktop/build/passage ./desktop
+          go test ./internal/... ./native-host/... ./desktop/...
+          go build -o desktop/build/passage ./desktop
           go build -o native-host/build/passage-native-host ./native-host
           python3 native-host/tests/integration.py native-host/build/passage-native-host
           ./scripts/package-linux.sh
