@@ -52,6 +52,10 @@ The chosen directory is saved in the local Passage configuration and is used by 
 
 With the vault open, click on **New Entry** and enter the entry path, password, username and URL. Passage writes via GNU `pass`: the password is on the first line, followed by `login:` and `url:`. The **Other Pass Lines** field accepts additional metadata, such as `otpauth:` or annotations. To edit an entry, open it and click **Edit**. To remove it, click **Delete** and confirm. These operations check whether the encrypted file has changed since reading; in this case, update the entry before trying again. The opened password is removed from the interface after 30 seconds; the creation form closes after 30 seconds without changing the password. The operation does not automatically make `git push`.
 
+### Generate passwords
+
+The **Generator** tab creates a random password with the browser's cryptographic generator. Choose the length (5 to 128), the character sets (A–Z, a–z, 0–9 and `!@#$%^&*`), whether to avoid ambiguous characters such as `l`, `1`, `O` and `0`, and the minimum count of numbers and special characters. **Copy** puts the password on the clipboard and clears it after 45 seconds if it is still there; **Create login** opens a new entry with the password filled in. Passage remembers the options on this device, never the generated password.
+
 ### Connect a GitHub account
 
 Install [GitHub CLI (`gh`)](https://cli.github.com/). In **Settings → Git sync**, click **Sign in with GitHub**. Passage opens `gh auth login` in the default terminal; Complete your browser login and return to Passage to click **Check account**. If the default terminal cannot be opened, run `gh auth login --web` manually. The token is managed by `gh`, which can use secure system storage or, if that is not available, a local file; check `gh auth status` for the location used.

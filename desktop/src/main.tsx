@@ -1,6 +1,8 @@
 import { createSignal, createEffect, createMemo, onCleanup, onMount, type JSX } from 'solid-js';
 import { render } from 'solid-js/web';
+import { Clipboard } from '@wailsio/runtime';
 import { invoke } from './service';
+import { generatePassword, loadOptions, maxLength, maxMinimum, minLength, normalize, saveOptions, specialChars, type GeneratorOptions } from './generator';
 import { version as appVersion } from '../package.json';
 import type { VaultState } from '@passage/core';
 import './style.css';
@@ -12,11 +14,12 @@ type GitStatus = { branch: string; upstream: string | null; dirty: boolean; ahea
 type GithubStatus = { cli_installed: boolean; login: string | null; vault_git_configured: boolean };
 type Pairing = { origin: string; installationId: string };
 
-type Tab = 'vault' | 'settings';
+type Tab = 'vault' | 'generator' | 'settings';
 
 // Bottom navigation: icon above label, the active tab in the accent color.
 const tabs: { id: Tab; label: string; icon: () => JSX.Element }[] = [
   { id: 'vault', label: 'Vault', icon: () => <><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></> },
+  { id: 'generator', label: 'Generator', icon: () => <><path d="M19.5 9A8 8 0 0 0 5.3 7.2M4.5 4v3.5H8" /><path d="M4.5 15a8 8 0 0 0 14.2 1.8m.8 3.2v-3.5H16" /><path d="M12 9v6M9.4 10.5l5.2 3M14.6 10.5l-5.2 3" /></> },
   { id: 'settings', label: 'Settings', icon: () => <><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12" /><circle cx="16" cy="6" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="18" r="2" /></> },
 ];
 
@@ -261,6 +264,49 @@ function App() {
     finally { setEntryBusy(false); }
   }
 
+  // Generator: the password lives only while the tab is open; the options are
+  // remembered per device. A copied password is cleared from the clipboard
+  // after 45 seconds, as `pass -c` does, unless something else replaced it.
+  const [genOptions, setGenOptions] = createSignal<GeneratorOptions>(loadOptions());
+  const [generated, setGenerated] = createSignal('');
+  const [genStatus, setGenStatus] = createSignal('');
+  const regenerate = () => setGenerated(generatePassword(genOptions()));
+  const updateGen = (patch: Partial<GeneratorOptions>) => setGenOptions(normalize({ ...genOptions(), ...patch }));
+  createEffect(() => {
+    if (activeTab() !== 'generator') { setGenerated(''); return; }
+    saveOptions(genOptions());
+    regenerate();
+  });
+  let clipboardTimer: number | undefined;
+  async function copyGenerated() {
+    const value = generated();
+    if (!value) return;
+    try {
+      await Clipboard.SetText(value);
+      setGenStatus('Copied. The clipboard clears in 45 seconds.');
+      window.clearTimeout(clipboardTimer);
+      clipboardTimer = window.setTimeout(async () => {
+        try { if (await Clipboard.Text() === value) await Clipboard.SetText(''); } catch { /* clipboard unavailable */ }
+        setGenStatus('');
+      }, 45_000);
+    } catch (cause) { setGenStatus(`Copy failed: ${cause}`); }
+  }
+  function createFromGenerator() {
+    const password = generated();
+    setActiveTab('vault');
+    startCreate();
+    setEntryPassword(password);
+  }
+  const genSets: [keyof GeneratorOptions, string][] = [['upper', 'A–Z'], ['lower', 'a–z'], ['numbers', '0–9'], ['special', specialChars]];
+  const onlySet = (key: keyof GeneratorOptions) => genSets.filter(([set]) => genOptions()[set]).length === 1 && Boolean(genOptions()[key]);
+  const stepper = (key: 'minNumbers' | 'minSpecial', label: string, enabled: () => boolean) => <div class="gen-row">
+    <span class="gen-label">{label}<strong>{genOptions()[key]}</strong></span>
+    <div class="gen-stepper">
+      <button aria-label={`Decrease ${label.toLowerCase()}`} disabled={!enabled() || genOptions()[key] <= 1} onClick={() => updateGen({ [key]: genOptions()[key] - 1 })}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12" /></svg></button>
+      <button aria-label={`Increase ${label.toLowerCase()}`} disabled={!enabled() || genOptions()[key] >= maxMinimum} onClick={() => updateGen({ [key]: genOptions()[key] + 1 })}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6v12M6 12h12" /></svg></button>
+    </div>
+  </div>;
+
   const filtered = createMemo(() => entries().filter(entry => entry.id.toLocaleLowerCase().includes(query().toLocaleLowerCase())));
 
   async function sync(operation: 'git_pull' | 'git_push') {
@@ -395,6 +441,26 @@ function App() {
   return <main class="shell">
     {navPosition() === 'top' && appBar()}
     <div class="app-body">
+    {activeTab() === 'generator' && <div class="generator">
+      <section class="gen-output" aria-label="Generated password">
+        <code class="gen-password">{[...generated()].map(char => /[0-9]/.test(char) ? <span class="gen-number">{char}</span> : specialChars.includes(char) ? <span class="gen-special">{char}</span> : char)}</code>
+        <button class="icon-button" aria-label="Generate another password" title="Generate another" onClick={regenerate}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 9A8 8 0 0 0 5.3 7.2M4.5 4v3.5H8" /><path d="M4.5 15a8 8 0 0 0 14.2 1.8m.8 3.2v-3.5H16" /></svg></button>
+        <button class="icon-button" aria-label="Copy password" title="Copy" onClick={() => void copyGenerated()}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" /><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" /></svg></button>
+      </section>
+      <p class="gen-status" role="status">{genStatus()}</p>
+      <button class="gen-create" disabled={unavailable()} onClick={createFromGenerator}>Create login</button>
+      <section class="gen-card" aria-label="Length">
+        <div class="gen-row"><label class="gen-label" for="gen-length">Length<strong>{genOptions().length}</strong></label><input id="gen-length" class="gen-range" type="range" min={minLength} max={maxLength} value={genOptions().length} style={{ '--fill': `${(genOptions().length - minLength) / (maxLength - minLength) * 100}%` }} onInput={event => updateGen({ length: Number(event.currentTarget.value) })} /></div>
+      </section>
+      <section class="gen-card" aria-label="Characters">
+        {genSets.map(([key, label]) => <label class="check gen-row"><input type="checkbox" checked={Boolean(genOptions()[key])} disabled={onlySet(key)} onChange={event => updateGen({ [key]: event.currentTarget.checked })} />{label}</label>)}
+        <label class="check gen-row"><input type="checkbox" checked={genOptions().avoidAmbiguous} onChange={event => updateGen({ avoidAmbiguous: event.currentTarget.checked })} />Avoid ambiguous characters</label>
+      </section>
+      <section class="gen-card" aria-label="Minimums">
+        {stepper('minNumbers', 'Minimum numbers', () => genOptions().numbers)}
+        {stepper('minSpecial', 'Minimum special', () => genOptions().special)}
+      </section>
+    </div>}
     {activeTab() === 'settings' && <section class="panel vault-panel" aria-label="Layout">
       <h2>Layout</h2>
       <label class="check"><input type="checkbox" checked={navPosition() === 'bottom'} onChange={event => void changeNavPosition(event.currentTarget.checked ? 'bottom' : 'top')} />Show navigation at the bottom</label>
