@@ -20,8 +20,8 @@ type Tab = 'vault' | 'generator' | 'settings';
 
 // Bottom navigation: icon above label, the active tab in the accent color.
 const tabs: { id: Tab; label: string; icon: () => JSX.Element }[] = [
-  { id: 'vault', label: 'Vault', icon: () => <><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></> },
   { id: 'generator', label: 'Generator', icon: () => <><path d="M19.5 9A8 8 0 0 0 5.3 7.2M4.5 4v3.5H8" /><path d="M4.5 15a8 8 0 0 0 14.2 1.8m.8 3.2v-3.5H16" /><path d="M12 9v6M9.4 10.5l5.2 3M14.6 10.5l-5.2 3" /></> },
+  { id: 'vault', label: 'Vault', icon: () => <><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></> },
   { id: 'settings', label: 'Settings', icon: () => <><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12" /><circle cx="16" cy="6" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="18" r="2" /></> },
 ];
 
@@ -453,8 +453,8 @@ function App() {
   const unavailable = createMemo(() => state().kind === 'unavailable');
   const tabButton = (tab: (typeof tabs)[number]) => <button class={activeTab() === tab.id ? 'active' : ''} aria-current={activeTab() === tab.id ? 'page' : undefined} onClick={() => setActiveTab(tab.id)}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">{tab.icon()}</svg><span>{tab.label}</span></button>;
   const appBar = () => {
-    const toolbar = activeTab() === 'vault' && <div class="toolbar"><input type="search" aria-label="Search entries" placeholder="Search vault…" value={query()} disabled={unavailable()} onInput={event => setQuery(event.currentTarget.value)} onKeyDown={event => { if (event.key === 'Escape') setQuery(''); }} /></div>;
-    const nav = <nav class="app-nav" aria-label="Sections">{tabButton(tabs[0])}<button aria-label="New entry" disabled={unavailable()} onClick={() => { setActiveTab('vault'); startCreate(); }}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg><span>New</span></button>{tabs.slice(1).map(tabButton)}</nav>;
+    const toolbar = activeTab() === 'vault' && <div class="toolbar"><input type="search" aria-label="Search entries" placeholder="Search vault…" value={query()} disabled={unavailable()} onInput={event => setQuery(event.currentTarget.value)} onKeyDown={event => { if (event.key === 'Escape') setQuery(''); }} /><Button class="toolbar-new" disabled={unavailable()} onClick={startCreate}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>New</Button></div>;
+    const nav = <nav class="app-nav" aria-label="Sections">{tabs.map(tabButton)}</nav>;
     return <div class={`app-bar ${navPosition()}`}>{navPosition() === 'top' ? <>{nav}{toolbar}</> : <>{toolbar}{nav}</>}</div>;
   };
   return <Theme class="passage" accent="red" shape="square"><main class="shell">
