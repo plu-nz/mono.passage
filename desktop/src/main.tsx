@@ -1,6 +1,8 @@
 import { createSignal, createEffect, createMemo, onCleanup, onMount, type JSX } from 'solid-js';
 import { render } from 'solid-js/web';
 import { Clipboard } from '@wailsio/runtime';
+import { Button, Card, TextField, Theme } from '@plunz/storybook';
+import '@plunz/storybook/styles.css';
 import { invoke } from './service';
 import { generatePassword, loadOptions, maxLength, maxMinimum, minLength, normalize, saveOptions, specialChars, type GeneratorOptions } from './generator';
 import { version as appVersion } from '../package.json';
@@ -302,8 +304,8 @@ function App() {
   const stepper = (key: 'minNumbers' | 'minSpecial', label: string, enabled: () => boolean) => <div class="gen-row">
     <span class="gen-label">{label}<strong>{genOptions()[key]}</strong></span>
     <div class="gen-stepper">
-      <button aria-label={`Decrease ${label.toLowerCase()}`} disabled={!enabled() || genOptions()[key] <= 1} onClick={() => updateGen({ [key]: genOptions()[key] - 1 })}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12" /></svg></button>
-      <button aria-label={`Increase ${label.toLowerCase()}`} disabled={!enabled() || genOptions()[key] >= maxMinimum} onClick={() => updateGen({ [key]: genOptions()[key] + 1 })}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6v12M6 12h12" /></svg></button>
+      <Button variant="outline" size="sm" class="gen-step" aria-label={`Decrease ${label.toLowerCase()}`} disabled={!enabled() || genOptions()[key] <= 1} onClick={() => updateGen({ [key]: genOptions()[key] - 1 })}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12" /></svg></Button>
+      <Button variant="outline" size="sm" class="gen-step" aria-label={`Increase ${label.toLowerCase()}`} disabled={!enabled() || genOptions()[key] >= maxMinimum} onClick={() => updateGen({ [key]: genOptions()[key] + 1 })}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6v12M6 12h12" /></svg></Button>
     </div>
   </div>;
 
@@ -317,13 +319,12 @@ function App() {
 
   // Shared by the Edit pane and the New entry modal.
   const entryForm = () => <div class="entry-form">
-      <label for="entry-id">Entry name or path</label><input id="entry-id" value={entryId()} onInput={event => setEntryId(event.currentTarget.value)} disabled={!creating() || entryBusy()} placeholder="sites/example.com" autocomplete="off" />
-      <label for="entry-password">Password</label><input id="entry-password" type="password" value={entryPassword()} onInput={event => setEntryPassword(event.currentTarget.value)} disabled={entryBusy()} autocomplete="new-password" />
-      <label for="entry-username">Username</label><input id="entry-username" value={entryUsername()} onInput={event => setEntryUsername(event.currentTarget.value)} disabled={entryBusy()} autocomplete="off" />
-      <label for="entry-url">URL</label><input id="entry-url" type="url" value={entryUrl()} onInput={event => setEntryUrl(event.currentTarget.value)} disabled={entryBusy()} placeholder="https://example.com" autocomplete="url" />
-      <label for="entry-details">Other pass lines</label><textarea id="entry-details" value={entryDetails()} onInput={event => setEntryDetails(event.currentTarget.value)} disabled={entryBusy()} rows={6} spellcheck={false} />
-      <p class="hint">The first line is the password. GNU pass can still read the other fields.</p>
-      <div class="form-actions"><button disabled={entryBusy() || !entryId().trim() || !entryPassword()} onClick={() => void saveEntry()}>{entryBusy() ? 'Saving…' : 'Save'}</button><button disabled={entryBusy()} onClick={cancelEntry}>Cancel</button></div>
+    <TextField id="entry-id" label="Entry name or path" value={entryId()} onInput={event => setEntryId(event.currentTarget.value)} disabled={!creating() || entryBusy()} placeholder="sites/example.com" autocomplete="off" />
+    <TextField id="entry-password" label="Password" type="password" value={entryPassword()} onInput={event => setEntryPassword(event.currentTarget.value)} disabled={entryBusy()} autocomplete="new-password" />
+    <TextField id="entry-username" label="Username" value={entryUsername()} onInput={event => setEntryUsername(event.currentTarget.value)} disabled={entryBusy()} autocomplete="off" />
+    <TextField id="entry-url" label="URL" type="url" value={entryUrl()} onInput={event => setEntryUrl(event.currentTarget.value)} disabled={entryBusy()} placeholder="https://example.com" autocomplete="url" />
+    <div class="plz-field"><label class="plz-field__label" for="entry-details">Other pass lines</label><textarea id="entry-details" class="plz-field__input" aria-describedby="entry-details-hint" value={entryDetails()} onInput={event => setEntryDetails(event.currentTarget.value)} disabled={entryBusy()} rows={5} spellcheck={false} /><p id="entry-details-hint" class="plz-field__hint">The first line is the password. GNU pass can still read the other fields.</p></div>
+    <div class="form-actions"><Button disabled={entryBusy() || !entryId().trim() || !entryPassword()} onClick={() => void saveEntry()}>{entryBusy() ? 'Saving…' : 'Save'}</Button><Button variant="ghost" disabled={entryBusy()} onClick={cancelEntry}>Cancel</Button></div>
   </div>;
 
   // New entry opens as a modal over the current tab. Escape or Cancel closes
@@ -456,54 +457,54 @@ function App() {
     const nav = <nav class="app-nav" aria-label="Sections">{tabButton(tabs[0])}<button aria-label="New entry" disabled={unavailable()} onClick={() => { setActiveTab('vault'); startCreate(); }}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg><span>New</span></button>{tabs.slice(1).map(tabButton)}</nav>;
     return <div class={`app-bar ${navPosition()}`}>{navPosition() === 'top' ? <>{nav}{toolbar}</> : <>{toolbar}{nav}</>}</div>;
   };
-  return <main class="shell">
+  return <Theme class="passage" accent="red" shape="square"><main class="shell">
     {navPosition() === 'top' && appBar()}
     <div class="app-body">
     {activeTab() === 'generator' && <div class="generator">
-      <section class="gen-output" aria-label="Generated password">
+      <Card padding="sm" class="gen-output" aria-label="Generated password">
         <code class="gen-password">{[...generated()].map(char => /[0-9]/.test(char) ? <span class="gen-number">{char}</span> : specialChars.includes(char) ? <span class="gen-special">{char}</span> : char)}</code>
         <button class="icon-button" aria-label="Generate another password" title="Generate another" onClick={regenerate}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 9A8 8 0 0 0 5.3 7.2M4.5 4v3.5H8" /><path d="M4.5 15a8 8 0 0 0 14.2 1.8m.8 3.2v-3.5H16" /></svg></button>
         <button class="icon-button" aria-label="Copy password" title="Copy" onClick={() => void copyGenerated()}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" /><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" /></svg></button>
-      </section>
+      </Card>
       <p class="gen-status" role="status">{genStatus()}</p>
-      <button class="gen-create" disabled={unavailable()} onClick={createFromGenerator}>Create login</button>
-      <section class="gen-card" aria-label="Length">
+      <Button class="gen-create" disabled={unavailable()} onClick={createFromGenerator}>Create login</Button>
+      <Card padding="sm" class="gen-card" aria-label="Length">
         <div class="gen-row"><label class="gen-label" for="gen-length">Length<strong>{genOptions().length}</strong></label><input id="gen-length" class="gen-range" type="range" min={minLength} max={maxLength} value={genOptions().length} style={{ '--fill': `${(genOptions().length - minLength) / (maxLength - minLength) * 100}%` }} onInput={event => updateGen({ length: Number(event.currentTarget.value) })} /></div>
-      </section>
-      <section class="gen-card" aria-label="Characters">
+      </Card>
+      <Card padding="sm" class="gen-card" aria-label="Characters">
         {genSets.map(([key, label]) => <label class="check gen-row"><input type="checkbox" checked={Boolean(genOptions()[key])} disabled={onlySet(key)} onChange={event => updateGen({ [key]: event.currentTarget.checked })} />{label}</label>)}
         <label class="check gen-row"><input type="checkbox" checked={genOptions().avoidAmbiguous} onChange={event => updateGen({ avoidAmbiguous: event.currentTarget.checked })} />Avoid ambiguous characters</label>
-      </section>
-      <section class="gen-card" aria-label="Minimums">
+      </Card>
+      <Card padding="sm" class="gen-card" aria-label="Minimums">
         {stepper('minNumbers', 'Minimum numbers', () => genOptions().numbers)}
         {stepper('minSpecial', 'Minimum special', () => genOptions().special)}
-      </section>
+      </Card>
     </div>}
-    {activeTab() === 'settings' && <section class="panel vault-panel" aria-label="Vault setup">
+    {activeTab() === 'settings' && <Card class="panel vault-panel" aria-label="Vault setup">
       <h2>Vault</h2>
       <p class="status-line"><span class={state().kind === 'available' ? 'status-dot ready' : 'status-dot'} />{state().kind === 'available' ? 'Vault available' : 'Vault unavailable'}</p>
       <p class="hint">Active directory: <code>{vaultInfo()?.path || 'checking…'}</code>{vaultInfo()?.source === 'environment' ? ' · set by PASSWORD_STORE_DIR' : ''}</p>
       <label for="vault-path">Vault directory</label>
-      <div class="panel-actions"><input id="vault-path" value={vaultPath()} onInput={event => setVaultPath(event.currentTarget.value)} placeholder="/home/user/.password-store" autocomplete="off" disabled={vaultBusy() || vaultInfo()?.source === 'environment'} /><button disabled={vaultBusy() || !vaultPath().trim() || vaultInfo()?.source === 'environment'} onClick={() => void configureVault('select_vault')}>Open existing</button></div>
-      <div class="panel-actions"><select aria-label="GPG key for the new vault" value={keyId()} onChange={event => setKeyId(event.currentTarget.value)} disabled={vaultBusy() || vaultInfo()?.source === 'environment'}><option value="">Select a GPG key</option>{vaultInfo()?.gpgKeys.map(key => <option value={key.id}>{key.label} · {key.id.slice(-16)}</option>)}</select><button disabled={vaultBusy() || !vaultPath().trim() || !keyId() || vaultInfo()?.source === 'environment'} onClick={() => void configureVault('create_vault')}>Create vault</button></div>
-      <div class="panel-actions"><input aria-label="Existing Git vault URL" value={cloneRemote()} onInput={event => setCloneRemote(event.currentTarget.value)} placeholder="Private Git repository URL" autocomplete="off" disabled={vaultBusy() || vaultInfo()?.source === 'environment'} /><button disabled={vaultBusy() || !vaultPath().trim() || !cloneRemote().trim() || vaultInfo()?.source === 'environment'} onClick={() => void cloneVault()}>Clone existing vault</button></div>
+      <div class="panel-actions"><input id="vault-path" value={vaultPath()} onInput={event => setVaultPath(event.currentTarget.value)} placeholder="/home/user/.password-store" autocomplete="off" disabled={vaultBusy() || vaultInfo()?.source === 'environment'} /><Button variant="outline" size="sm" disabled={vaultBusy() || !vaultPath().trim() || vaultInfo()?.source === 'environment'} onClick={() => void configureVault('select_vault')}>Open existing</Button></div>
+      <div class="panel-actions"><select aria-label="GPG key for the new vault" value={keyId()} onChange={event => setKeyId(event.currentTarget.value)} disabled={vaultBusy() || vaultInfo()?.source === 'environment'}><option value="">Select a GPG key</option>{vaultInfo()?.gpgKeys.map(key => <option value={key.id}>{key.label} · {key.id.slice(-16)}</option>)}</select><Button variant="outline" size="sm" disabled={vaultBusy() || !vaultPath().trim() || !keyId() || vaultInfo()?.source === 'environment'} onClick={() => void configureVault('create_vault')}>Create vault</Button></div>
+      <div class="panel-actions"><input aria-label="Existing Git vault URL" value={cloneRemote()} onInput={event => setCloneRemote(event.currentTarget.value)} placeholder="Private Git repository URL" autocomplete="off" disabled={vaultBusy() || vaultInfo()?.source === 'environment'} /><Button variant="outline" size="sm" disabled={vaultBusy() || !vaultPath().trim() || !cloneRemote().trim() || vaultInfo()?.source === 'environment'} onClick={() => void cloneVault()}>Clone existing vault</Button></div>
       <p class="hint">To clone, enter a new directory and the URL of a remote with a main branch. The private GPG key must be available on this computer to open entries.</p>
       <details class="key-creation"><summary>Create GPG key and vault</summary>
         <p>GPG opens a system prompt to set the passphrase. Passage never receives it. Cancel in that prompt if you change your mind.</p>
         <div class="panel-actions"><input aria-label="New key name" value={newKeyName()} onInput={event => setNewKeyName(event.currentTarget.value)} placeholder="Your name" autocomplete="name" disabled={vaultBusy()} /><input aria-label="New key email" type="email" value={newKeyEmail()} onInput={event => setNewKeyEmail(event.currentTarget.value)} placeholder="you@example.com" autocomplete="email" disabled={vaultBusy()} /></div>
-        <button disabled={vaultBusy() || !vaultPath().trim() || !newKeyName().trim() || !newKeyEmail().trim() || !vaultInfo()?.passInstalled || !vaultInfo()?.gpgInstalled || vaultInfo()?.source === 'environment'} onClick={() => void createKeyAndVault()}>{vaultBusy() ? 'Please wait…' : 'Create key and vault'}</button>
+        <Button variant="outline" size="sm" disabled={vaultBusy() || !vaultPath().trim() || !newKeyName().trim() || !newKeyEmail().trim() || !vaultInfo()?.passInstalled || !vaultInfo()?.gpgInstalled || vaultInfo()?.source === 'environment'} onClick={() => void createKeyAndVault()}>{vaultBusy() ? 'Please wait…' : 'Create key and vault'}</Button>
       </details>
       {createdFingerprint() && <div class="recovery-notice" role="status"><strong>Key and vault created.</strong><p>Fingerprint: <code>{createdFingerprint()}</code></p><p>Back up your private key and passphrase before relying on this vault. Git stores encrypted files but cannot recover a lost private key.</p></div>}
       {vaultInfo() && <p class="hint">{!vaultInfo().passInstalled ? 'GNU pass not found. ' : ''}{!vaultInfo().gpgInstalled ? 'GPG not found. ' : ''}{vaultInfo().initialized ? `Initialized for: ${vaultInfo().recipientIds.join(', ') || 'unknown key'}.` : 'Vault not initialized yet.'} {vaultInfo().gpgKeys.length === 0 && vaultInfo().gpgInstalled ? 'No private GPG key found. Create or import one before creating a vault.' : ''}</p>}
-      <button onClick={() => void refreshVaultInfo()} disabled={vaultBusy()}>Check keys and vault</button>
+      <Button variant="outline" size="sm" onClick={() => void refreshVaultInfo()} disabled={vaultBusy()}>Check keys and vault</Button>
       {vaultError() && <p class="panel-error" role="alert">{vaultError()}</p>}
-    </section>}
-    {activeTab() === 'settings' && <section class="panel vault-panel" aria-label="Layout">
+    </Card>}
+    {activeTab() === 'settings' && <Card class="panel vault-panel" aria-label="Layout">
       <h2>Layout</h2>
       <label class="check"><input type="checkbox" checked={navPosition() === 'bottom'} onChange={event => void changeNavPosition(event.currentTarget.checked ? 'bottom' : 'top')} />Show navigation at the bottom</label>
       {navError() && <p class="panel-error" role="alert">{navError()}</p>}
-    </section>}
-    {activeTab() === 'settings' && <section class="panel vault-panel" aria-label="Entry list">
+    </Card>}
+    {activeTab() === 'settings' && <Card class="panel vault-panel" aria-label="Entry list">
       <h2>Entry list</h2>
       <label for="refresh-seconds">Refresh automatically</label>
       <div class="panel-actions"><select id="refresh-seconds" value={String(refreshSeconds())} onChange={event => void changeRefreshSeconds(Number(event.currentTarget.value))}>
@@ -511,43 +512,43 @@ function App() {
       </select></div>
       <p class="hint">Reloads the list so entries added or removed with <code>pass</code> or Git appear without reopening Passage.</p>
       {refreshError() && <p class="panel-error" role="alert">{refreshError()}</p>}
-    </section>}
-    {activeTab() === 'settings' && <section class="panel vault-panel" aria-label="Git sync">
+    </Card>}
+    {activeTab() === 'settings' && <Card class="panel vault-panel" aria-label="Git sync">
       <h2>Git sync</h2>
       <h3>GitHub</h3>
       <p>{!github() ? 'Checking account…' : !github().cli_installed ? 'Install GitHub CLI (gh) to connect your account.' : github().login ? `Connected as @${github().login}.` : 'No GitHub account connected through gh.'} {github()?.vault_git_configured ? 'This vault uses your gh account for GitHub HTTPS remotes.' : ''}</p>
-      <div class="panel-actions"><button disabled={!github()?.cli_installed} onClick={() => void connectGithub()}>{github()?.login ? 'Switch account' : 'Sign in with GitHub'}</button><button onClick={() => void refreshGithub()}>Check account</button><button disabled={!github()?.login || !git()} onClick={() => void configureGithubVault()}>Use for this vault</button></div>
+      <div class="panel-actions"><Button variant="outline" size="sm" disabled={!github()?.cli_installed} onClick={() => void connectGithub()}>{github()?.login ? 'Switch account' : 'Sign in with GitHub'}</Button><Button variant="outline" size="sm" onClick={() => void refreshGithub()}>Check account</Button><Button variant="outline" size="sm" disabled={!github()?.login || !git()} onClick={() => void configureGithubVault()}>Use for this vault</Button></div>
       {githubError() && <p class="panel-error" role="alert">{githubError()}</p>}
       <p class="hint">Sign-in opens GitHub CLI in a terminal. After completing it in your browser, click Check account. gh manages your account; Passage does not store the token. Use for this vault configures only this local Git repository for GitHub HTTPS remotes.</p>
       {git() ? <p>Branch {git().branch}{git().upstream ? ` · upstream ${git().upstream}` : ' · no upstream'} · {git().dirty ? 'local changes' : 'no local changes'} · ↑{git().ahead} ↓{git().behind}</p> : <p>This vault is not ready for Git sync yet.</p>}
-      {!git() && state().kind === 'available' && <button onClick={() => void setupGit('git_initialize')}>Initialize Git in this vault</button>}
-      {git() && !git().upstream && <><div class="panel-actions"><input aria-label="Git origin remote URL" value={gitRemote()} onInput={event => setGitRemote(event.currentTarget.value)} placeholder="HTTPS URL, SSH URL, or remote path" autocomplete="off" /><button disabled={!gitRemote().trim()} onClick={() => void setupGit('git_set_remote')}>Add origin remote</button></div><button onClick={() => void setupGit('git_publish_new_vault')}>Publish new vault</button><p class="hint">This creates the first commit using only .gpg and .gpg-id files and sets the upstream if the remote is empty. Connect a remote with existing history through Git. Future changes remain available through  <code>pass git</code>.</p></>}
-      <div class="panel-actions"><button onClick={() => void refreshGit()}>Check</button><button disabled={!git()?.dirty || !git().upstream} onClick={() => void setupGit('git_commit_changes')}>Commit changes</button><button disabled={!git()?.upstream} onClick={() => void sync('git_pull')}>Pull</button><button disabled={!git()?.upstream} onClick={() => void sync('git_push')}>Push</button></div>
-      {git() && git().ahead > 0 && git().behind > 0 && <><button onClick={() => void setupGit('git_merge_preserving_both')}>Preserve both versions</button><p class="hint">Merge the commits and, when the same .gpg entry changed on both devices, keep the local version and save the remote version as another encrypted entry. .gpg-id conflicts require manual resolution. Pushing remains a separate action.</p></>}
+      {!git() && state().kind === 'available' && <Button variant="outline" size="sm" onClick={() => void setupGit('git_initialize')}>Initialize Git in this vault</Button>}
+      {git() && !git().upstream && <><div class="panel-actions"><input aria-label="Git origin remote URL" value={gitRemote()} onInput={event => setGitRemote(event.currentTarget.value)} placeholder="HTTPS URL, SSH URL, or remote path" autocomplete="off" /><Button variant="outline" size="sm" disabled={!gitRemote().trim()} onClick={() => void setupGit('git_set_remote')}>Add origin remote</Button></div><Button variant="outline" size="sm" onClick={() => void setupGit('git_publish_new_vault')}>Publish new vault</Button><p class="hint">This creates the first commit using only .gpg and .gpg-id files and sets the upstream if the remote is empty. Connect a remote with existing history through Git. Future changes remain available through  <code>pass git</code>.</p></>}
+      <div class="panel-actions"><Button variant="outline" size="sm" onClick={() => void refreshGit()}>Check</Button><Button variant="outline" size="sm" disabled={!git()?.dirty || !git().upstream} onClick={() => void setupGit('git_commit_changes')}>Commit changes</Button><Button variant="outline" size="sm" disabled={!git()?.upstream} onClick={() => void sync('git_pull')}>Pull</Button><Button variant="outline" size="sm" disabled={!git()?.upstream} onClick={() => void sync('git_push')}>Push</Button></div>
+      {git() && git().ahead > 0 && git().behind > 0 && <><Button variant="outline" size="sm" onClick={() => void setupGit('git_merge_preserving_both')}>Preserve both versions</Button><p class="hint">Merge the commits and, when the same .gpg entry changed on both devices, keep the local version and save the remote version as another encrypted entry. .gpg-id conflicts require manual resolution. Pushing remains a separate action.</p></>}
       {gitError() && <p class="panel-error" role="alert">{gitError()}</p>}
       <p class="hint">Configure the remote through Git or  <code>pass git</code>. Conflicts and local changes prevent automatic sync.</p>
-    </section>}
-    {activeTab() === 'settings' && <section class="panel vault-panel" aria-label="Browser extensions">
+    </Card>}
+    {activeTab() === 'settings' && <Card class="panel vault-panel" aria-label="Browser extensions">
       <h2>Browser extensions</h2>
       <p>{browserLocked() === null ? 'Access status unavailable.' : browserLocked() ? 'Extension access locked.' : 'Extension access unlocked.'} Locking does not clear the GPG cache or prevent using pass in a terminal.</p>
-      <div class="panel-actions"><button disabled={browserLocked() !== false} onClick={() => void changeBrowserLock(true)}>Lock extensions</button><button disabled={browserLocked() !== true} onClick={() => void changeBrowserLock(false)}>Unlock extensions</button><button onClick={() => void refreshBrowserLock()}>Check lock status</button></div>
+      <div class="panel-actions"><Button variant="outline" size="sm" disabled={browserLocked() !== false} onClick={() => void changeBrowserLock(true)}>Lock extensions</Button><Button variant="outline" size="sm" disabled={browserLocked() !== true} onClick={() => void changeBrowserLock(false)}>Unlock extensions</Button><Button variant="outline" size="sm" onClick={() => void refreshBrowserLock()}>Check lock status</Button></div>
       {browserLockError() && <p class="panel-error" role="alert">{browserLockError()}</p>}
       <p>Enter the code shown in the extension to authorize this installation.</p>
-      <div class="panel-actions"><input aria-label="Pairing code" value={pairingCode()} maxLength={12} onInput={event => setPairingCode(event.currentTarget.value)} placeholder="12-character code" /><button disabled={!/^[a-f0-9]{12}$/i.test(pairingCode().trim())} onClick={() => void approvePairing()}>Authorize</button></div>
-      {pairings().map(pairing => <div class="pairing"><span>{pairing.origin}<small>{pairing.installationId}</small></span><button onClick={() => void revokePairing(pairing)}>Revoke</button></div>)}
-      <button onClick={() => void refreshPairings()}>Refresh list</button>
+      <div class="panel-actions"><input aria-label="Pairing code" value={pairingCode()} maxLength={12} onInput={event => setPairingCode(event.currentTarget.value)} placeholder="12-character code" /><Button variant="outline" size="sm" disabled={!/^[a-f0-9]{12}$/i.test(pairingCode().trim())} onClick={() => void approvePairing()}>Authorize</Button></div>
+      {pairings().map(pairing => <div class="pairing"><span>{pairing.origin}<small>{pairing.installationId}</small></span><Button variant="outline" size="sm" onClick={() => void revokePairing(pairing)}>Revoke</Button></div>)}
+      <Button variant="outline" size="sm" onClick={() => void refreshPairings()}>Refresh list</Button>
       {pairingError() && <p class="panel-error" role="alert">{pairingError()}</p>}
-    </section>}
-    {activeTab() === 'settings' && <section class="panel vault-panel" aria-label="About">
+    </Card>}
+    {activeTab() === 'settings' && <Card class="panel vault-panel" aria-label="About">
       <h2>About</h2>
       <p class="hint">Passage {appVersion}</p>
-    </section>}
+    </Card>}
     {activeTab() === 'vault' && (state().kind === 'unavailable' ? <section class="notice">{(state() as {kind: "unavailable"; reason: string}).reason}</section> : <>
       <div class="workspace"><nav aria-label="Vault entries">{filtered().length ? filtered().map(entry => <button class={selected() === entry.id ? 'entry selected' : 'entry'} onClick={() => void openEntry(entry.id)}><span class="entry-icon" aria-hidden="true">{entry.title.slice(0, 2).toUpperCase()}</span><span class="entry-text"><strong>{entry.title}</strong><small>{entry.id}</small></span><span class="entry-chevron" aria-hidden="true">›</span></button>) : <p>No entries found.</p>}</nav>
       <section class="detail" aria-label="Entry details">{editing() && !creating() ? <>
         <h2>Edit {selected()}</h2>
         {entryForm()}
-      </> : selected() ? <><div class="detail-heading"><div><small>VAULT ENTRY</small><h2>{selected()}</h2></div><button onClick={startEdit} disabled={!secret()}>Edit</button></div>{secret() ? <>{secret().username && <div class="field-card"><label>Username</label><div class="field-value">{secret().username}</div></div>}{secret().urls.length > 0 && <div class="field-card"><label>URL</label><div class="field-value">{secret().urls[0]}</div></div>}<div class="field-card"><label>Password</label><div class="password"><code>{visible() ? secret().password : '••••••••••••'}</code><button onClick={() => setVisible(!visible())}>{visible() ? 'Hide' : 'Show'}</button></div></div>{secret().details && <div class="field-card"><label>Other fields</label><pre>{displayDetails(secret().details)}</pre></div>}<button disabled={entryBusy()} onClick={() => void deleteEntry()}>Delete</button><button onClick={() => void showTotp()}>Generate TOTP code</button>{totp() && <p role="status">TOTP code: <code>{totp().code}</code> · valid for up to {Math.max(0, Math.ceil(totp().validUntil - Date.now() / 1000))} s</p>}<p class="hint">The secret disappears from the screen after 30 seconds. gpg-agent may keep the key cached.</p></> : <p>Open the entry to view its contents.</p>}</> : <p>Select an entry.</p>}</section></div>
+      </> : selected() ? <><div class="detail-heading"><div><small>VAULT ENTRY</small><h2>{selected()}</h2></div><Button variant="outline" size="sm" onClick={startEdit} disabled={!secret()}>Edit</Button></div>{secret() ? <>{secret().username && <Card padding="sm" class="field-card"><label>Username</label><div class="field-value">{secret().username}</div></Card>}{secret().urls.length > 0 && <Card padding="sm" class="field-card"><label>URL</label><div class="field-value">{secret().urls[0]}</div></Card>}<Card padding="sm" class="field-card"><label>Password</label><div class="password"><code>{visible() ? secret().password : '••••••••••••'}</code><Button variant="ghost" size="sm" onClick={() => setVisible(!visible())}>{visible() ? 'Hide' : 'Show'}</Button></div></Card>{secret().details && <Card padding="sm" class="field-card"><label>Other fields</label><pre>{displayDetails(secret().details)}</pre></Card>}<Button variant="outline" size="sm" disabled={entryBusy()} onClick={() => void deleteEntry()}>Delete</Button><Button variant="outline" size="sm" onClick={() => void showTotp()}>Generate TOTP code</Button>{totp() && <p role="status">TOTP code: <code>{totp().code}</code> · valid for up to {Math.max(0, Math.ceil(totp().validUntil - Date.now() / 1000))} s</p>}<p class="hint">The secret disappears from the screen after 30 seconds. gpg-agent may keep the key cached.</p></> : <p>Open the entry to view its contents.</p>}</> : <p>Select an entry.</p>}</section></div>
     </>)}
     {error() && !creating() && <p class="error" role="alert">{error()}</p>}
     </div>
@@ -557,7 +558,7 @@ function App() {
       {error() && <p class="panel-error" role="alert">{error()}</p>}
     </dialog>}
     {navPosition() === 'bottom' && appBar()}
-  </main>;
+  </main></Theme>;
 }
 
 render(() => <App />, document.getElementById('root')!);

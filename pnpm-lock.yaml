@@ -177,6 +177,9 @@ importers:
       '@passage/core':
         specifier: workspace:*
         version: link:../core
+      '@plunz/storybook':
+        specifier: github:plu-nz/lib.storybook#3449d90
+        version: https://codeload.github.com/plu-nz/lib.storybook/tar.gz/3449d901435c28c965d8b40e2bc3159019f72556(solid-js@1.9.19)
       '@wailsio/runtime':
         specifier: 3.1.0
         version: 3.1.0
@@ -324,6 +327,12 @@ packages:
 
   '@oxc-project/types@0.156.0':
     resolution: {integrity: sha512-1Duyg48TdJNdyhEB8Xn1L36bT9Pv6GUtlKjHxOys8xkaF/rQq3XJE+bAurSK/AgIz5mGFsb77cn9Pb20+WCScw==}
+
+  '@plunz/storybook@https://codeload.github.com/plu-nz/lib.storybook/tar.gz/3449d901435c28c965d8b40e2bc3159019f72556':
+    resolution: {gitHosted: true, integrity: sha512-K9yZKHiIMc3e/qIJTxakbmS/WsASrVaKS07rkBSj4o77uA82TSPbm0JshwcRwnwj76vvA5UytIKCvxeDKQu5Tg==, tarball: https://codeload.github.com/plu-nz/lib.storybook/tar.gz/3449d901435c28c965d8b40e2bc3159019f72556}
+    version: 0.1.0
+    peerDependencies:
+      solid-js: ^1.9.0
 
   '@rolldown/binding-android-arm-eabi@1.2.18':
     resolution: {integrity: sha512-ubTG+4KlidvioxjOFdsdEa2F6JVGZb8m2ByJUqQ7fYzUeT1cEn194POcsQ10PKH4p//q0YQn4SB3YpSuzcA1Yg==}
@@ -1313,6 +1322,10 @@ snapshots:
       '@jridgewell/sourcemap-codec': 1.6.0
 
   '@oxc-project/types@0.156.0': {}
+
+  '@plunz/storybook@https://codeload.github.com/plu-nz/lib.storybook/tar.gz/3449d901435c28c965d8b40e2bc3159019f72556(solid-js@1.9.19)':
+    dependencies:
+      solid-js: 1.9.19
 
   '@rolldown/binding-android-arm-eabi@1.2.18':
     optional: true
